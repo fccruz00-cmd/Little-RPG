@@ -52,8 +52,7 @@ python3 tools/build_single_file.py
   Attack Speed stat. Enemies do the same. When the hero falls it gets up in 2 s.
 - **Gold** drops from every kill and scales with the stage. Mini bosses pay 5x,
   bosses pay 14x.
-- **Idle** progress banks half your gold per second while the game is closed or
-  the tab is hidden, up to 8 hours.
+- **Hidden tab**: the fight keeps running. See *Running in the background*.
 - **&lt; &gt;** step back to a cleared stage to farm it.
 - Progress autosaves to `localStorage` every 5 s.
 
@@ -67,6 +66,35 @@ python3 tools/build_single_file.py
   or two minutes.
 - A **star** marks the upgrade with the best power per coin among the ones you
   can afford.
+
+### Running in the background
+
+Switching tabs does not pause the game. `requestAnimationFrame` stops the
+moment the tab is hidden, so a timer takes over and fast-forwards the fight
+instead: real kills, real stages, real experience, real soul dust, and Herald
+and Anvil keep working. Come back and you get one line telling you what
+happened, like `+2.4M gold, +12 stages over 3h 12m`.
+
+Three details make it hold together:
+
+- **Browsers throttle background timers**, to once a second and then to once a
+  minute after five minutes. That is fine, because each wake simulates the
+  whole span since the last one rather than a fixed step. Stepping costs
+  about 0.07 ms per simulated second with no renderer attached, so ten
+  minutes of catch-up is roughly 40 ms.
+- **A visible tab can be starved too.** A window sitting behind another gets
+  its frames throttled without ever firing `visibilitychange`, so a frame gap
+  longer than 250 ms is caught up the same way instead of being clamped away.
+- **Anything nobody simulated still pays.** If the browser froze the tab or
+  the machine slept, that span is banked as gold at 50%, capped at 8 hours,
+  which is also what happens while the game is fully closed. Gold only:
+  there is no fight to read kills, experience or dust from.
+
+The catch that made this work at all: gold per second is measured against a
+**simulation clock**, not the wall clock. A background wake plays a minute of
+fighting in a few milliseconds, and against `performance.now()` that reads as
+sixty times the real income, which then inflates every offline payout after
+it.
 
 ### The four tabs
 
@@ -126,7 +154,8 @@ extra points that survive rebirth.
 index.html          the three layout bands
 styles.css          UI: every frame, strip and bar is 9-sliced pack art
 src/
-  main.js           bootstrap plus the game loop (fixed 1/60 s step)
+  main.js           bootstrap, the game loop (fixed 1/60 s step) and the
+                    background loop that runs it while the tab is hidden
   format.js         1.2K, 340M, 5.07aa...
   data/
     balance.js      EVERY progression number, the file to rebalance

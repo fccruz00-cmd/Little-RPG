@@ -108,6 +108,11 @@ export class GameState {
     this.hp = this.maxHp;
     this._saveTimer = 0;
     this._goldWindow = [];
+    // Seconds of SIMULATED time, advanced by the loop, never by the wall
+    // clock. The background loop fast-forwards a minute of fighting in a few
+    // milliseconds, so anything measured per second has to count game time
+    // or it reads sixty times too fast.
+    this.clock = 0;
   }
 
   // --- tree bonuses -------------------------------------------------
@@ -354,7 +359,7 @@ export class GameState {
   earn(amount) {
     const value = amount * this.goldGain;
     this.gold += value;
-    this._goldWindow.push({ t: performance.now(), value });
+    this._goldWindow.push({ t: this.clock, value });
     return value;
   }
 
@@ -392,13 +397,13 @@ export class GameState {
     return n;
   }
 
-  /** Rolling gold/s over the last 20s, used for the idle payout. */
-  refreshGoldRate(now = performance.now()) {
-    const cutoff = now - 20_000;
+  /** Rolling gold/s over the last 20s of game time, used for the idle payout. */
+  refreshGoldRate() {
+    const cutoff = this.clock - 20;
     while (this._goldWindow.length && this._goldWindow[0].t < cutoff) this._goldWindow.shift();
     if (this._goldWindow.length < 2) return;
     const total = this._goldWindow.reduce((sum, e) => sum + e.value, 0);
-    const span = Math.max(1, (now - this._goldWindow[0].t) / 1000);
+    const span = Math.max(1, this.clock - this._goldWindow[0].t);
     this.goldPerSec = total / span;
   }
 
@@ -449,8 +454,19 @@ export class GameState {
 
   /** Credits gold banked while the game was closed. Returns `{seconds, gold}`. */
   collectOffline(lastSeen) {
-    if (!lastSeen || !this.goldPerSec) return null;
-    const seconds = Math.min((Date.now() - lastSeen) / 1000, OFFLINE.maxHours * 3600);
+    if (!lastSeen) return null;
+    return this.bankIdle((Date.now() - lastSeen) / 1000);
+  }
+
+  /**
+   * Pays out a span the simulation could not cover: the game was closed, or
+   * the browser froze the tab hard enough that the background loop never
+   * fired. Gold only, at OFFLINE.rate, because there is no fight to read
+   * kills, experience or dust from.
+   */
+  bankIdle(rawSeconds) {
+    if (!this.goldPerSec) return null;
+    const seconds = Math.min(rawSeconds, OFFLINE.maxHours * 3600);
     if (seconds < 60) return null;
     const gold = this.goldPerSec * seconds * OFFLINE.rate;
     this.gold += gold;

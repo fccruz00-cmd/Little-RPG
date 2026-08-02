@@ -6,6 +6,9 @@ import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, RARITY_ODDS, describeGear } from '../data/gear.js';
 import { fmt, pct, mult, duration } from '../format.js';
 
+const AUTO_FORGE_EVERY = 1.5;   // seconds between Anvil forges
+const AUTOMATION_CATCHUP = 200; // most actions one tickAutomation may replay
+
 /**
  * How to measure an upgrade's payoff, so the best value can be flagged.
  * Surviving and walking are worth less than killing, hence the weights.
@@ -69,6 +72,11 @@ export class UI {
 
     this.tab = 'upgrades';
     this.tree = 'talents';
+    // Set while the tab is hidden and the fight is being fast-forwarded.
+    // Nobody is looking, so skip the DOM: a two minute catch-up can contain
+    // eighty auto-forges, and each one rebuilding the list and forcing a
+    // layout for its glow is work spent on pixels that are not on screen.
+    this.quiet = false;
     this.rows = new Map();
     this.nodes = [];
 
@@ -327,6 +335,7 @@ export class UI {
   }
 
   toast({ text, bad = false }) {
+    if (this.quiet) return;
     const el = this.el.toast;
     el.hidden = false;
     el.textContent = text;
@@ -475,6 +484,8 @@ export class UI {
     if (!result) return null;
     this.state.save();
 
+    if (this.quiet) return result;
+
     const entry = this.slots.get(slotId);
     const rarity = RARITIES[result.rolled];
     if (result.equipped) {
@@ -524,29 +535,51 @@ export class UI {
    * Both only do what a finger would do, nothing the player could not do by
    * hand.
    */
+  /**
+   * Herald and Anvil, on a timer.
+   *
+   * `dt` is one frame while you are watching, but a whole minute when the
+   * background loop hands over a catch-up, so both act in a loop instead of
+   * firing once per call. Without that, looking away turns "buys every 6s"
+   * into "buys every wake", and automation gets worse the longer you leave
+   * it, which is backwards. AUTOMATION_CATCHUP caps the loop so a resume
+   * from a long freeze cannot stall the thread.
+   */
   tickAutomation(dt) {
     const { state } = this;
 
     if (state.bonus.autoBuy > 0) {
-      this._autoBuy = (this._autoBuy ?? 0) + dt;
       const every = Math.max(1, AUTO_BUY_BASE - state.bonus.autoBuy + 1);
-      if (this._autoBuy >= every) {
-        this._autoBuy = 0;
+      this._autoBuy = (this._autoBuy ?? 0) + dt;
+      let budget = AUTOMATION_CATCHUP;
+      let bought = false;
+      while (this._autoBuy >= every && budget > 0) {
+        budget -= 1;
+        this._autoBuy -= every;
         const key = this.bestBuy();
-        if (key && state.buy(key)) {
-          state.save();
-          if (this.tab === 'upgrades') this.refreshShop(true);
-        }
+        // Nothing affordable: stop here rather than burning the backlog on
+        // failed attempts, and let the next tick try again.
+        if (!key || !state.buy(key)) break;
+        bought = true;
+      }
+      this._autoBuy = Math.min(this._autoBuy, every);
+      if (bought) {
+        state.save();
+        if (!this.quiet && this.tab === 'upgrades') this.refreshShop(true);
       }
     }
 
     if (state.bonus.autoCraft > 0 && state.autoCraftOn !== false) {
       this._autoForge = (this._autoForge ?? 0) + dt;
-      if (this._autoForge >= 1.5) {
-        this._autoForge = 0;
+      let budget = AUTOMATION_CATCHUP;
+      while (this._autoForge >= AUTO_FORGE_EVERY && budget > 0) {
+        budget -= 1;
+        this._autoForge -= AUTO_FORGE_EVERY;
         const slotId = state.cheapestForgeable();
-        if (slotId) this.doForge(slotId, true);
+        if (!slotId) break;
+        this.doForge(slotId, true);
       }
+      this._autoForge = Math.min(this._autoForge, AUTO_FORGE_EVERY);
     }
   }
 
@@ -632,5 +665,23 @@ export class UI {
   /** Notice for gold banked while the game was closed. */
   showOffline({ seconds, gold }) {
     this.toast({ text: `+${fmt(gold)} gold over ${duration(seconds)}` });
+  }
+
+  /**
+   * What happened while the tab was hidden. The fight really ran, so this
+   * reports the whole span, not just the gold: stages and levels are the
+   * part you would otherwise have to go looking for.
+   */
+  showAway({ seconds, gold, stages, levels }) {
+    if (seconds < 20) return;
+    const parts = [];
+    // Gold can end up lower than it started: Herald spends it while you are
+    // away. Reporting a negative would read as a bug, so only what grew
+    // makes the line.
+    if (gold > 0) parts.push(`+${fmt(gold)} gold`);
+    if (stages > 0) parts.push(`+${stages} stage${stages > 1 ? 's' : ''}`);
+    if (levels > 0) parts.push(`+${levels} level${levels > 1 ? 's' : ''}`);
+    if (!parts.length) return;
+    this.toast({ text: `${parts.join(', ')} over ${duration(seconds)}` });
   }
 }
