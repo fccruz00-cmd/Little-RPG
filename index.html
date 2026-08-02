@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#14121c">
+<meta name="description" content="Idle RPG: o herói anda em linha reta, mata os bichos sozinho e avança de fase enquanto você compra upgrades.">
+<title>Little RPG</title>
+<link rel="icon" href="assets/icons/icons.png" type="image/png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── UI ──────────────────────────────────────────────────────── -->
+  <header class="hud" id="hud">
+    <div class="hud__stage">
+      <button class="stepper" id="stage-prev" type="button" aria-label="Fase anterior">◀</button>
+      <div class="hud__stage-label">
+        <span class="hud__stage-name" id="stage-name">Fase 1</span>
+        <span class="hud__stage-sub" id="stage-sub">0 / 10</span>
+      </div>
+      <button class="stepper" id="stage-next" type="button" aria-label="Próxima fase">▶</button>
+    </div>
+    <div class="hud__stats">
+      <span class="stat stat--gold"><i class="ico ico--gold"></i><b id="stat-gold">0</b></span>
+      <span class="stat stat--dps"><i class="ico ico--damage"></i><b id="stat-dps">0</b>/s</span>
+    </div>
+  </header>
+
+  <!-- ── FIGHT ───────────────────────────────────────────────────── -->
+  <section class="arena" id="arena">
+    <canvas id="stage"></canvas>
+    <div class="arena__progress">
+      <div class="arena__progress-fill" id="stage-progress"></div>
+    </div>
+    <div class="arena__boss" id="boss-timer" hidden>
+      <i class="ico ico--boss"></i><span id="boss-timer-value">0.0</span>s
+    </div>
+    <div class="arena__toast" id="toast" hidden></div>
+  </section>
+
+  <!-- ── UPGRADES ────────────────────────────────────────────────── -->
+  <section class="shop">
+    <div class="shop__head">
+      <h2>Upgrades</h2>
+      <label class="toggle">
+        <input type="checkbox" id="buy-max">
+        <span>Comprar máx.</span>
+      </label>
+    </div>
+    <ul class="shop__list" id="shop-list"></ul>
+    <footer class="shop__foot">
+      <button class="link" id="btn-reset" type="button">Recomeçar</button>
+      <span class="shop__best">Recorde: fase <b id="stat-best">1</b></span>
+    </footer>
+  </section>
+
+</div>
+
+<div class="loading" id="loading"><span>carregando…</span></div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

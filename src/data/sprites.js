@@ -1,0 +1,79 @@
+// GERADO por tools/extract_assets.py — não editar à mão.
+
+export const FRAME = 100;
+
+// Linha de chão comum a todos os frames do pacote (os pés ficam por volta
+// de y=57 e a sombra original ia até y=60). Desenhar todo mundo com a mesma
+// origem é o que mantém o morcego voando e o resto pisando no chão — encostar
+// cada sprite no piso pela própria caixa faria o morcego pousar.
+export const GROUND_LINE = 58;
+
+export const SPRITES = {
+  armored_orc: {
+    top: 37, bottom: 57, left: 42, right: 67,
+    anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  armored_skeleton: {
+    top: 34, bottom: 58, left: 46, right: 64,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  bat: {
+    top: 36, bottom: 54, left: 37, right: 62,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
+  elite_orc: {
+    top: 33, bottom: 57, left: 42, right: 70,
+    anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  greatsword_skeleton: {
+    top: 37, bottom: 57, left: 28, right: 59,
+    anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 9 },
+  },
+  knight_templar: {
+    top: 39, bottom: 57, left: 43, right: 70,
+    anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  necromancer: {
+    top: 29, bottom: 61, left: 31, right: 62,
+    anims: { attack: 9, death: 9, hurt: 4, idle: 6, walk: 6 },
+  },
+  orc: {
+    top: 41, bottom: 57, left: 44, right: 66,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  orc_rider: {
+    top: 28, bottom: 57, left: 37, right: 69,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  skeleton: {
+    top: 41, bottom: 57, left: 43, right: 69,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  slime: {
+    top: 40, bottom: 57, left: 36, right: 61,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
+  soldier: {
+    top: 38, bottom: 60, left: 41, right: 58,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  swordsman: {
+    top: 38, bottom: 60, left: 42, right: 66,
+    anims: { attack: 7, death: 4, hurt: 5, idle: 6, walk: 8 },
+  },
+  werebear: {
+    top: 39, bottom: 57, left: 42, right: 61,
+    anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  werewolf: {
+    top: 40, bottom: 57, left: 42, right: 69,
+    anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  wizard: {
+    top: 38, bottom: 58, left: 43, right: 60,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+};
+
+export const ICONS = ["damage", "attack_speed", "crit", "crit_power", "gold", "health", "regen", "stride", "boss", "stage"];
+

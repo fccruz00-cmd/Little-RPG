@@ -1,0 +1,402 @@
+/* ============================================================
+   Little RPG — idle auto-battler
+   Layout em 3 faixas: UI (topo) / Fight (arena) / Upgrades (loja)
+   ============================================================ */
+
+:root {
+  --bg:        #14121c;
+  --bg-deep:   #0d0b13;
+  --panel:     #241f2e;
+  --panel-2:   #1b1725;
+  --ink:       #f4ead8;
+  --ink-dim:   #a2957f;
+  --gold:      #f0a63c;
+  --gold-lit:  #ffd27f;
+  --red:       #d9534f;
+  --green:     #8bc34a;
+  --blue:      #5fa8d3;
+
+  /* escala do pixel-art da UI (sprites de 8px do Mini Medieval) */
+  --px: 3;
+
+  --hud-h: 54px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body { display: flex; justify-content: center; }
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  height: 100dvh;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px #000, 0 0 60px #0008;
+  overflow: hidden;
+}
+
+/* ── ícones (strip 10 × 32px do Raven Fantasy) ─────────────── */
+.ico {
+  --i: 0;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background-image: url(assets/icons/icons.png);
+  background-size: 160px 16px;
+  background-position: calc(var(--i) * -16px) 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  vertical-align: -3px;
+}
+.ico--damage       { --i: 0; }
+.ico--attack_speed { --i: 1; }
+.ico--crit         { --i: 2; }
+.ico--crit_power   { --i: 3; }
+.ico--gold         { --i: 4; }
+.ico--health       { --i: 5; }
+.ico--regen        { --i: 6; }
+.ico--stride       { --i: 7; }
+.ico--boss         { --i: 8; }
+.ico--stage        { --i: 9; }
+.ico--lg { width: 24px; height: 24px; background-size: 240px 24px; background-position: calc(var(--i) * -24px) 0; }
+
+/* ============================================================
+   UI — faixa do topo
+   ============================================================ */
+.hud {
+  flex: none;
+  height: var(--hud-h);
+  padding: 0 8px;
+  padding-top: env(safe-area-inset-top);
+  height: calc(var(--hud-h) + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(#2a2337, #1d1828);
+  border-bottom: 2px solid #000;
+  box-shadow: inset 0 -1px 0 #3a3048;
+}
+
+.hud__stage {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.hud__stage-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 92px;
+  line-height: 1.15;
+}
+.hud__stage-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-lit);
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+}
+.hud__stage-name.is-boss { color: var(--red); }
+.hud__stage-sub {
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+
+.stepper {
+  width: 24px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: .85;
+}
+.stepper:disabled { opacity: .2; cursor: default; }
+.stepper:not(:disabled):active { transform: translateY(1px); }
+
+.hud__stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 12px;
+}
+.stat { display: flex; align-items: center; gap: 4px; }
+.stat b { font-weight: 700; }
+.stat--gold b { color: var(--gold-lit); }
+.stat--dps   { color: var(--ink-dim); font-size: 11px; }
+.stat--dps b { color: var(--ink); }
+
+/* ============================================================
+   FIGHT — arena
+   ============================================================ */
+.arena {
+  position: relative;
+  flex: none;
+  height: 34%;
+  min-height: 150px;
+  background: #0b0a11;
+  border-bottom: 2px solid #000;
+  overflow: hidden;
+}
+
+#stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.arena__progress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 5px;
+  background: #00000099;
+}
+.arena__progress-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--gold), var(--gold-lit));
+  box-shadow: 0 0 6px #f0a63c88;
+  transition: width .18s linear;
+}
+.arena__progress-fill.is-boss {
+  background: linear-gradient(90deg, #8e2b28, var(--red));
+  box-shadow: 0 0 6px #d9534f88;
+}
+
+.arena__boss {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffdede;
+  background: #2a0f10cc;
+  border: 1px solid #d9534f66;
+  border-radius: 3px;
+}
+.arena__boss[hidden] { display: none; }
+
+.arena__toast {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--gold-lit);
+  background: #000000cc;
+  border: 1px solid #f0a63c55;
+  border-radius: 4px;
+  pointer-events: none;
+  animation: toast .9s ease-out;
+}
+.arena__toast[hidden] { display: none; }
+.arena__toast.is-bad { color: #ffb3b3; border-color: #d9534f66; }
+@keyframes toast {
+  0%   { opacity: 0; transform: translate(-50%, -30%) scale(.9); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ============================================================
+   UPGRADES — loja
+   ============================================================ */
+.shop {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-2);
+}
+
+.shop__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 6px;
+  border-bottom: 1px solid #000;
+  background: linear-gradient(#2a2337, #221c2e);
+}
+.shop__head h2 {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  user-select: none;
+}
+.toggle input { accent-color: var(--gold); width: 13px; height: 13px; }
+
+.shop__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  list-style: none;
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+/* botão de upgrade — 9-slice do Mini Medieval UI */
+.up {
+  --slice-w: calc(var(--px) * 3px);
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  text-align: left;
+  font: inherit;
+  color: #3a2410;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.up:active:not(:disabled) { transform: translateY(1px); filter: brightness(1.08); }
+.up:disabled {
+  cursor: default;
+  color: #efe6d6;
+  text-shadow: 0 1px 0 #00000066;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+.up:disabled .up__effect { opacity: .68; }
+.up:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+
+.up__icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+}
+.up:disabled .up__icon { filter: grayscale(1) opacity(.55); }
+
+.up__body { min-width: 0; }
+.up__name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.up__effect {
+  display: block;
+  font-size: 10px;
+  opacity: .78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.up__buy {
+  text-align: right;
+  line-height: 1.2;
+  flex: none;
+}
+.up__lvl {
+  display: block;
+  font-size: 10px;
+  opacity: .7;
+}
+.up__cost {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.up__cost .ico { vertical-align: -2px; width: 12px; height: 12px; background-size: 120px 12px; background-position: calc(var(--i) * -12px) 0; }
+.up--max .up__cost { color: #4b3a12; }
+
+.shop__foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom));
+  font-size: 10px;
+  color: var(--ink-dim);
+  border-top: 1px solid #000;
+  background: #191424;
+}
+.shop__best b { color: var(--gold); }
+.link {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 10px;
+  color: #7b6f8c;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link:hover { color: var(--red); }
+
+/* ── carregando ─────────────────────────────────────────────── */
+.loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg-deep);
+  color: var(--ink-dim);
+  font-size: 12px;
+  letter-spacing: 3px;
+  z-index: 10;
+  transition: opacity .25s;
+}
+.loading.is-done { opacity: 0; pointer-events: none; }
+
+/* ── telas altas: arena um pouco maior ─────────────────────── */
+@media (min-height: 700px) {
+  .arena { height: 36%; }
+}
+@media (max-height: 560px) {
+  .arena { height: 40%; min-height: 130px; }
+  :root { --hud-h: 46px; }
+}

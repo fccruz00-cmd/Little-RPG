@@ -1,0 +1,224 @@
+{
+  "characters": {
+    "armored_orc": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 42,
+      "right": 67,
+      "top": 37
+    },
+    "armored_skeleton": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 58,
+      "left": 46,
+      "right": 64,
+      "top": 34
+    },
+    "bat": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 54,
+      "left": 37,
+      "right": 62,
+      "top": 36
+    },
+    "elite_orc": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 42,
+      "right": 70,
+      "top": 33
+    },
+    "greatsword_skeleton": {
+      "anims": {
+        "attack": 9,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 9
+      },
+      "bottom": 57,
+      "left": 28,
+      "right": 59,
+      "top": 37
+    },
+    "knight_templar": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 43,
+      "right": 70,
+      "top": 39
+    },
+    "necromancer": {
+      "anims": {
+        "attack": 9,
+        "death": 9,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 61,
+      "left": 31,
+      "right": 62,
+      "top": 29
+    },
+    "orc": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 44,
+      "right": 66,
+      "top": 41
+    },
+    "orc_rider": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 37,
+      "right": 69,
+      "top": 28
+    },
+    "skeleton": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 43,
+      "right": 69,
+      "top": 41
+    },
+    "slime": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 57,
+      "left": 36,
+      "right": 61,
+      "top": 40
+    },
+    "soldier": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 60,
+      "left": 41,
+      "right": 58,
+      "top": 38
+    },
+    "swordsman": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 5,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 60,
+      "left": 42,
+      "right": 66,
+      "top": 38
+    },
+    "werebear": {
+      "anims": {
+        "attack": 9,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 42,
+      "right": 61,
+      "top": 39
+    },
+    "werewolf": {
+      "anims": {
+        "attack": 9,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 42,
+      "right": 69,
+      "top": 40
+    },
+    "wizard": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 58,
+      "left": 43,
+      "right": 60,
+      "top": 38
+    }
+  },
+  "icons": [
+    "damage",
+    "attack_speed",
+    "crit",
+    "crit_power",
+    "gold",
+    "health",
+    "regen",
+    "stride",
+    "boss",
+    "stage"
+  ]
+}

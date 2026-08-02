@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+
+# Descomente se os pacotes de arte não puderem ser redistribuídos: aí cada
+# pessoa regenera com `python3 tools/extract_assets.py` (veja o README).
+# assets/characters/
+# assets/ui/
+# assets/icons/
