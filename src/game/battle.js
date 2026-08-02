@@ -1,8 +1,9 @@
 import { Animator } from '../engine/anim.js';
 import { SPRITES, GROUND_LINE } from '../data/sprites.js';
 import {
-  HERO, KILLS_PER_STAGE, mobsForStage, eliteForStage, isBossStage, bossForStage,
+  HERO, mobsForStage, eliteForStage, isBossStage, bossForStage,
 } from '../data/enemies.js';
+import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 
 const SPAWN_MARGIN = 12;   // px do mundo além da borda direita da tela
@@ -96,7 +97,7 @@ export class Battle {
    * chefe de verdade (com cronômetro) de 5 em 5.
    */
   get atFinalEncounter() {
-    return this.state.kills >= KILLS_PER_STAGE;
+    return this.state.kills >= this.state.killsPerStage;
   }
 
   enterStage(stage, { silent = false, keepKills = false } = {}) {
@@ -117,6 +118,7 @@ export class Battle {
   advance() {
     const next = this.state.stage + 1;
     this.state.maxStage = Math.max(this.state.maxStage, next);
+    this.state.bestStage = Math.max(this.state.bestStage, next);
     this.enterStage(next);
   }
 
@@ -273,7 +275,11 @@ export class Battle {
 
     const gold = state.earn(target.gold);
     this.pushFloater(target, gold, 'gold');
-    this.emit('kill', { target, gold });
+
+    const xpMul = target.isBoss ? LEVELS.bossXp : target.isElite ? LEVELS.eliteXp : 1;
+    const levelsUp = state.gainXp(killXp(state.stage, xpMul));
+    if (levelsUp) this.emit('toast', { text: `NÍVEL ${state.level}!` });
+    this.emit('kill', { target, gold, levelsUp });
 
     if (target.isBoss || target.isElite) {
       this.emit('toast', { text: target.isBoss ? 'CHEFE DERROTADO!' : 'MINI-CHEFE DERROTADO!' });
@@ -283,7 +289,7 @@ export class Battle {
 
     // Bate o número de mobs e a fase segura o contador ali: o próximo a
     // aparecer é o encontro final.
-    state.kills = Math.min(KILLS_PER_STAGE, state.kills + 1);
+    state.kills = Math.min(state.killsPerStage, state.kills + 1);
   }
 
   updateEnemy(dt) {
@@ -321,12 +327,13 @@ export class Battle {
   enemyStrike(enemy) {
     const { hero } = this;
     if (hero.dead) return;
-    const killed = hero.hurt(enemy.damage);
-    this.pushFloater(hero, enemy.damage, 'player');
+    const taken = enemy.damage * this.state.damageTaken;
+    const killed = hero.hurt(taken);
+    this.pushFloater(hero, taken, 'player');
     if (killed) {
       hero.dead = true;
       hero.anim.play('death', { fps: 8, loop: false, force: true });
-      this.respawnTimer = RESPAWN_DELAY;
+      this.respawnTimer = RESPAWN_DELAY * this.state.respawnMul;
       this.emit('toast', { text: 'VOCÊ CAIU', bad: true });
     } else if (hero.anim.name !== 'attack') {
       hero.anim.play('hurt', { fps: 14, loop: false, force: true });
@@ -377,7 +384,7 @@ export class Battle {
    * encontro final vale os 20% restantes, pela vida que já levou.
    */
   get stageProgress() {
-    const mobs = Math.min(1, this.state.kills / KILLS_PER_STAGE) * 0.8;
+    const mobs = Math.min(1, this.state.kills / this.state.killsPerStage) * 0.8;
     const final = this.enemy && (this.enemy.isBoss || this.enemy.isElite)
       ? (1 - this.enemy.hp / this.enemy.maxHp) * 0.2
       : 0;

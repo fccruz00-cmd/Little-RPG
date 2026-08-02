@@ -60,6 +60,16 @@ ICONS = [
     ("stride",        5, 20),   # ferradura
     ("boss",          4, 28),   # caveira
     ("stage",        14, 0),    # troféu
+    # árvores de talento
+    ("book",          2, 10),   # livro — experiência
+    ("shield",        1, 23),   # armadura — defesa
+    ("orb",           0, 22),   # orbe — alma
+    ("crown",         2, 22),   # coroa — herança
+    ("torch",         0, 14),   # tocha — fúria antiga
+    ("dagger",        9, 24),   # adaga — golpe mortal
+    ("bag",          13, 24),   # saco de moedas — cofre
+    ("scout",         7, 0),    # corno — batedor
+    ("relic",        11, 28),   # anel dourado — relíquia
 ]
 ICON_SIZE = 32
 

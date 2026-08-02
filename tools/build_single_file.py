@@ -36,33 +36,41 @@ def resolve(importer, spec):
     return os.path.normpath(os.path.join(os.path.dirname(importer), spec)).replace(os.sep, "/")
 
 
+def bare(rel):
+    """Especificador nu de um módulo, resolvido pelo import map."""
+    return "@rpg/" + rel
+
+
 def build_modules(entry):
-    """Converte cada módulo numa data: URL, das folhas para a raiz."""
-    urls = {}
-    visiting = set()
+    """
+    Cada módulo vira uma data: URL registrada num import map, e os imports
+    relativos viram especificadores nus.
+
+    A tentação é embutir a data: URL da dependência dentro de quem importa,
+    mas aí um módulo usado por três outros entra três vezes no arquivo — e
+    como isso é transitivo, o tamanho explode (o `format.js`, importado por
+    meio projeto, chegou a aparecer umas dez vezes). Com o import map cada
+    módulo aparece exatamente uma vez.
+    """
+    imports = {}
+    seen = set()
 
     def visit(rel):
-        if rel in urls:
-            return urls[rel]
-        if rel in visiting:
-            raise SystemExit(f"ciclo de import em {rel}")
-        visiting.add(rel)
+        if rel in seen:
+            return
+        seen.add(rel)
 
         source = read(rel)
         for spec in dict.fromkeys(deps_of(source)):
-            dep_url = visit(resolve(rel, spec))
-            source = re.sub(
-                rf"(['\"]){re.escape(spec)}\1",
-                lambda _m, u=dep_url: f'"{u}"',
-                source,
-            )
+            dep = resolve(rel, spec)
+            visit(dep)
+            source = re.sub(rf"(['\"]){re.escape(spec)}\1", f'"{bare(dep)}"', source)
 
-        visiting.discard(rel)
         encoded = base64.b64encode(source.encode("utf-8")).decode()
-        urls[rel] = f"data:text/javascript;base64,{encoded}"
-        return urls[rel]
+        imports[bare(rel)] = f"data:text/javascript;base64,{encoded}"
 
-    return visit(entry)
+    visit(entry)
+    return imports
 
 
 def collect_images():
@@ -97,16 +105,19 @@ def main():
     )
     html = html.replace("</head>", head_extra + "\n</head>")
 
+    modules = build_modules(ENTRY)
+    import_map = json.dumps({"imports": modules}, separators=(",", ":"))
     body_extra = (
         f"<script>globalThis.__ASSET_MAP={json.dumps(images, separators=(',', ':'))};</script>\n"
-        f'<script type="module" src="{build_modules(ENTRY)}"></script>'
+        f'<script type="importmap">{import_map}</script>\n'
+        f'<script type="module">import "{bare(ENTRY)}";</script>'
     )
     html = html.replace("</body>", body_extra + "\n</body>")
 
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html)
     size = os.path.getsize(out_path) / 1024
-    print(f"{out_path}  ({size:.0f} KB, {len(images)} imagens embutidas)")
+    print(f"{out_path}  ({size:.0f} KB, {len(images)} imagens, {len(modules)} módulos)")
 
 
 if __name__ == "__main__":

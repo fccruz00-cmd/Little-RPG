@@ -1,6 +1,6 @@
 /* ============================================================
    Little RPG — idle auto-battler
-   Layout em 3 faixas: UI (topo) / Fight (arena) / Upgrades (loja)
+   Layout em 3 faixas: UI (topo) / Fight (arena) / painel com abas
    ============================================================ */
 
 :root {
@@ -15,11 +15,11 @@
   --red:       #d9534f;
   --green:     #8bc34a;
   --blue:      #5fa8d3;
+  --violet:    #a678d6;
 
   /* escala do pixel-art da UI (sprites de 8px do Mini Medieval) */
   --px: 3;
-
-  --hud-h: 54px;
+  --hud-h: 76px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -49,15 +49,16 @@ body { display: flex; justify-content: center; }
   overflow: hidden;
 }
 
-/* ── ícones (strip 10 × 32px do Raven Fantasy) ─────────────── */
+/* ── ícones (strip do Raven Fantasy, 32px cada) ─────────────── */
 .ico {
   --i: 0;
+  --n: 19;
   display: inline-block;
   width: 16px;
   height: 16px;
   flex: none;
   background-image: url(assets/icons/icons.png);
-  background-size: 160px 16px;
+  background-size: calc(var(--n) * 16px) 16px;
   background-position: calc(var(--i) * -16px) 0;
   background-repeat: no-repeat;
   image-rendering: pixelated;
@@ -73,24 +74,39 @@ body { display: flex; justify-content: center; }
 .ico--stride       { --i: 7; }
 .ico--boss         { --i: 8; }
 .ico--stage        { --i: 9; }
-.ico--lg { width: 24px; height: 24px; background-size: 240px 24px; background-position: calc(var(--i) * -24px) 0; }
+.ico--book         { --i: 10; }
+.ico--shield       { --i: 11; }
+.ico--orb          { --i: 12; }
+.ico--crown        { --i: 13; }
+.ico--torch        { --i: 14; }
+.ico--dagger       { --i: 15; }
+.ico--bag          { --i: 16; }
+.ico--scout        { --i: 17; }
+.ico--relic        { --i: 18; }
+
+.ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
+.ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
 
 /* ============================================================
    UI — faixa do topo
    ============================================================ */
 .hud {
   flex: none;
-  height: var(--hud-h);
-  padding: 0 8px;
-  padding-top: env(safe-area-inset-top);
-  height: calc(var(--hud-h) + env(safe-area-inset-top));
+  padding: 4px 8px 5px;
+  padding-top: calc(4px + env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: linear-gradient(#2a2337, #1d1828);
+  border-bottom: 2px solid #000;
+  box-shadow: inset 0 -1px 0 #3a3048;
+}
+
+.hud__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: linear-gradient(#2a2337, #1d1828);
-  border-bottom: 2px solid #000;
-  box-shadow: inset 0 -1px 0 #3a3048;
 }
 
 .hud__stage {
@@ -114,14 +130,11 @@ body { display: flex; justify-content: center; }
   white-space: nowrap;
 }
 .hud__stage-name.is-boss { color: var(--red); }
-.hud__stage-sub {
-  font-size: 10px;
-  color: var(--ink-dim);
-}
+.hud__stage-sub { font-size: 10px; color: var(--ink-dim); }
 
 .stepper {
   width: 24px;
-  height: 28px;
+  height: 26px;
   border: 0;
   background: transparent;
   color: var(--gold);
@@ -136,14 +149,47 @@ body { display: flex; justify-content: center; }
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 2px;
+  gap: 1px;
   font-size: 12px;
 }
 .stat { display: flex; align-items: center; gap: 4px; }
-.stat b { font-weight: 700; }
-.stat--gold b { color: var(--gold-lit); }
+.stat--gold b { color: var(--gold-lit); font-weight: 700; }
 .stat--dps   { color: var(--ink-dim); font-size: 11px; }
-.stat--dps b { color: var(--ink); }
+.stat--dps b { color: var(--ink); font-weight: 700; }
+
+/* barra de experiência */
+.hud__row--xp { gap: 6px; }
+.hud__lvl {
+  font-size: 10px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.hud__lvl b { color: var(--violet); font-size: 12px; }
+
+.xpbar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 9px;
+  background: #100d18;
+  border: 1px solid #000;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.xpbar__fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #6f42a8, var(--violet));
+  transition: width .2s linear;
+}
+.xpbar__text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  color: #d9cdf0;
+  text-shadow: 0 1px 0 #000a;
+}
 
 /* ============================================================
    FIGHT — arena
@@ -151,8 +197,8 @@ body { display: flex; justify-content: center; }
 .arena {
   position: relative;
   flex: none;
-  height: 34%;
-  min-height: 150px;
+  height: 31%;
+  min-height: 145px;
   background: #0b0a11;
   border-bottom: 2px solid #000;
   overflow: hidden;
@@ -217,6 +263,7 @@ body { display: flex; justify-content: center; }
   border-radius: 4px;
   pointer-events: none;
   animation: toast .9s ease-out;
+  white-space: nowrap;
 }
 .arena__toast[hidden] { display: none; }
 .arena__toast.is-bad { color: #ffb3b3; border-color: #d9534f66; }
@@ -228,9 +275,9 @@ body { display: flex; justify-content: center; }
 }
 
 /* ============================================================
-   UPGRADES — loja
+   Painel com abas
    ============================================================ */
-.shop {
+.panel {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -238,21 +285,82 @@ body { display: flex; justify-content: center; }
   background: var(--panel-2);
 }
 
-.shop__head {
+.tabs {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #16121f;
+  border-bottom: 1px solid #000;
+}
+.tab {
+  position: relative;
+  padding: 8px 4px 7px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .5px;
+  color: #6f6480;
+  cursor: pointer;
+}
+.tab.is-on {
+  color: var(--gold-lit);
+  background: linear-gradient(#2a2337, #221c2e);
+  border-bottom-color: var(--gold);
+}
+.tab:not(.is-on):hover { color: var(--ink-dim); }
+
+.pip {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--violet);
+  box-shadow: 0 0 5px var(--violet);
+  vertical-align: 2px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.pip[hidden] { display: none; }
+.pip--gold { background: var(--gold); box-shadow: 0 0 5px var(--gold); }
+@keyframes pulse { 50% { opacity: .35; } }
+
+.pane {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+.pane.is-on { display: flex; }
+
+.pane__head {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 10px 6px;
+  gap: 8px;
+  padding: 6px 10px;
   border-bottom: 1px solid #000;
-  background: linear-gradient(#2a2337, #221c2e);
+  background: #221c2e;
 }
-.shop__head h2 {
-  font-size: 12px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--gold);
+.pane__hint { font-size: 10px; color: #6f6480; }
+.pane__points { font-size: 11px; color: var(--ink-dim); white-space: nowrap; margin-left: auto; }
+.pane__head .link[hidden] { display: none; }
+.pane__points b { color: var(--violet); }
+.pane__points.is-relic b { color: var(--gold); }
+
+.pane__detail {
+  flex: none;
+  padding: 6px 10px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--ink-dim);
+  background: #16121f;
+  border-bottom: 1px solid #000;
+  min-height: 34px;
 }
+.pane__detail b { color: var(--ink); }
 
 .toggle {
   display: flex;
@@ -265,7 +373,25 @@ body { display: flex; justify-content: center; }
 }
 .toggle input { accent-color: var(--gold); width: 13px; height: 13px; }
 
-.shop__list {
+.segmented {
+  display: flex;
+  border: 1px solid #000;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.segmented button {
+  padding: 4px 10px;
+  border: 0;
+  background: #16121f;
+  font: inherit;
+  font-size: 10px;
+  color: #6f6480;
+  cursor: pointer;
+}
+.segmented button.is-on { background: var(--gold); color: #3a2410; font-weight: 700; }
+
+/* ── aba 1: loja de upgrades ────────────────────────────────── */
+.shop {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -280,7 +406,6 @@ body { display: flex; justify-content: center; }
 
 /* botão de upgrade — 9-slice do Mini Medieval UI */
 .up {
-  --slice-w: calc(var(--px) * 3px);
   display: grid;
   grid-template-columns: 28px 1fr auto;
   align-items: center;
@@ -308,12 +433,7 @@ body { display: flex; justify-content: center; }
 .up:disabled .up__effect { opacity: .68; }
 .up:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
 
-.up__icon {
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-}
+.up__icon { width: 24px; height: 24px; display: grid; place-items: center; }
 .up:disabled .up__icon { filter: grayscale(1) opacity(.55); }
 
 .up__body { min-width: 0; }
@@ -334,26 +454,194 @@ body { display: flex; justify-content: center; }
   text-overflow: ellipsis;
 }
 
-.up__buy {
-  text-align: right;
-  line-height: 1.2;
-  flex: none;
-}
-.up__lvl {
-  display: block;
-  font-size: 10px;
-  opacity: .7;
-}
-.up__cost {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.up__cost .ico { vertical-align: -2px; width: 12px; height: 12px; background-size: 120px 12px; background-position: calc(var(--i) * -12px) 0; }
+.up__buy { text-align: right; line-height: 1.2; flex: none; }
+.up__lvl { display: block; font-size: 10px; opacity: .7; }
+.up__cost { display: block; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .up--max .up__cost { color: #4b3a12; }
 
-.shop__foot {
+/* ── aba 2: árvores ─────────────────────────────────────────── */
+.tree-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 6px 12px;
+}
+.tree-scroll[hidden] { display: none; }
+
+.tree {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.branch {
+  --accent: var(--gold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.branch__name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+/* fio que liga um nó ao seguinte */
+.branch__link {
+  width: 2px;
+  height: 10px;
+  background: #342c44;
+}
+.branch__link.is-on { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+
+.node {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px 5px;
+  border: 1px solid #3a3048;
+  border-radius: 4px;
+  background: #221c2e;
+  font: inherit;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+.node__name {
+  font-size: 9px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.node__rank {
+  font-size: 9px;
+  font-weight: 700;
+  color: #6f6480;
+}
+
+/* investido */
+.node.is-ranked {
+  border-color: var(--accent);
+  background: #2b2338;
+  color: var(--ink);
+  box-shadow: inset 0 0 10px #0006, 0 0 0 1px #0006;
+}
+.node.is-ranked .node__rank { color: var(--accent); }
+.node.is-full { background: #332948; }
+.node.is-full .node__rank::after { content: ' ✓'; }
+
+/* comprável agora — pisca de leve pra puxar o olho */
+.node.can-buy {
+  border-color: var(--accent);
+  animation: nodeGlow 1.8s ease-in-out infinite;
+}
+@keyframes nodeGlow {
+  50% { box-shadow: 0 0 8px -1px var(--accent); }
+}
+
+/* trancado */
+.node:disabled { cursor: default; }
+.node.is-locked { opacity: .38; }
+.node.is-locked .ico { filter: grayscale(1); }
+
+.node__cost {
+  display: block;
+  font-size: 9px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.node:disabled .node__cost { color: #6f6480; }
+
+/* ── aba 3: prestígio ───────────────────────────────────────── */
+.prestige {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prestige__gain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #221c2e;
+  border: 1px solid #3a3048;
+  border-radius: 4px;
+}
+.prestige__gain strong {
+  font-size: 22px;
+  color: var(--gold-lit);
+}
+.prestige__gain small {
+  display: block;
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: #000;
+  border: 1px solid #000;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.facts > div {
+  padding: 7px 9px;
+  background: #221c2e;
+}
+.facts dt { font-size: 9px; color: #6f6480; }
+.facts dd { font-size: 13px; font-weight: 700; color: var(--ink); }
+
+.prestige__note {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.prestige__note b { color: var(--ink); }
+
+.big-btn {
+  width: 100%;
+  padding: 12px 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #3a2410;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.big-btn:active:not(:disabled) { transform: translateY(1px); filter: brightness(1.08); }
+.big-btn:disabled {
+  cursor: default;
+  color: #efe6d6;
+  text-shadow: 0 1px 0 #00000066;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+
+/* ── rodapé ─────────────────────────────────────────────────── */
+.foot {
   flex: none;
   display: flex;
   align-items: center;
@@ -365,7 +653,7 @@ body { display: flex; justify-content: center; }
   border-top: 1px solid #000;
   background: #191424;
 }
-.shop__best b { color: var(--gold); }
+.foot__best b { color: var(--gold); }
 .link {
   border: 0;
   background: none;
@@ -392,11 +680,12 @@ body { display: flex; justify-content: center; }
 }
 .loading.is-done { opacity: 0; pointer-events: none; }
 
-/* ── telas altas: arena um pouco maior ─────────────────────── */
-@media (min-height: 700px) {
-  .arena { height: 36%; }
+/* ── ajustes por altura de tela ─────────────────────────────── */
+@media (min-height: 720px) {
+  .arena { height: 33%; }
 }
-@media (max-height: 560px) {
-  .arena { height: 40%; min-height: 130px; }
-  :root { --hud-h: 46px; }
+@media (max-height: 600px) {
+  .arena { height: 34%; min-height: 128px; }
+  .pane__detail { min-height: 0; }
+  .node__name { font-size: 8px; }
 }

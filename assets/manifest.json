@@ -219,6 +219,15 @@
     "regen",
     "stride",
     "boss",
-    "stage"
+    "stage",
+    "book",
+    "shield",
+    "orb",
+    "crown",
+    "torch",
+    "dagger",
+    "bag",
+    "scout",
+    "relic"
   ]
 }

@@ -1,6 +1,7 @@
 import { UPGRADES } from '../data/upgrades.js';
 import { GameState } from '../game/state.js';
-import { KILLS_PER_STAGE } from '../data/enemies.js';
+import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talents.js';
+import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
 import { fmt, duration } from '../format.js';
 
 const $ = (id) => document.getElementById(id);
@@ -8,6 +9,10 @@ const $ = (id) => document.getElementById(id);
 /** Atualiza `el.textContent` só quando o valor muda de verdade. */
 function setText(el, value) {
   if (el.textContent !== value) el.textContent = value;
+}
+
+function setHtml(el, value) {
+  if (el.innerHTML !== value) el.innerHTML = value;
 }
 
 export class UI {
@@ -20,29 +25,38 @@ export class UI {
     this.battle = battle;
 
     this.el = {
-      stageName: $('stage-name'),
-      stageSub: $('stage-sub'),
-      stagePrev: $('stage-prev'),
-      stageNext: $('stage-next'),
+      stageName: $('stage-name'), stageSub: $('stage-sub'),
+      stagePrev: $('stage-prev'), stageNext: $('stage-next'),
       progress: $('stage-progress'),
-      gold: $('stat-gold'),
-      dps: $('stat-dps'),
-      best: $('stat-best'),
-      bossTimer: $('boss-timer'),
-      bossValue: $('boss-timer-value'),
+      gold: $('stat-gold'), dps: $('stat-dps'), best: $('stat-best'),
+      level: $('stat-level'), xpFill: $('xp-fill'), xpText: $('xp-text'),
+      bossTimer: $('boss-timer'), bossValue: $('boss-timer-value'),
       toast: $('toast'),
-      list: $('shop-list'),
-      buyMax: $('buy-max'),
+      tabs: $('tabs'),
+      shop: $('shop-list'), buyMax: $('buy-max'),
+      treeSwitch: $('tree-switch'), treePoints: $('tree-points'), treeDetail: $('tree-detail'),
+      respec: $('btn-respec'),
+      treeTalents: $('tree-talents'), treeRelics: $('tree-relics'),
+      pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
+      presGain: $('pres-gain'), presHave: $('pres-have'), presCount: $('pres-count'),
+      presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
       reset: $('btn-reset'),
     };
 
+    this.tab = 'upgrades';
+    this.tree = 'talents';
     this.rows = new Map();
+    this.nodes = [];
+
     this.buildShop();
+    this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
+    this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
     this.bind();
 
     battle.on('toast', (t) => this.toast(t));
   }
 
+  // ── construção ────────────────────────────────────────────────────
   buildShop() {
     const frag = document.createDocumentFragment();
     for (const up of UPGRADES) {
@@ -62,8 +76,7 @@ export class UI {
       const button = li.querySelector('button');
       button.querySelector('.up__name').textContent = up.name;
       this.rows.set(up.key, {
-        up,
-        button,
+        up, button,
         effect: button.querySelector('.up__effect'),
         lvl: button.querySelector('.up__lvl'),
         cost: button.querySelector('.up__cost'),
@@ -71,34 +84,168 @@ export class UI {
       });
       frag.append(li);
     }
-    this.el.list.append(frag);
+    this.el.shop.append(frag);
   }
 
+  /** Monta uma árvore: um galho por coluna, nós ligados por um fio. */
+  buildTree(host, tree, kind) {
+    const grid = document.createElement('div');
+    grid.className = 'tree';
+
+    for (const branch of tree) {
+      const col = document.createElement('div');
+      col.className = 'branch';
+      col.style.setProperty('--accent', branch.accent);
+      col.innerHTML = `<h3 class="branch__name">${branch.name}</h3>`;
+
+      branch.nodes.forEach((node, index) => {
+        if (index > 0) {
+          const link = document.createElement('span');
+          link.className = 'branch__link';
+          col.append(link);
+          this.nodes.at(-1).link = link;
+        }
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'node';
+        button.innerHTML = `
+          <i class="ico ico--lg ico--${node.icon}"></i>
+          <span class="node__name">${node.name}</span>
+          <span class="node__rank">0/${node.max}</span>
+          ${kind === 'relic' ? '<span class="node__cost"></span>' : ''}`;
+        col.append(button);
+
+        this.nodes.push({
+          kind, branch, index, node, button,
+          rank: button.querySelector('.node__rank'),
+          cost: button.querySelector('.node__cost'),
+          link: null,
+        });
+      });
+      grid.append(col);
+    }
+    host.append(grid);
+  }
+
+  // ── eventos ───────────────────────────────────────────────────────
   bind() {
-    this.el.list.addEventListener('click', (e) => {
+    const { el, state, battle } = this;
+
+    el.tabs.addEventListener('click', (e) => {
+      const button = e.target.closest('.tab');
+      if (button) this.showTab(button.dataset.tab);
+    });
+
+    el.treeSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button) this.showTree(button.dataset.tree);
+    });
+
+    el.shop.addEventListener('click', (e) => {
       const button = e.target.closest('.up');
       if (!button) return;
-      const bought = this.state.buy(button.dataset.key);
-      if (bought) {
-        this.state.save();
+      if (state.buy(button.dataset.key)) {
+        state.save();
         this.refreshShop(true);
       }
     });
 
-    this.el.buyMax.checked = this.state.buyMax;
-    this.el.buyMax.addEventListener('change', () => {
-      this.state.buyMax = this.el.buyMax.checked;
+    // Comprar e mostrar o detalhe do nó vivem no mesmo toque: o clique
+    // investe (se der) e o texto de baixo explica o que aconteceu.
+    for (const entry of this.nodes) {
+      entry.button.addEventListener('click', () => {
+        const bought = entry.kind === 'talent'
+          ? state.buyTalent(entry.branch, entry.index)
+          : state.buyRelic(entry.branch, entry.index);
+        if (bought) state.save();
+        this.describe(entry);
+        this.refreshTrees(true);
+      });
+      const show = () => this.describe(entry);
+      entry.button.addEventListener('pointerenter', show);
+      entry.button.addEventListener('focus', show);
+    }
+
+    el.respec.addEventListener('click', () => {
+      if (!state.spentPoints) return;
+      if (!confirm('Devolver todos os pontos de talento pra redistribuir?')) return;
+      state.respecTalents();
+      state.save();
+      this.refreshTrees(true);
+    });
+
+    el.buyMax.checked = state.buyMax;
+    el.buyMax.addEventListener('change', () => {
+      state.buyMax = el.buyMax.checked;
       this.refreshShop(true);
     });
 
-    this.el.stagePrev.addEventListener('click', () => this.battle.goToStage(this.state.stage - 1));
-    this.el.stageNext.addEventListener('click', () => this.battle.goToStage(this.state.stage + 1));
+    el.stagePrev.addEventListener('click', () => battle.goToStage(state.stage - 1));
+    el.stageNext.addEventListener('click', () => battle.goToStage(state.stage + 1));
 
-    this.el.reset.addEventListener('click', () => {
-      if (!confirm('Apagar o progresso e começar de novo?')) return;
+    el.presGo.addEventListener('click', () => {
+      const gain = state.pendingRelics;
+      if (gain <= 0) return;
+      if (!confirm(`Renascer agora rende ${gain} relíquia(s).\n\nVocê perde fase, ouro, upgrades, nível e talentos. Confirma?`)) return;
+      state.prestige();
+      battle.enterStage(state.startStage, { silent: true });
+      this.refreshShop(true);
+      this.refreshTrees(true);
+      this.showTab('talents');
+      this.showTree('relics');
+      this.toast({ text: `RENASCEU — +${gain} RELÍQUIA(S)` });
+    });
+
+    el.reset.addEventListener('click', () => {
+      if (!confirm('Apagar TUDO, inclusive relíquias e prestígio?')) return;
       GameState.wipe();
       location.reload();
     });
+  }
+
+  showTab(name) {
+    this.tab = name;
+    for (const button of this.el.tabs.querySelectorAll('.tab')) {
+      button.classList.toggle('is-on', button.dataset.tab === name);
+    }
+    for (const pane of document.querySelectorAll('.pane')) {
+      pane.classList.toggle('is-on', pane.id === `pane-${name}`);
+    }
+    if (name === 'talents') this.refreshTrees(true);
+    if (name === 'prestige') this.refreshPrestige();
+  }
+
+  showTree(name) {
+    this.tree = name;
+    for (const button of this.el.treeSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.tree === name);
+    }
+    this.el.treeTalents.hidden = name !== 'talents';
+    this.el.treeRelics.hidden = name !== 'relics';
+    this.el.treePoints.classList.toggle('is-relic', name === 'relics');
+    this.el.respec.hidden = name !== 'talents';
+    setText(this.el.treeDetail, 'Toque num nó pra investir.');
+    this.refreshTrees(true);
+  }
+
+  /** Linha de explicação do nó tocado. */
+  describe(entry) {
+    const { state } = this;
+    const { node, kind, branch, index } = entry;
+    const ranks = (kind === 'talent' ? state.talents : state.relicTalents)[node.id] ?? 0;
+    const locked = !state.isUnlocked(branch, index, kind === 'talent' ? state.talents : state.relicTalents);
+
+    const now = ranks > 0 ? `agora: ${describeNode(node, ranks)}` : 'ainda sem pontos';
+    let line;
+    if (locked) {
+      line = `<b>${node.name}</b> — trancado: invista em <b>${branch.nodes[index - 1].name}</b> primeiro.`;
+    } else if (ranks >= node.max) {
+      line = `<b>${node.name}</b> — no máximo. ${describeNode(node, ranks)}.`;
+    } else {
+      const price = kind === 'relic' ? `${relicCost(node, ranks)} relíquia(s)` : '1 ponto';
+      line = `<b>${node.name}</b> (${ranks}/${node.max}) — ${now}. Próximo ponto: <b>${describeNode(node, ranks + 1)}</b> por ${price}.`;
+    }
+    setHtml(this.el.treeDetail, line);
   }
 
   toast({ text, bad = false }) {
@@ -114,12 +261,17 @@ export class UI {
     this._toastTimer = setTimeout(() => { el.hidden = true; }, 900);
   }
 
-  /** Chamado a cada quadro; o grosso do trabalho é throttled. */
+  // ── atualização por quadro ────────────────────────────────────────
   update(dt) {
     const { state, battle, el } = this;
 
     setText(el.gold, fmt(state.gold));
     setText(el.dps, fmt(state.dps));
+    setText(el.level, String(state.level));
+
+    const need = state.xpNeeded;
+    el.xpFill.style.width = `${Math.min(100, (state.xp / need) * 100).toFixed(1)}%`;
+    setText(el.xpText, `${fmt(state.xp)} / ${fmt(need)}`);
 
     const encounter = battle.nextEncounter();
     setText(el.stageName, `Fase ${state.stage}`);
@@ -127,9 +279,9 @@ export class UI {
     setText(el.stageSub, {
       boss: 'chefe',
       elite: 'mini-chefe',
-      mob: `${state.kills} / ${KILLS_PER_STAGE}`,
+      mob: `${state.kills} / ${state.killsPerStage}`,
     }[encounter]);
-    setText(el.best, String(state.maxStage));
+    setText(el.best, String(state.bestStage));
 
     el.progress.style.width = `${(battle.stageProgress * 100).toFixed(1)}%`;
     el.progress.classList.toggle('is-boss', encounter !== 'mob');
@@ -141,11 +293,18 @@ export class UI {
     el.stagePrev.disabled = state.stage <= 1;
     el.stageNext.disabled = state.stage >= state.maxStage;
 
-    this._shopTimer = (this._shopTimer ?? 0) + dt;
-    if (this._shopTimer >= 0.12) {
-      this._shopTimer = 0;
-      this.refreshShop();
-    }
+    // marcadores de "tem coisa pra gastar aqui"
+    el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
+    el.pipPrestige.hidden = state.pendingRelics <= 0;
+    el.pipPrestige.classList.add('pip--gold');
+
+    this._timer = (this._timer ?? 0) + dt;
+    if (this._timer < 0.15) return;
+    this._timer = 0;
+
+    if (this.tab === 'upgrades') this.refreshShop();
+    else if (this.tab === 'talents') this.refreshTrees();
+    else this.refreshPrestige();
   }
 
   refreshShop(force = false) {
@@ -168,8 +327,59 @@ export class UI {
       const cost = maxed
         ? 'MÁX'
         : `<i class="ico ico--gold"></i> ${fmt(state.priceFor(key, Math.max(1, n)))}`;
-      if (row.cost.innerHTML !== cost) row.cost.innerHTML = cost;
+      setHtml(row.cost, cost);
     }
+  }
+
+  refreshTrees() {
+    const { state, el } = this;
+    const relicMode = this.tree === 'relics';
+
+    setHtml(el.treePoints, relicMode
+      ? `<i class="ico ico--sm ico--relic"></i> <b>${fmt(state.relics)}</b> relíquias`
+      : `<b>${state.freePoints}</b> ponto(s) livre(s)`);
+
+    for (const entry of this.nodes) {
+      const isRelic = entry.kind === 'relic';
+      if (isRelic !== relicMode) continue; // a outra árvore está escondida
+
+      const ranksOf = isRelic ? state.relicTalents : state.talents;
+      const ranks = ranksOf[entry.node.id] ?? 0;
+      const unlocked = state.isUnlocked(entry.branch, entry.index, ranksOf);
+      const full = ranks >= entry.node.max;
+      const canBuy = isRelic
+        ? state.canBuyRelic(entry.branch, entry.index)
+        : state.canBuyTalent(entry.branch, entry.index);
+
+      entry.button.disabled = !canBuy;
+      entry.button.classList.toggle('is-ranked', ranks > 0);
+      entry.button.classList.toggle('is-full', full);
+      entry.button.classList.toggle('is-locked', !unlocked);
+      entry.button.classList.toggle('can-buy', canBuy);
+      setText(entry.rank, `${ranks}/${entry.node.max}`);
+      if (entry.cost) setText(entry.cost, full ? '—' : `${relicCost(entry.node, ranks)} ⬦`);
+      if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
+    }
+  }
+
+  refreshPrestige() {
+    const { state, el } = this;
+    const gain = state.pendingRelics;
+    setText(el.presGain, String(gain));
+    setText(el.presHave, fmt(state.relics));
+    setText(el.presCount, String(state.prestiges));
+    setText(el.presBest, String(state.maxStage));
+
+    // A próxima relíquia é medida a partir do que a corrida atual já vale,
+    // não do que já foi recebido: senão, quem está na fase 38 com 3 relíquias
+    // pendentes leria "fase 25", que já passou.
+    const next = nextRelicStage(relicsEarnedAt(state.maxStage));
+    setText(el.presNext, isFinite(next) ? `fase ${next}` : '—');
+
+    el.presGo.disabled = gain <= 0;
+    setText(el.presGo, gain > 0
+      ? `Renascer por ${gain} relíquia(s)`
+      : `Avance até a fase ${isFinite(next) ? next : PRESTIGE.minStage}`);
   }
 
   /** Aviso de ganho enquanto o jogo estava fechado. */

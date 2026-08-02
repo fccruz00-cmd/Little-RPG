@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#14121c">
-<meta name="description" content="Idle RPG: o herói anda em linha reta, mata os bichos sozinho e avança de fase enquanto você compra upgrades.">
+<meta name="description" content="Idle RPG: o herói anda em linha reta, mata os bichos sozinho e avança de fase enquanto você compra upgrades, sobe de nível e gasta talentos.">
 <title>Little RPG</title>
 <link rel="icon" href="assets/icons/icons.png" type="image/png">
 <link rel="stylesheet" href="styles.css">
@@ -15,17 +15,26 @@
 
   <!-- ── UI ──────────────────────────────────────────────────────── -->
   <header class="hud" id="hud">
-    <div class="hud__stage">
-      <button class="stepper" id="stage-prev" type="button" aria-label="Fase anterior">◀</button>
-      <div class="hud__stage-label">
-        <span class="hud__stage-name" id="stage-name">Fase 1</span>
-        <span class="hud__stage-sub" id="stage-sub">0 / 10</span>
+    <div class="hud__row">
+      <div class="hud__stage">
+        <button class="stepper" id="stage-prev" type="button" aria-label="Fase anterior">◀</button>
+        <div class="hud__stage-label">
+          <span class="hud__stage-name" id="stage-name">Fase 1</span>
+          <span class="hud__stage-sub" id="stage-sub">0 / 10</span>
+        </div>
+        <button class="stepper" id="stage-next" type="button" aria-label="Próxima fase">▶</button>
       </div>
-      <button class="stepper" id="stage-next" type="button" aria-label="Próxima fase">▶</button>
+      <div class="hud__stats">
+        <span class="stat stat--gold"><i class="ico ico--gold"></i><b id="stat-gold">0</b></span>
+        <span class="stat stat--dps"><i class="ico ico--damage"></i><b id="stat-dps">0</b>/s</span>
+      </div>
     </div>
-    <div class="hud__stats">
-      <span class="stat stat--gold"><i class="ico ico--gold"></i><b id="stat-gold">0</b></span>
-      <span class="stat stat--dps"><i class="ico ico--damage"></i><b id="stat-dps">0</b>/s</span>
+    <div class="hud__row hud__row--xp">
+      <span class="hud__lvl">Nv. <b id="stat-level">1</b></span>
+      <div class="xpbar" role="progressbar" aria-label="Experiência">
+        <div class="xpbar__fill" id="xp-fill"></div>
+        <span class="xpbar__text" id="xp-text">0 / 20</span>
+      </div>
     </div>
   </header>
 
@@ -41,19 +50,76 @@
     <div class="arena__toast" id="toast" hidden></div>
   </section>
 
-  <!-- ── UPGRADES ────────────────────────────────────────────────── -->
-  <section class="shop">
-    <div class="shop__head">
-      <h2>Upgrades</h2>
-      <label class="toggle">
-        <input type="checkbox" id="buy-max">
-        <span>Comprar máx.</span>
-      </label>
+  <!-- ── PAINEL COM ABAS ─────────────────────────────────────────── -->
+  <section class="panel">
+    <nav class="tabs" id="tabs" role="tablist">
+      <button class="tab is-on" data-tab="upgrades" type="button" role="tab">Upgrades</button>
+      <button class="tab" data-tab="talents" type="button" role="tab">
+        Talentos<i class="pip" id="pip-talents" hidden></i>
+      </button>
+      <button class="tab" data-tab="prestige" type="button" role="tab">
+        Prestígio<i class="pip" id="pip-prestige" hidden></i>
+      </button>
+    </nav>
+
+    <!-- aba 1: upgrades de ouro -->
+    <div class="pane is-on" id="pane-upgrades">
+      <div class="pane__head">
+        <span class="pane__hint">Comprados com ouro</span>
+        <label class="toggle">
+          <input type="checkbox" id="buy-max">
+          <span>Comprar máx.</span>
+        </label>
+      </div>
+      <ul class="shop" id="shop-list"></ul>
     </div>
-    <ul class="shop__list" id="shop-list"></ul>
-    <footer class="shop__foot">
-      <button class="link" id="btn-reset" type="button">Recomeçar</button>
-      <span class="shop__best">Recorde: fase <b id="stat-best">1</b></span>
+
+    <!-- aba 2: árvores de talento (níveis e relíquias) -->
+    <div class="pane" id="pane-talents">
+      <div class="pane__head">
+        <div class="segmented" id="tree-switch">
+          <button class="is-on" data-tree="talents" type="button">Talentos</button>
+          <button data-tree="relics" type="button">Relíquias</button>
+        </div>
+        <span class="pane__points" id="tree-points"></span>
+        <button class="link" id="btn-respec" type="button">redistribuir</button>
+      </div>
+      <p class="pane__detail" id="tree-detail">Toque num nó pra investir.</p>
+      <div class="tree-scroll" id="tree-talents"></div>
+      <div class="tree-scroll" id="tree-relics" hidden></div>
+    </div>
+
+    <!-- aba 3: renascer -->
+    <div class="pane" id="pane-prestige">
+      <div class="prestige">
+        <div class="prestige__gain">
+          <i class="ico ico--lg ico--relic"></i>
+          <div>
+            <strong id="pres-gain">0</strong> relíquia(s)
+            <small>se renascer agora</small>
+          </div>
+        </div>
+
+        <dl class="facts">
+          <div><dt>Relíquias guardadas</dt><dd id="pres-have">0</dd></div>
+          <div><dt>Renascimentos</dt><dd id="pres-count">0</dd></div>
+          <div><dt>Fase mais longe</dt><dd id="pres-best">1</dd></div>
+          <div><dt>Próxima relíquia</dt><dd id="pres-next">fase 25</dd></div>
+        </dl>
+
+        <p class="prestige__note">
+          Renascer zera <b>fase, ouro, upgrades, nível e talentos</b>.<br>
+          Ficam com você as <b>relíquias</b> e a <b>árvore de relíquias</b>,
+          que você gasta na aba Talentos.
+        </p>
+
+        <button class="big-btn" id="pres-go" type="button" disabled>Renascer</button>
+      </div>
+    </div>
+
+    <footer class="foot">
+      <button class="link" id="btn-reset" type="button">Apagar tudo</button>
+      <span class="foot__best">Recorde: fase <b id="stat-best">1</b></span>
     </footer>
   </section>
 

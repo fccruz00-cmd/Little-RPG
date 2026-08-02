@@ -5,7 +5,8 @@ em linha reta, encontra os bichos, mata sozinho e avança de fase — você só
 decide onde gastar o ouro.
 
 O layout segue as três faixas do rascunho: **UI** no topo, **Fight** no meio e
-**Upgrades** ocupando o resto da tela.
+o painel embaixo, agora com três abas: **Upgrades**, **Talentos** e
+**Prestígio**.
 
 ```
 ┌──────────────────────────────┐
@@ -14,16 +15,16 @@ O layout segue as três faixas do rascunho: **UI** no topo, **Fight** no meio e
 │      🗡️ ————→  👹            │  Fight
 │  chão rolando, parallax      │
 ├──────────────────────────────┤
-│  Dano            Nv. 12  221 │  Upgrades
+│ Upgrades │ Talentos │Prestígio│  abas
+│  Dano            Nv. 12  221 │
 │  Vel. de Ataque  Nv.  6  181 │
-│  ...                         │
 └──────────────────────────────┘
 ```
 
 ## Rodando
 
 **Do jeito mais rápido:** baixe `little-rpg.html` e abra com dois cliques. É o
-jogo inteiro num arquivo só (449 KB) — CSS, código e sprites embutidos, sem
+jogo inteiro num arquivo só (373 KB) — CSS, código e sprites embutidos, sem
 servidor e sem pasta ao lado. Até o progresso salvo funciona.
 
 **Pra mexer no código:** sirva a pasta, porque o jogo usa módulos ES e o
@@ -55,6 +56,27 @@ python3 tools/build_single_file.py
 - **◀ ▶** — dá pra voltar pra uma fase já vencida e farmar ouro nela.
 - O progresso salva sozinho no `localStorage` a cada 5 s.
 
+### As três abas
+
+1. **Upgrades** — atributos comprados com **ouro**, que zeram no renascimento.
+2. **Talentos** — duas árvores no mesmo lugar, no seletor do topo:
+   - *Talentos*, pagos com **pontos de nível** (1 por nível). Zeram no
+     renascimento; dá pra redistribuir a qualquer momento.
+   - *Relíquias*, a árvore de prestígio, paga com **relíquias**. É permanente.
+   - Nos dois casos um nó só abre quando o anterior do galho tem 1 ponto.
+3. **Prestígio** — renascer. Zera fase, ouro, upgrades, nível e talentos, e
+   converte a profundidade da corrida em relíquias. A primeira sai na fase 25;
+   como o cálculo é acumulado menos o que já foi recebido, repetir a mesma
+   profundidade não paga de novo.
+
+### Nível e experiência
+
+Cada abate dá XP (mini-chefe ×5, chefe ×12) e cada nível dá 1 ponto de talento.
+O nível não mexe em atributo nenhum sozinho — quem dá poder é a árvore, senão
+seria mais uma curva escondida. A árvore inteira custa 80 pontos e enche por
+volta da fase 120; o talento *Veterano*, na árvore de relíquias, adiciona
+pontos extras que sobrevivem ao renascimento.
+
 ## Organização
 
 ```
@@ -67,15 +89,18 @@ src/
     balance.js      TODAS as curvas numéricas — é o arquivo pra rebalancear
     enemies.js      elenco, quando cada bicho aparece, chefes
     upgrades.js     o que aparece na loja
+    levels.js       curva de XP e ganho por abate
+    talents.js      as duas árvores (nós, efeitos e custos)
+    prestige.js     quantas relíquias uma corrida vale
     sprites.js      GERADO — contagem de frames e caixa de cada sprite
   engine/
     loader.js       carregamento das imagens
     anim.js         tocador de spritesheet
   game/
-    state.js        atributos derivados, compras, save/load, ocioso
+    state.js        atributos derivados, árvores, nível, prestígio, save/load
     battle.js       simulação da arena (não conhece canvas nem DOM)
     render.js       canvas: cenário procedural, sprites, barras, números
-  ui/ui.js          HUD e loja
+  ui/ui.js          HUD, abas, loja, árvores e painel de prestígio
 little-rpg.html     GERADO — o jogo inteiro num arquivo só
 tools/
   extract_assets.py    recorta os pacotes originais pro que o jogo usa
@@ -85,6 +110,11 @@ tools/
 `battle.js` só emite eventos (`stage`, `spawn`, `hit`, `kill`, `toast`); quem
 desenha e quem mexe no DOM são o `render.js` e a `ui.js`. Dá pra trocar a
 renderização inteira sem encostar na simulação.
+
+Os nós das árvores não conhecem os atributos: cada um só acumula numa chave de
+bônus (`dmgMul`, `goldMul`, `critAdd`…), e o `GameState` aplica essas chaves em
+cima do que foi comprado com ouro. Pra criar um talento novo basta uma linha em
+`talents.js` — se a chave já existir, não precisa mexer em mais nada.
 
 ### Rebalancear
 
