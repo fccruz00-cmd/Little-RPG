@@ -96,7 +96,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 29;
+  --n: 32;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -137,6 +137,9 @@ body { display: flex; justify-content: center; }
 .ico--dust          { --i: 26; }
 .ico--gear          { --i: 27; }
 .ico--bolt          { --i: 28; }
+.ico--ore           { --i: 29; }
+.ico--bar           { --i: 30; }
+.ico--pick          { --i: 31; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
@@ -413,11 +416,11 @@ body { display: flex; justify-content: center; }
 .tab {
   --px: 2;
   position: relative;
-  padding: 3px 2px 4px;
+  padding: 3px 1px 4px;
   border: 0;
   font: inherit;
-  font-size: 10px;
-  letter-spacing: .3px;
+  font-size: 9px;
+  letter-spacing: 0;
   color: #e9e6ef;
   text-shadow: 0 1px 0 #0009;
   cursor: pointer;
@@ -825,7 +828,70 @@ body { display: flex; justify-content: center; }
 }
 .node:disabled .node__cost { color: var(--ink-mute); }
 
-/* --- tab 3: forge --- */
+/* --- tab 3: gathering skills --- */
+.skillbar {
+  flex: none;
+  padding: 6px 8px;
+  background: var(--slate-2);
+  border-bottom: 2px solid #000;
+}
+.xpbar__fill--ore { background-image: url(assets/ui/bar_gold.png); }
+
+/* One row per ore: what is in the sack, what it smelts to, and the button
+   that does it. The left rail carries the ore's own colour, the same way a
+   forge slot carries its rarity. */
+.stock {
+  flex: none;
+  display: grid;
+  gap: 4px;
+  padding: 6px 6px 0;
+}
+.ore {
+  --ore: var(--stone);
+  --px: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto auto 46px;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 3px 9px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.ore[hidden] { display: none; }
+.ore::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 3px;
+  background: var(--ore);
+}
+.ore__name { font-size: 11px; font-weight: 700; color: var(--ore); text-align: left; }
+.ore__have { font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
+.ore__have b { color: var(--cream); font-weight: 700; margin-left: 3px; }
+/* Idle it shows the exchange rate, ready it shows the bars waiting. */
+.ore__smelt {
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--ink-mute);
+}
+.ore.can-smelt .ore__smelt { color: var(--gold); }
+.ore:disabled { cursor: default; opacity: .7; }
+.ore:not(:disabled):active { transform: translateY(1px); }
+
+.mine-tools { flex: none; padding: 6px; }
+.mine-tools .slot { grid-template-columns: 26px 1fr auto; }
+
+/* --- tab 4: forge --- */
 .forge {
   flex: 1 1 auto;
   min-height: 0;

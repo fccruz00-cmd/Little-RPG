@@ -4,6 +4,7 @@ import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talent
 import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, RARITY_ODDS, describeGear } from '../data/gear.js';
+import { MINING_TREE, PICKS, ORES, ORE_BY_ID, swingTime } from '../data/mining.js';
 import { fmt, pct, mult, duration } from '../format.js';
 
 const AUTO_FORGE_EVERY = 1.5;   // seconds between Anvil forges
@@ -59,6 +60,12 @@ export class UI {
       treeSwitch: $('tree-switch'), treePoints: $('tree-points'), treeDetail: $('tree-detail'),
       respec: $('btn-respec'),
       treeTalents: $('tree-talents'), treeRelics: $('tree-relics'),
+      treeMining: $('tree-mining'), mineDetail: $('mine-detail'),
+      mineLevel: $('mine-level'), minePoints: $('mine-points'),
+      mineXpFill: $('mine-xp-fill'), mineXpText: $('mine-xp-text'),
+      stock: $('stock'), pickBuy: $('pick-buy'), pickName: $('pick-name'),
+      pickEffect: $('pick-effect'), pickCost: $('pick-cost'),
+      respecMine: $('btn-respec-mine'), pipSkills: $('pip-skills'),
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
       presGain: $('pres-gain'), presHave: $('pres-have'), presCount: $('pres-count'),
       presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
@@ -85,6 +92,8 @@ export class UI {
     this.buildShop();
     this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
+    this.buildTree(this.el.treeMining, MINING_TREE, 'mining');
+    this.buildStock();
     this.buildForge();
     this.bind();
 
@@ -224,17 +233,43 @@ export class UI {
     // can, and the line below explains what happened.
     for (const entry of this.nodes) {
       entry.button.addEventListener('click', () => {
-        const bought = entry.kind === 'talent'
-          ? state.buyTalent(entry.branch, entry.index)
+        const bought = entry.kind === 'talent' ? state.buyTalent(entry.branch, entry.index)
+          : entry.kind === 'mining' ? state.buyMineTalent(entry.branch, entry.index)
           : state.buyRelic(entry.branch, entry.index);
         if (bought) state.save();
         this.describe(entry);
-        this.refreshTrees(true);
+        if (entry.kind === 'mining') this.refreshMining(); else this.refreshTrees(true);
       });
       const show = () => this.describe(entry);
       entry.button.addEventListener('pointerenter', show);
       entry.button.addEventListener('focus', show);
     }
+
+    el.stock.addEventListener('click', (e) => {
+      const row = e.target.closest('.ore');
+      if (!row) return;
+      const bars = state.smelt(row.dataset.ore);
+      if (!bars) return;
+      state.save();
+      this.toast({ text: `+${fmt(bars)} ${ORE_BY_ID[row.dataset.ore].name} bar(s)` });
+      this.refreshMining();
+    });
+
+    el.pickBuy.addEventListener('click', () => {
+      const next = state.nextPick;
+      if (!state.buyPick()) return;
+      state.save();
+      this.toast({ text: `${next.name.toUpperCase()}!` });
+      this.refreshMining();
+    });
+
+    el.respecMine.addEventListener('click', () => {
+      if (!state.mineSpentPoints) return;
+      if (!confirm('Refund every mining point so you can respend them?')) return;
+      state.respecMining();
+      state.save();
+      this.refreshMining();
+    });
 
     el.forgeList.addEventListener('click', (e) => {
       const button = e.target.closest('.slot');
@@ -297,6 +332,7 @@ export class UI {
       pane.classList.toggle('is-on', pane.id === `pane-${name}`);
     }
     if (name === 'talents') this.refreshTrees(true);
+    if (name === 'skills') this.refreshMining();
     if (name === 'forge') this.refreshForge();
     if (name === 'prestige') this.refreshPrestige();
   }
@@ -314,12 +350,20 @@ export class UI {
     this.refreshTrees(true);
   }
 
+  /** Where a tree keeps its ranks. One map per kind, same shape. */
+  ranksFor(kind) {
+    if (kind === 'relic') return this.state.relicTalents;
+    if (kind === 'mining') return this.state.miningTalents;
+    return this.state.talents;
+  }
+
   /** Explanation line for the node being touched. */
   describe(entry) {
     const { state } = this;
     const { node, kind, branch, index } = entry;
-    const ranks = (kind === 'talent' ? state.talents : state.relicTalents)[node.id] ?? 0;
-    const locked = !state.isUnlocked(branch, index, kind === 'talent' ? state.talents : state.relicTalents);
+    const ranksOf = this.ranksFor(kind);
+    const ranks = ranksOf[node.id] ?? 0;
+    const locked = !state.isUnlocked(branch, index, ranksOf);
 
     const now = ranks > 0 ? `now: ${describeNode(node, ranks)}` : 'no points yet';
     let line;
@@ -331,7 +375,7 @@ export class UI {
       const price = kind === 'relic' ? `${relicCost(node, ranks)} relic(s)` : '1 point';
       line = `<b>${node.name}</b> (${ranks}/${node.max}), ${now}. Next point: <b>${describeNode(node, ranks + 1)}</b> for ${price}.`;
     }
-    setHtml(this.el.treeDetail, line);
+    setHtml(kind === 'mining' ? this.el.mineDetail : this.el.treeDetail, line);
   }
 
   toast({ text, bad = false }) {
@@ -383,6 +427,8 @@ export class UI {
 
     // "there is something to spend here" markers
     el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
+    el.pipSkills.hidden = state.mineFreePoints <= 0 && !state.canBuyPick();
+    el.pipSkills.classList.add('pip--gold');
     el.pipPrestige.hidden = state.pendingRelics <= 0;
     el.pipPrestige.classList.add('pip--gold');
     el.tabForge.hidden = !state.forgeUnlocked;
@@ -397,6 +443,7 @@ export class UI {
 
     if (this.tab === 'upgrades') this.refreshShop();
     else if (this.tab === 'talents') this.refreshTrees();
+    else if (this.tab === 'skills') this.refreshMining();
     else if (this.tab === 'forge') this.refreshForge();
     else this.refreshPrestige();
   }
@@ -583,6 +630,86 @@ export class UI {
     }
   }
 
+  /** One plaque per ore: what is in the sack, and what it smelts to. */
+  buildStock() {
+    this.stockRows = new Map();
+    for (const ore of Object.values(ORE_BY_ID)) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore';
+      row.dataset.ore = ore.id;
+      row.style.setProperty('--ore', ore.color);
+      row.innerHTML = `
+        <span class="ore__name">${ore.name}</span>
+        <span class="ore__have"><i class="ico ico--sm ico--ore"></i><b>0</b></span>
+        <span class="ore__have"><i class="ico ico--sm ico--bar"></i><b>0</b></span>
+        <span class="ore__smelt">smelt</span>`;
+      this.el.stock.append(row);
+      this.stockRows.set(ore.id, {
+        ore, row,
+        raw: row.querySelectorAll('b')[0],
+        bars: row.querySelectorAll('b')[1],
+        smelt: row.querySelector('.ore__smelt'),
+      });
+    }
+  }
+
+  refreshMining() {
+    const { state, el } = this;
+
+    setText(el.mineLevel, String(state.mineLevel));
+    const need = state.mineXpNeeded;
+    el.mineXpFill.style.width = `${Math.min(100, (state.mineXp / need) * 100).toFixed(1)}%`;
+    setText(el.mineXpText, `${fmt(state.mineXp)} / ${fmt(need)}`);
+    setHtml(el.minePoints, `<b>${state.mineFreePoints}</b> free point(s)`);
+
+    // An ore stays hidden until the stage that carries it, so the sack does
+    // not spoil what is coming.
+    const known = new Set(state.knownOres().map((o) => o.id));
+    for (const [id, entry] of this.stockRows) {
+      entry.row.hidden = !known.has(id);
+      if (entry.row.hidden) continue;
+      const raw = Math.floor(state.ore[id] ?? 0);
+      const bars = state.bars[id] ?? 0;
+      const canSmelt = state.smeltableBars(id);
+      setText(entry.raw, fmt(raw));
+      setText(entry.bars, fmt(bars));
+      setText(entry.smelt, canSmelt > 0 ? `+${fmt(canSmelt)}` : `${state.smeltCostFor(id)}:1`);
+      entry.row.disabled = canSmelt <= 0;
+      entry.row.classList.toggle('can-smelt', canSmelt > 0);
+    }
+
+    const pick = PICKS[state.pick];
+    const next = state.nextPick;
+    // The pick one tier up reaches the ore of that same tier, which is the
+    // whole reason to buy it; speed and yield are the sweetener.
+    const unlocks = next ? ORES.find((o) => o.tier === next.tier) : null;
+    setText(el.pickName, next ? `${pick.name} \u2794 ${next.name}` : pick.name);
+    setText(el.pickEffect, next
+      ? `${swingTime(next.tier, state.bonus).toFixed(2)}s a vein, ${mult(next.yield)} ore`
+        + (unlocks ? `, reaches ${unlocks.name}` : '')
+      : `${swingTime(state.pick, state.bonus).toFixed(2)}s a vein, ${mult(pick.yield)} ore`);
+    setText(el.pickCost, next
+      ? `${fmt(state.bars[next.cost.ore] ?? 0)}/${next.cost.bars} ${ORE_BY_ID[next.cost.ore].name}`
+      : 'maxed');
+    el.pickBuy.disabled = !state.canBuyPick();
+    el.pickBuy.style.setProperty('--rar', next ? ORE_BY_ID[next.cost.ore].color : '#ebb85b');
+
+    for (const entry of this.nodes) {
+      if (entry.kind !== 'mining') continue;
+      const ranks = state.miningTalents[entry.node.id] ?? 0;
+      const unlocked = state.isUnlocked(entry.branch, entry.index, state.miningTalents);
+      const canBuy = state.canBuyMineTalent(entry.branch, entry.index);
+      entry.button.disabled = !canBuy;
+      entry.button.classList.toggle('is-ranked', ranks > 0);
+      entry.button.classList.toggle('is-full', ranks >= entry.node.max);
+      entry.button.classList.toggle('is-locked', !unlocked);
+      entry.button.classList.toggle('can-buy', canBuy);
+      setText(entry.rank, `${ranks}/${entry.node.max}`);
+      if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
+    }
+  }
+
   refreshStatbar() {
     const { state, el } = this;
     setText(el.sbDps, fmt(state.dps));
@@ -600,6 +727,7 @@ export class UI {
       : `<b>${state.freePoints}</b> free point(s)`);
 
     for (const entry of this.nodes) {
+      if (entry.kind === 'mining') continue; // its own tab, its own refresh
       const isRelic = entry.kind === 'relic';
       if (isRelic !== relicMode) continue; // the other tree is hidden
 

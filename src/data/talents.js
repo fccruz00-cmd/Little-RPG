@@ -21,6 +21,9 @@ export const BONUS_KEYS = [
   'dustChance', 'dustMul', 'bossTime', 'autoBuy', 'autoCraft',
   // combat skills
   'doubleHit', 'lifesteal', 'executeMul', 'ambush',
+  // mining
+  'oreMul', 'oreDouble', 'nodeMul', 'mineSpeed', 'mineXpMul', 'smeltLess',
+  'nodeGold', 'nodeDust',
 ];
 
 /** Seconds between automatic purchases at the first rank of Herald. */
@@ -136,6 +139,11 @@ export function describeNode(node, ranks) {
     case 'lifesteal':    return `heals ${pct(total)} of damage dealt`;
     case 'executeMul':   return `+${pct(total)} damage below 30% health`;
     case 'ambush':       return `+${pct(total)} on the first hit on each enemy`;
+    case 'oreDouble':    return `+${pct(total)} chance a vein pays twice`;
+    case 'mineSpeed':    return `${pct(total)} faster to work a vein`;
+    case 'smeltLess':    return `${pct(total)} less ore per bar`;
+    case 'nodeGold':     return `veins also pay ${total.toFixed(2)}x a mob's gold`;
+    case 'nodeDust':     return `+${pct(total)} chance a vein drops dust`;
     default:             return `${mult(1 + total)} ${LABEL[node.key] ?? ''}`.trim();
   }
 }
@@ -149,6 +157,9 @@ const LABEL = {
   goldMul: 'gold',
   xpMul: 'XP',
   moveMul: 'stride',
+  oreMul: 'ore per vein',
+  nodeMul: 'veins on the road',
+  mineXpMul: 'mining XP',
 };
 
 /** Relic cost to take a node from `ranks` to `ranks + 1`. */

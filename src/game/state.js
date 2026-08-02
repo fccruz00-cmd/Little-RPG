@@ -6,15 +6,19 @@ import { TALENT_TREE, RELIC_TREE, BONUS_KEYS, relicCost } from '../data/talents.
 import { relicsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
+import {
+  ORES, ORE_BY_ID, PICKS, MINING, MINING_TREE, mineXpToNext, smeltCost,
+} from '../data/mining.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
   'dmgMul', 'atkSpeedMul', 'hpMul', 'regenMul', 'goldMul', 'xpMul', 'moveMul',
   'damageTaken', 'respawnMul', 'dustMul',
+  'oreMul', 'nodeMul', 'mineSpeed', 'mineXpMul', 'smeltLess',
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -43,6 +47,14 @@ function defaults() {
     dust: 0,
     gear: {},        // slotId -> index of the equipped rarity
     autoCraftOn: true,
+
+    // mining
+    mineLevel: 1,
+    mineXp: 0,
+    miningTalents: {},
+    ore: {},          // oreId -> count
+    bars: {},         // oreId -> count
+    pick: 0,          // pickaxe tier
 
     buyMax: false,
     goldPerSec: 0,
@@ -81,9 +93,9 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 3) {
+  if (data.version >= 1 && data.version <= 4) {
     // v1: before levels/talents/prestige. v2: before the forge.
-    // v3: before the ids were translated.
+    // v3: before the ids were translated. v4: before mining.
     return {
       ...defaults(),
       ...data,
@@ -104,6 +116,9 @@ export class GameState {
     this.talents = { ...(data.talents ?? {}) };
     this.relicTalents = { ...(data.relicTalents ?? {}) };
     this.gear = { ...(data.gear ?? {}) };
+    this.miningTalents = { ...(data.miningTalents ?? {}) };
+    this.ore = { ...(data.ore ?? {}) };
+    this.bars = { ...(data.bars ?? {}) };
     this._bonus = null;
     this.hp = this.maxHp;
     this._saveTimer = 0;
@@ -136,6 +151,7 @@ export class GameState {
     };
     for (const branch of TALENT_TREE) for (const n of branch.nodes) apply(n, this.talents[n.id] ?? 0);
     for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
+    for (const branch of MINING_TREE) for (const n of branch.nodes) apply(n, this.miningTalents[n.id] ?? 0);
 
     // Gear comes in through the same path: a slot is just one more bonus
     // source, with the value pinned by rarity.
@@ -263,6 +279,106 @@ export class GameState {
   respecTalents() {
     this.talents = {};
     this.invalidateBonus();
+  }
+
+  // --- mining -------------------------------------------------------
+  // Mining survives rebirth on purpose. It pays in access and conversion,
+  // never in damage, so it cannot compound with the combat curve; and wiping
+  // it every prestige would make a long chain of picks pointless when
+  // rebirths come every few hours.
+  get mineXpNeeded() {
+    return mineXpToNext(this.mineLevel);
+  }
+
+  get minePoints() {
+    return (this.mineLevel - 1) * MINING.pointsPerLevel;
+  }
+
+  get mineSpentPoints() {
+    return Object.values(this.miningTalents).reduce((sum, r) => sum + r, 0);
+  }
+
+  get mineFreePoints() {
+    return Math.max(0, this.minePoints - this.mineSpentPoints);
+  }
+
+  /** Adds mining XP. Returns how many levels it crossed. */
+  gainMineXp(amount) {
+    this.mineXp += amount * this.bonus.mineXpMul;
+    let gained = 0;
+    while (this.mineXp >= this.mineXpNeeded) {
+      this.mineXp -= this.mineXpNeeded;
+      this.mineLevel += 1;
+      gained += 1;
+    }
+    return gained;
+  }
+
+  canBuyMineTalent(branch, index) {
+    const node = branch.nodes[index];
+    const ranks = this.miningTalents[node.id] ?? 0;
+    return ranks < node.max
+      && this.mineFreePoints > 0
+      && this.isUnlocked(branch, index, this.miningTalents);
+  }
+
+  buyMineTalent(branch, index) {
+    if (!this.canBuyMineTalent(branch, index)) return false;
+    const node = branch.nodes[index];
+    this.miningTalents[node.id] = (this.miningTalents[node.id] ?? 0) + 1;
+    this.invalidateBonus();
+    return true;
+  }
+
+  respecMining() {
+    this.miningTalents = {};
+    this.invalidateBonus();
+  }
+
+  addOre(oreId, amount) {
+    this.ore[oreId] = (this.ore[oreId] ?? 0) + amount;
+  }
+
+  smeltCostFor(oreId) {
+    return smeltCost(ORE_BY_ID[oreId], this.bonus);
+  }
+
+  /** How many bars the ore on hand is worth right now. */
+  smeltableBars(oreId) {
+    return Math.floor((this.ore[oreId] ?? 0) / this.smeltCostFor(oreId));
+  }
+
+  /** Smelts everything it can of one ore. Returns the bars produced. */
+  smelt(oreId) {
+    const bars = this.smeltableBars(oreId);
+    if (bars <= 0) return 0;
+    this.ore[oreId] -= bars * this.smeltCostFor(oreId);
+    this.bars[oreId] = (this.bars[oreId] ?? 0) + bars;
+    return bars;
+  }
+
+  /** The pick one tier above the one in hand, or null at the top. */
+  get nextPick() {
+    return PICKS[this.pick + 1] ?? null;
+  }
+
+  canBuyPick() {
+    const next = this.nextPick;
+    return !!next && (this.bars[next.cost.ore] ?? 0) >= next.cost.bars;
+  }
+
+  buyPick() {
+    if (!this.canBuyPick()) return false;
+    const next = this.nextPick;
+    this.bars[next.cost.ore] -= next.cost.bars;
+    this.pick += 1;
+    return true;
+  }
+
+  /** Ores the player has ever been able to see, for the UI. */
+  knownOres() {
+    return ORES.filter((o) => this.bestStage >= o.minStage
+      || (this.ore[o.id] ?? 0) > 0 || (this.bars[o.id] ?? 0) > 0);
   }
 
   // --- forge --------------------------------------------------------
@@ -412,12 +528,14 @@ export class GameState {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
+      mineLevel, mineXp, miningTalents, ore, bars, pick,
       buyMax, goldPerSec,
     } = this;
     return {
       version: SAVE_VERSION,
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
+      mineLevel, mineXp, miningTalents, ore, bars, pick,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }

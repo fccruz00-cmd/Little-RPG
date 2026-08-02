@@ -78,6 +78,7 @@ export class Renderer {
     ctx.imageSmoothingEnabled = false;
 
     this.drawBackground(camX, biome, time);
+    this.drawVeins(battle, camX);
 
     for (const corpse of battle.corpses) this.drawActor(corpse, camX, { fade: corpse.corpseTimer });
     if (battle.enemy) this.drawActor(battle.enemy, camX);
@@ -190,6 +191,64 @@ export class Renderer {
       ctx.lineTo(x + 7, baseY - h + 4);
       ctx.closePath();
       ctx.fill();
+    }
+  }
+
+  // --- ore veins ----------------------------------------------------
+  /**
+   * A boulder with the ore showing through it. Drawn rather than blitted,
+   * because the arena is about 92 world px tall and a vein has to read at
+   * ten pixels wide, which no icon from the packs survives being scaled to.
+   * A locked vein keeps its ore colour but goes grey and gets a chain of
+   * dots over it, so "come back with a better pick" is legible at a glance.
+   */
+  drawVeins(battle, camX) {
+    const { ctx, groundY } = this;
+    for (const vein of battle.veins) {
+      const x = Math.round(vein.x - camX);
+      if (x < -20 || x > this.width + 20) continue;
+
+      const nudge = vein.shake > 0 ? (Math.random() < 0.5 ? 1 : 0) : 0;
+      const bx = x - 5 + nudge;
+      const by = groundY - 9;
+
+      if (vein.spent) {
+        // worked out: rubble left on the ground
+        ctx.fillStyle = '#00000055';
+        ctx.fillRect(bx + 1, groundY - 2, 8, 2);
+        continue;
+      }
+
+      // rock body
+      ctx.fillStyle = vein.locked ? '#3b3a3e' : '#4a3f39';
+      ctx.fillRect(bx + 1, by + 2, 9, 7);
+      ctx.fillRect(bx + 2, by, 7, 3);
+      ctx.fillStyle = vein.locked ? '#57565c' : '#6a5a4e';
+      ctx.fillRect(bx + 2, by + 1, 6, 2);
+
+      // ore showing through
+      ctx.fillStyle = vein.locked ? '#2f2e33' : vein.ore.color;
+      ctx.globalAlpha = vein.locked ? 0.45 : 1;
+      ctx.fillRect(bx + 3, by + 3, 2, 2);
+      ctx.fillRect(bx + 6, by + 5, 2, 2);
+      ctx.fillRect(bx + 4, by + 7, 1, 1);
+      ctx.globalAlpha = 1;
+
+      if (vein.locked) {
+        ctx.fillStyle = '#e6dccb';
+        ctx.fillRect(bx + 4, by - 3, 4, 1);
+        ctx.fillRect(bx + 5, by - 5, 2, 2);
+        continue;
+      }
+
+      // progress pips while the hero works it
+      if (battle.mining === vein) {
+        const done = Math.min(1, vein.progress / Math.max(0.01, battle.veinSwingTime));
+        ctx.fillStyle = '#150f0d';
+        ctx.fillRect(bx, by - 4, 11, 3);
+        ctx.fillStyle = vein.ore.color;
+        ctx.fillRect(bx + 1, by - 3, Math.round(9 * done), 1);
+      }
     }
   }
 
@@ -375,4 +434,5 @@ const FLOATER_STYLE = {
   gold:   { color: '#8bd450', size: 20, prefix: '+' },
   player: { color: '#ff7b6b', size: 22, prefix: '-' },
   dust:   { color: '#c79ae8', size: 20, prefix: '+' },
+  ore:    { color: '#dacea4', size: 20, prefix: '+' },
 };

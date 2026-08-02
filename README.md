@@ -6,7 +6,7 @@ clears stages. All you decide is where the gold goes.
 
 The layout follows the three bands from the original sketch: **UI** on top,
 **Fight** in the middle, and a tabbed panel below with **Upgrades**,
-**Skills**, **Forge** and **Prestige**.
+**Talents**, **Skills**, **Forge** and **Prestige**.
 
 ```
 +------------------------------+
@@ -15,7 +15,7 @@ The layout follows the three bands from the original sketch: **UI** on top,
 |      hero ---->  monster     |  Fight
 |  scrolling ground, parallax  |
 +------------------------------+
-| Upgrades | Skills | Prestige |  tabs
+| Upgrades | Talents | Skills |  tabs
 |  Damage           Lv. 12 221 |
 |  Attack Speed     Lv.  6 181 |
 +------------------------------+
@@ -96,22 +96,57 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The four tabs
+### The five tabs
 
 1. **Upgrades**: stats bought with **gold**, wiped on rebirth.
-2. **Skills**: two trees behind one switch at the top.
-   - *Skills*, paid with **level points** (one per level). Wiped on rebirth,
+2. **Talents**: two trees behind one switch at the top.
+   - *Talents*, paid with **level points** (one per level). Wiped on rebirth,
      and you can respec at any time.
    - *Relics*, the prestige tree, paid with **relics**. Permanent.
    - In both, a node only opens once the previous one in its branch has a point.
-3. **Forge**: only appears after the first rebirth.
-4. **Prestige**: rebirth. Wipes stage, gold, upgrades, level and skill points,
+3. **Skills**: gathering. **Mining** today, see below.
+4. **Forge**: only appears after the first rebirth.
+5. **Prestige**: rebirth. Wipes stage, gold, upgrades, level and skill points,
    and turns the depth of the run into relics. The first one lands at stage 25;
    since the formula is cumulative minus what you already collected, repeating
    the same depth does not pay twice.
 
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**, 1,498 relics to fill completely.
+
+### Mining
+
+Ore veins spawn on the same line the hero already walks. It stops, swings,
+and picks up ore, with no input from you. Five ores gated by depth (copper,
+iron at stage 8, silver at 20, gold at 36, mithril at 55), each smelted into
+**bars** at a fixed ore-per-bar rate, and bars buy the next **pickaxe**.
+
+Each pick is paid for in the bars of the ore the previous one unlocked, so
+the chain bootstraps: copper buys the pick that reaches iron, iron buys the
+pick that reaches silver. A vein your pick cannot handle still shows up about
+a quarter of the time, greyed with a marker over it, because a vein you walk
+past teaches "upgrade your pick" better than one that never spawns.
+
+Mining has its **own level and its own tree** (84 points across Prospect,
+Delve and Refine), fed only by mining XP. All of it, level, tree, ore, bars
+and pick, **survives rebirth**.
+
+Two numbers are worth knowing:
+
+- **Mining costs no stage progress.** Measured over ten simulated minutes at
+  stages 3, 10, 25, 40 and 60, stopping to swing cost zero stages and within
+  3% of the same gold. Travel is never the bottleneck: enemies walk toward
+  you, so a swing only changes where you meet them, not when. The real
+  tradeoff arrives with the second skill, when one tool slot has to choose
+  between a pickaxe, an axe and a rod.
+- **Mining never pays into damage.** Kills produce ore, so ore producing
+  damage would rebuild exactly the compounding loop the stat caps exist to
+  prevent. It pays in access (picks now, dungeon keys later), in conversion
+  (bars), and in two flat per-vein trickles, *Coin Seam* and *Soul Seam*,
+  which are bounded by the kill rate because vein rate is kill rate.
+
+Bars pile up past what the picks need, on purpose. They are what dungeon keys
+will want; until then picks are the only sink.
 
 ### Forge and soul dust
 
@@ -159,6 +194,7 @@ src/
   format.js         1.2K, 340M, 5.07aa...
   data/
     balance.js      EVERY progression number, the file to rebalance
+    mining.js       ores, picks, smelting and the mining tree
     enemies.js      roster, when each mob unlocks, bosses
     upgrades.js     what shows up in the shop
     levels.js       XP curve and gain per kill

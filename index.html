@@ -55,7 +55,10 @@
     <nav class="tabs" id="tabs" role="tablist">
       <button class="tab is-on" data-tab="upgrades" type="button" role="tab">Upgrades</button>
       <button class="tab" data-tab="talents" type="button" role="tab">
-        Skills<i class="pip" id="pip-talents" hidden></i>
+        Talents<i class="pip" id="pip-talents" hidden></i>
+      </button>
+      <button class="tab" data-tab="skills" type="button" role="tab">
+        Skills<i class="pip" id="pip-skills" hidden></i>
       </button>
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
@@ -87,7 +90,7 @@
     <div class="pane" id="pane-talents">
       <div class="pane__head">
         <div class="segmented" id="tree-switch">
-          <button class="is-on" data-tree="talents" type="button">Skills</button>
+          <button class="is-on" data-tree="talents" type="button">Talents</button>
           <button data-tree="relics" type="button">Relics</button>
         </div>
         <span class="pane__points" id="tree-points"></span>
@@ -98,7 +101,41 @@
       <div class="tree-scroll" id="tree-relics" hidden></div>
     </div>
 
-    <!-- tab 3: forge (shows up after the first rebirth) -->
+    <!-- tab 3: gathering skills. Mining today, more on the same rails. -->
+    <div class="pane" id="pane-skills">
+      <div class="pane__head">
+        <span class="pane__points">
+          <i class="ico ico--sm ico--pick"></i> Mining <b id="mine-level">1</b>
+        </span>
+        <span class="pane__points" id="mine-points"></span>
+        <button class="link" id="btn-respec-mine" type="button">respec</button>
+      </div>
+
+      <div class="skillbar">
+        <div class="xpbar" role="progressbar" aria-label="Mining experience">
+          <div class="xpbar__fill xpbar__fill--ore" id="mine-xp-fill"></div>
+          <span class="xpbar__text" id="mine-xp-text">0 / 30</span>
+        </div>
+      </div>
+
+      <div class="stock" id="stock"></div>
+
+      <div class="mine-tools">
+        <button class="slot" id="pick-buy" type="button">
+          <i class="ico ico--lg ico--pick"></i>
+          <span>
+            <span class="slot__name" id="pick-name">Worn Pick</span>
+            <span class="slot__effect" id="pick-effect"></span>
+          </span>
+          <span class="slot__cost" id="pick-cost"></span>
+        </button>
+      </div>
+
+      <p class="pane__detail" id="mine-detail">Tap a node to invest.</p>
+      <div class="tree-scroll" id="tree-mining"></div>
+    </div>
+
+    <!-- tab 4: forge (shows up after the first rebirth) -->
     <div class="pane" id="pane-forge">
       <div class="pane__head">
         <span class="pane__points"><i class="ico ico--sm ico--dust"></i> <b id="dust-have">0</b> dust</span>
@@ -115,7 +152,7 @@
       <dl class="odds" id="odds"></dl>
     </div>
 
-    <!-- tab 4: rebirth -->
+    <!-- tab 5: rebirth -->
     <div class="pane" id="pane-prestige">
       <div class="prestige">
         <div class="prestige__gain">
@@ -136,7 +173,8 @@
         <p class="prestige__note">
           Rebirth wipes <b>stage, gold, upgrades, level and skill points</b>.<br>
           You keep your <b>relics</b> and the <b>relic tree</b>, which you spend
-          on the Skills tab.
+          on the Talents tab, plus everything on the <b>Skills</b> tab:
+          mining levels, ore, bars and your pick.
         </p>
 
         <button class="big-btn" id="pres-go" type="button" disabled>Rebirth</button>

@@ -104,6 +104,10 @@ ICONS = [
     ("dust",          1, 481),  # soul dust
     ("gear",          1, 0),    # cog, automation
     ("bolt",          0, 220),  # bolt, skills
+    # mining
+    ("ore",           5, 482),  # raw stone
+    ("bar",           9, 486),  # stockpiled bars
+    ("pick",          2, 337),  # pickaxe
 ]
 ICON_SIZE = 32
 
