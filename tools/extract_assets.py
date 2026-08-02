@@ -41,12 +41,34 @@ ROSTER = {
 ANIMS = {"idle": "Idle", "walk": "Walk", "attack": "Attack01", "hurt": "Hurt", "death": "Death"}
 
 # Mini Medieval UI crops (sheet, x, y, w, h) -> assets/ui/<name>.png
+#
+# Every one of these is 9-sliced in styles.css, so the crop has to line up with
+# a slice that leaves the middle of each edge uniform. Crop one pixel off and
+# the stretched edge smears a bevel across the whole side.
 UI_CROPS = {
+    # buttons
     "button":          ("Inputs.png", 7, 7, 26, 12),
     "button_pressed":  ("Inputs.png", 8, 24, 24, 10),
     "button_disabled": ("Inputs.png", 127, 7, 26, 12),
-    "panel":           ("Frames.png", 85, 5, 30, 32),
-    "banner":          ("Inputs.png", 3, 165, 34, 15),
+    "scroll":          ("Inputs.png", 3, 165, 34, 15),
+    # frames, 9-sliced for tree nodes: gems dark when empty, lit when maxed
+    "frame_gem":       ("Frames.png", 4, 84, 32, 33),
+    "frame_lit":       ("Frames.png", 164, 84, 32, 33),
+    # board with stone studs: the frame every card and panel is built from
+    "board":           ("Banners.png", 182, 310, 20, 21),
+    # plank banners used as headers and strips
+    "plank":           ("Banners.png", 216, 30, 32, 9),
+    "plank_tall":      ("Banners.png", 304, 30, 32, 18),
+    # seamless plank tile (rows 1..6 of a plank, period 3) for panel fills
+    "wood":            ("Banners.png", 216, 31, 32, 6),
+    # bars: one hollow track plus a fill per colour
+    "bar_track":       ("Bars-Sliders-Scrollbars.png", 0, 97, 24, 6),
+    "bar_red":         ("Bars-Sliders-Scrollbars.png", 1, 122, 22, 3),
+    "bar_violet":      ("Bars-Sliders-Scrollbars.png", 73, 122, 22, 3),
+    "bar_gold":        ("Bars-Sliders-Scrollbars.png", 97, 122, 22, 3),
+    # checkbox
+    "check_off":       ("Inputs.png", 1, 264, 7, 8),
+    "check_on":        ("Inputs.png", 33, 264, 7, 8),
 }
 
 # Raven Fantasy icons: name, column, row on the 32x32 sheet (16 columns)

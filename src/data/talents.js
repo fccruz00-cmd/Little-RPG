@@ -29,7 +29,7 @@ export const AUTO_BUY_BASE = 6;
 // --- skill tree (level points) --------------------------------------
 export const TALENT_TREE = [
   {
-    id: 'fury', name: 'Fury', accent: '#d9534f',
+    id: 'fury', name: 'Fury', accent: '#e67146',
     nodes: [
       { id: 'edge',      name: 'Keen Edge',  icon: 'damage',       max: 10, key: 'dmgMul',       mode: 'mul',  per: 0.06 },
       { id: 'haste',     name: 'Haste',      icon: 'attack_speed', max: 8,  key: 'atkSpeedMul',  mode: 'mul',  per: 0.04 },
@@ -38,7 +38,7 @@ export const TALENT_TREE = [
     ],
   },
   {
-    id: 'guard', name: 'Guard', accent: '#5fa8d3',
+    id: 'guard', name: 'Guard', accent: '#5aa9c9',
     nodes: [
       { id: 'leather',   name: 'Tough Hide', icon: 'health', max: 10, key: 'hpMul',       mode: 'mul',  per: 0.08 },
       { id: 'stamina',   name: 'Stamina',    icon: 'regen',  max: 8,  key: 'regenMul',    mode: 'mul',  per: 0.12 },
@@ -47,7 +47,7 @@ export const TALENT_TREE = [
     ],
   },
   {
-    id: 'fortune', name: 'Fortune', accent: '#f0a63c',
+    id: 'fortune', name: 'Fortune', accent: '#ebb85b',
     nodes: [
       { id: 'pockets', name: 'Deep Pockets', icon: 'gold',   max: 10, key: 'goldMul',   mode: 'mul', per: 0.08 },
       { id: 'lore',    name: 'Lore',         icon: 'book',   max: 8,  key: 'xpMul',     mode: 'mul', per: 0.08 },
@@ -62,7 +62,7 @@ export const TALENT_TREE = [
 // that costs one more.
 export const RELIC_TREE = [
   {
-    id: 'power', name: 'Power', accent: '#d9534f',
+    id: 'power', name: 'Power', accent: '#e67146',
     nodes: [
       { id: 'legacy',       name: 'Legacy',        icon: 'torch',        max: 15, cost: 1, key: 'dmgMul',       mode: 'mul', per: 0.15 },
       { id: 'ancientFury',  name: 'Ancient Fury',  icon: 'attack_speed', max: 8,  cost: 3, key: 'atkSpeedMul',  mode: 'mul', per: 0.05 },
@@ -71,7 +71,7 @@ export const RELIC_TREE = [
     ],
   },
   {
-    id: 'wealth', name: 'Wealth', accent: '#f0a63c',
+    id: 'wealth', name: 'Wealth', accent: '#ebb85b',
     nodes: [
       { id: 'vault',    name: 'Vault',    icon: 'bag',   max: 15, cost: 1, key: 'goldMul',    mode: 'mul', per: 0.20 },
       { id: 'wisdom',   name: 'Wisdom',   icon: 'book',  max: 12, cost: 2, key: 'xpMul',      mode: 'mul', per: 0.20 },
@@ -80,7 +80,7 @@ export const RELIC_TREE = [
     ],
   },
   {
-    id: 'essence', name: 'Essence', accent: '#8bc34a',
+    id: 'essence', name: 'Essence', accent: '#6dba79',
     nodes: [
       { id: 'vigor',    name: 'Vigor',    icon: 'shield', max: 15, cost: 1, key: 'hpMul',       mode: 'mul',  per: 0.20 },
       { id: 'soul',     name: 'Soul',     icon: 'orb',    max: 12, cost: 2, key: 'regenMul',    mode: 'mul',  per: 0.25 },
@@ -89,7 +89,7 @@ export const RELIC_TREE = [
     ],
   },
   {
-    id: 'automation', name: 'Automation', accent: '#5fa8d3',
+    id: 'automation', name: 'Automation', accent: '#5aa9c9',
     nodes: [
       { id: 'herald',    name: 'Herald',    icon: 'gear',  max: 5,  cost: 3,  key: 'autoBuy',    mode: 'add', per: 1 },
       { id: 'collector', name: 'Collector', icon: 'dust',  max: 10, cost: 2,  key: 'dustChance', mode: 'add', per: 0.04 },
@@ -98,7 +98,7 @@ export const RELIC_TREE = [
     ],
   },
   {
-    id: 'skills', name: 'Skills', accent: '#e0c341',
+    id: 'skills', name: 'Skills', accent: '#c9c03d',
     nodes: [
       { id: 'doubleStrike', name: 'Double Strike', icon: 'bolt',   max: 10, cost: 2, key: 'doubleHit',  mode: 'add', per: 0.04 },
       { id: 'bloodthirst',  name: 'Bloodthirst',   icon: 'regen',  max: 10, cost: 3, key: 'lifesteal',  mode: 'add', per: 0.01 },
@@ -107,7 +107,7 @@ export const RELIC_TREE = [
     ],
   },
   {
-    id: 'time', name: 'Time', accent: '#a678d6',
+    id: 'time', name: 'Time', accent: '#b072c9',
     nodes: [
       { id: 'respite', name: 'Respite', icon: 'boss',   max: 6, cost: 3, key: 'bossTime',   mode: 'add',  per: 5 },
       { id: 'revive',  name: 'Revive',  icon: 'orb',    max: 4, cost: 4, key: 'respawnMul', mode: 'less', per: 0.20 },

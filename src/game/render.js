@@ -15,6 +15,15 @@ function hash(n) {
   return ((x ^ (x >>> 16)) >>> 0) / 4294967295;
 }
 
+// Health bar tones, read straight out of assets/ui/bar_*.png so the bars in
+// the arena and the bars in the DOM are literally the same three colours.
+const BAR_GREEN = ['#6dba79', '#2a7d75', '#24505f'];
+const BAR_RED   = ['#e67146', '#b74132', '#7a2849'];
+const BAR_GOLD  = ['#ebb85b', '#e67146', '#b74132'];
+const BAR_TRACK = '#150f0d';
+const BAR_RAIL_DIM = '#7a6a4e';
+const BAR_TRIM = '#dacea4';   // cream rail, for the encounters worth framing
+
 // Biome palettes, swapped every 10 stages.
 const BIOMES = [
   { sky: ['#1b2340', '#3d3357'], far: '#2a2743', mid: '#1d1b31', tree: '#12101f', ground: '#2f2a3d', grass: '#4a4460' },
@@ -291,37 +300,46 @@ export class Renderer {
     const { hero, enemy } = battle;
     const W = 18;
     if (!hero.dead) {
-      this.bar(hero.x - camX - W / 2, this.headY(hero), W, 2, hero.hp / hero.maxHp, '#57b03a', '#2c1f18');
+      this.bar(hero.x - camX - W / 2, this.headY(hero), W, hero.hp / hero.maxHp, BAR_GREEN);
     }
     if (!enemy || enemy.dead) return;
 
     if (enemy.isBoss) {
       // Sits below the boss timer, which is a DOM element pinned up top.
       const w = Math.min(this.width - 24, 90);
-      this.bar((this.width - w) / 2, 17, w, 4, enemy.hp / enemy.maxHp, '#d9534f', '#20141a', '#f0a63c');
+      this.bar((this.width - w) / 2, 17, w, enemy.hp / enemy.maxHp, BAR_RED, BAR_TRIM);
     } else if (enemy.isElite) {
-      // Mini boss: amber bar, wider than a mob's and pinned to it.
-      const w = 30;
-      this.bar(enemy.x - camX - w / 2, this.headY(enemy) - 1, w, 3,
-        enemy.hp / enemy.maxHp, '#e8862b', '#2c1f18', '#f0a63caa');
+      // Mini boss: gold bar, wider than a mob's and pinned to it.
+      this.bar(enemy.x - camX - 15, this.headY(enemy) - 1, 30, enemy.hp / enemy.maxHp, BAR_GOLD, BAR_TRIM);
     } else {
-      this.bar(enemy.x - camX - W / 2, this.headY(enemy), W, 2,
-        enemy.hp / enemy.maxHp, '#c0392b', '#2c1f18');
+      this.bar(enemy.x - camX - W / 2, this.headY(enemy), W, enemy.hp / enemy.maxHp, BAR_RED);
     }
   }
 
-  bar(x, y, w, h, ratio, fill, back, border = '#00000088') {
+  /**
+   * Health bar drawn the way the Mini Medieval bars are: a cream rail around
+   * a dark track, and a fill in three one-pixel bands. The DOM bars use the
+   * sprites straight, but these are 2 to 4 px tall inside the arena, where
+   * a 9-slice would land on half pixels; painting the same pixels by hand is
+   * what keeps them matching the rest of the UI.
+   */
+  bar(x, y, w, ratio, tones, rail = BAR_RAIL_DIM) {
     const { ctx } = this;
     const px = Math.round(x);
     const py = Math.round(y);
-    ctx.fillStyle = border;
-    ctx.fillRect(px - 1, py - 1, w + 2, h + 2);
-    ctx.fillStyle = back;
+    const h = tones.length;             // one row per tone, 3 by default
+    ctx.fillStyle = '#000000aa';
+    ctx.fillRect(px - 1, py - 1, w + 2, h + 3);
+    ctx.fillStyle = rail;
+    ctx.fillRect(px - 1, py - 1, w + 2, 1);
+    ctx.fillRect(px - 1, py + h, w + 2, 1);
+    ctx.fillStyle = BAR_TRACK;
     ctx.fillRect(px, py, w, h);
-    ctx.fillStyle = fill;
-    ctx.fillRect(px, py, Math.max(0, Math.round(w * Math.min(1, Math.max(0, ratio)))), h);
-    ctx.fillStyle = '#ffffff26';
-    ctx.fillRect(px, py, w, 1);
+    const fw = Math.max(0, Math.round(w * Math.min(1, Math.max(0, ratio))));
+    for (let i = 0; i < h; i += 1) {
+      ctx.fillStyle = tones[i];
+      ctx.fillRect(px, py + i, fw, 1);
+    }
   }
 
   // --- floating numbers ----------------------------------------------

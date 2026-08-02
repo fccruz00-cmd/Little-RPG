@@ -2,10 +2,10 @@
 
 export const FRAME = 100;
 
-// Ground line shared by every frame in the pack (feet sit around y=57 and
-// the original baked shadow ran to y=60). Drawing everyone from the same
-// origin is what keeps the bat flying and the rest on the floor: snapping
-// each sprite down by its own box would land the bat.
+// Ground line shared by every frame in the pack (feet sit around y=57
+// and the original baked shadow ran to y=60). Drawing everyone from
+// the same origin is what keeps the bat flying and the rest on the
+// floor: snapping each sprite down by its own box would land the bat.
 export const GROUND_LINE = 58;
 
 export const SPRITES = {
@@ -74,6 +74,4 @@ export const SPRITES = {
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
 };
-
-export const ICONS = ["damage", "attack_speed", "crit", "crit_power", "gold", "health", "regen", "stride", "boss", "stage", "book", "shield", "orb", "crown", "torch", "dagger", "bag", "scout", "relic", "it_sword", "it_chest", "it_helm", "it_pants", "it_boot", "it_amulet", "it_ring", "dust", "gear", "bolt"];
 

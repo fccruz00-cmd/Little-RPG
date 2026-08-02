@@ -447,7 +447,7 @@ export class UI {
       row.button.classList.toggle('up--best', key === best);
 
       setText(row.effect, row.up.describe(lvl));
-      setText(row.lvl, n > 1 ? `Nv. ${lvl} → ${lvl + n}` : `Nv. ${lvl}`);
+      setText(row.lvl, n > 1 ? `Lv. ${lvl} → ${lvl + n}` : `Lv. ${lvl}`);
       setHtml(row.cost, maxed
         ? 'MAX'
         : `<i class="ico ico--gold"></i> ${fmt(price)}`);
@@ -504,7 +504,7 @@ export class UI {
       const rarity = equipped == null ? null : RARITIES[equipped];
       const cost = state.costToForge(entry.slot.id);
 
-      entry.button.style.setProperty('--rar', rarity?.color ?? '#3a3048');
+      entry.button.style.setProperty('--rar', rarity?.color ?? '#6f6e72');
       entry.button.classList.toggle('slot--empty', equipped == null);
       entry.button.classList.toggle('slot--maxed', maxed);
       entry.button.disabled = !state.canForge(entry.slot.id);

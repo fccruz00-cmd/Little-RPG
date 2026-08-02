@@ -124,7 +124,7 @@ extra points that survive rebirth.
 
 ```
 index.html          the three layout bands
-styles.css          UI (buttons and frames are 9-sliced Mini Medieval art)
+styles.css          UI: every frame, strip and bar is 9-sliced pack art
 src/
   main.js           bootstrap plus the game loop (fixed 1/60 s step)
   format.js         1.2K, 340M, 5.07aa...
@@ -187,6 +187,36 @@ The hero is the **Knight**, set by `HERO.id` in `enemies.js`, one line to swap
 for any character in the `ROSTER`. Worth knowing: the **Soldier** is the only
 model in the pack shipping with a shadow painted into the sprite, even in the
 "no shadows" folder, and it clashes with the shadow the game draws.
+
+### The interface
+
+There is no flat CSS chrome: every panel, strip, node and bar is a sprite
+from the Mini Medieval pack, 9-sliced so it scales without blurring. The
+whole vocabulary is sixteen crops:
+
+| sprite | slice | where it goes |
+|---|---|---|
+| `board` | `6 6 7 6`, no fill | every card: stat plaques, forge slots, prestige facts, boss timer, toast |
+| `button` | `3 3 4 3 fill` | shop rows, tabs, steppers, rebirth. `button_disabled` for off, `button_pressed` for `:active` |
+| `frame_gem` / `frame_lit` | `6 6 7 6` | tree nodes, gems dark when empty and lit when maxed |
+| `scroll` | `3 5 4 5 fill` | the parchment strip that explains a tab |
+| `wood` / `plank` / `plank_tall` | tiled | the wooden shelves the HUD, tabs, headers and footer sit on |
+| `bar_track` + `bar_red`/`bar_violet`/`bar_gold` | `1 1 2 1` | XP and stage progress |
+| `check_off` / `check_on` | whole | the checkboxes, in place of the browser's |
+
+Two rules keep it from falling apart:
+
+- **The crop has to match the slice.** Each crop is chosen so the middle of
+  every edge is a uniform run of pixels. One pixel off and the stretched edge
+  smears a bevel down the whole side.
+- **Wood always sits under a dark scrim.** The raw plank is a light tan, and
+  small cream text on it turns to mud.
+
+The palette in `:root` is sampled straight out of those sprites, so the
+colours in the arena, the rarity tints and the borders all come from one
+ramp. `render.js` paints the in-arena health bars with the same three tones
+as `bar_*.png` by hand: at two to four pixels tall, a 9-slice would land on
+half pixels.
 
 ### Swapping sprites
 

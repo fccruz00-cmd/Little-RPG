@@ -8,12 +8,14 @@ import { pct, mult } from '../format.js';
  * items for you with no inventory to manage.
  */
 
+// Colours are pulled toward the Mini Medieval ramp so the rarity tint sits
+// next to the pack's frames instead of fighting them.
 export const RARITIES = [
-  { id: 'white',  name: 'Common',    color: '#cfc9be', mul: 1 },
-  { id: 'green',  name: 'Uncommon',  color: '#7fc45a', mul: 2.2 },
-  { id: 'blue',   name: 'Rare',      color: '#5fa8d3', mul: 4.5 },
-  { id: 'purple', name: 'Epic',      color: '#a678d6', mul: 9 },
-  { id: 'orange', name: 'Legendary', color: '#f0a63c', mul: 18 },
+  { id: 'white',  name: 'Common',    color: '#dacea4', mul: 1 },
+  { id: 'green',  name: 'Uncommon',  color: '#6dba79', mul: 2.2 },
+  { id: 'blue',   name: 'Rare',      color: '#5aa9c9', mul: 4.5 },
+  { id: 'purple', name: 'Epic',      color: '#b072c9', mul: 9 },
+  { id: 'orange', name: 'Legendary', color: '#ebb85b', mul: 18 },
 ];
 
 /** Roll weights, same order as the rarities. They add up to 1. */

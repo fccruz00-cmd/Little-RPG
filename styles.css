@@ -1,24 +1,44 @@
 /* ============================================================
    Little RPG, an idle auto-battler
    Three bands: UI (top) / Fight (arena) / tabbed panel
+
+   The chrome is Mini Medieval art, not CSS pretending to be it:
+   every card, strip, bar and node is a 9-sliced sprite from
+   assets/ui/. The palette below is sampled straight out of those
+   sprites, so borders and fills agree instead of clashing.
    ============================================================ */
 
 :root {
-  --bg:        #14121c;
-  --bg-deep:   #0d0b13;
-  --panel:     #241f2e;
-  --panel-2:   #1b1725;
-  --ink:       #f4ead8;
-  --ink-dim:   #a2957f;
-  --gold:      #f0a63c;
-  --gold-lit:  #ffd27f;
-  --red:       #d9534f;
-  --green:     #8bc34a;
-  --blue:      #5fa8d3;
-  --violet:    #a678d6;
+  /* Mini Medieval palette, sampled from the sprites */
+  --wood:      #a15c34;
+  --wood-dk:   #764032;
+  --wood-dkr:  #402e2b;
+  --stone:     #6f6e72;
+  --stud:      #aea47e;
+  --cream:     #dacea4;
+  --gold:      #ebb85b;
+  --gold-dp:   #c78539;
+  --red:       #e67146;
+  --red-dp:    #b74132;
+  --crimson:   #7a2849;
+  --green:     #6dba79;
+  --teal:      #2a7d75;
+  --pink:      #e67a84;
+  --lime:      #c9c03d;
+
+  /* surfaces: dark end of the same warm ramp */
+  --bg:        #221a16;
+  --bg-deep:   #120e0c;
+  --slate:     #1c1512;
+  --slate-2:   #241b16;
+
+  --ink:       #f2e6c8;
+  --ink-dim:   #a89272;
+  --ink-mute:  #6f5f4c;
+  --ink-dark:  #3a2410;   /* text sitting on gold */
 
   /* pixel scale for the UI art (8px Mini Medieval sprites) */
-  --px: 3;
+  --px: 2;
   --hud-h: 76px;
 }
 
@@ -48,6 +68,30 @@ body { display: flex; justify-content: center; }
   box-shadow: 0 0 0 1px #000, 0 0 60px #0008;
   overflow: hidden;
 }
+
+/* ============================================================
+   How the Mini Medieval art is applied
+
+   board.png   frame around every card, sliced 6/6/7/6 WITHOUT `fill`, so the
+               element keeps its own background and only the frame and its
+               corner studs come from the sprite. `round` tiles the plank
+               seam down the rails instead of smearing it.
+   button.png  buttons, sliced 3/3/4/3 WITH `fill`: the gold face is part of
+               the sprite. button_disabled swaps in for the off state and
+               button_pressed for :active.
+   wood.png    seamless plank tile, 32px across and repeating every 3px down.
+               Always laid under a dark scrim: the raw plank is a light tan
+               and small cream text on it reads as mud.
+   bar_track   hollow in the middle, so a bar scales to any height and the
+               coloured fill sprite inside shows through.
+   frame_gem   tree nodes; frame_lit is the same frame with the gems lit, for
+               a node that is maxed.
+   scroll.png  parchment, sliced 3/5/4/5 WITH `fill`, for explanatory text.
+
+   Every rule below sets these inline rather than sharing a utility class,
+   because --px (the pixel scale) differs per element and the border widths
+   are derived from it.
+   ============================================================ */
 
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
@@ -98,19 +142,25 @@ body { display: flex; justify-content: center; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
 
 /* ============================================================
-   UI: top band
+   UI: top band, a wooden shelf
    ============================================================ */
 .hud {
   flex: none;
-  padding: 4px 8px 5px;
-  padding-top: calc(4px + env(safe-area-inset-top));
+  position: relative;
+  padding: 5px 8px 6px;
+  padding-top: calc(5px + env(safe-area-inset-top));
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  background: linear-gradient(#2a2337, #1d1828);
+  gap: 4px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
+  background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+  image-rendering: pixelated;
+  box-shadow: inset 0 2px 0 var(--cream), inset 0 -2px 0 var(--wood-dkr);
   border-bottom: 2px solid #000;
-  box-shadow: inset 0 -1px 0 #3a3048;
 }
+/* everything written on wood gets a hard shadow so it stays legible */
+.hud, .hud * { text-shadow: 0 1px 0 #000, 0 0 3px #0009; }
 
 .hud__row {
   display: flex;
@@ -122,7 +172,7 @@ body { display: flex; justify-content: center; }
 .hud__stage {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .hud__stage-label {
@@ -135,25 +185,47 @@ body { display: flex; justify-content: center; }
 .hud__stage-name {
   font-size: 13px;
   font-weight: 700;
-  color: var(--gold-lit);
-  text-shadow: 0 1px 0 #000;
+  color: var(--cream);
   white-space: nowrap;
 }
-.hud__stage-name.is-boss { color: var(--red); }
-.hud__stage-sub { font-size: 10px; color: var(--ink-dim); }
+.hud__stage-name.is-boss { color: #ffc7b0; }
+.hud__stage-sub { font-size: 10px; color: #e2c9a5; opacity: .85; }
 
+/* The steppers are real pack buttons, not glyphs floating on the wood. The
+   arrow is drawn with borders rather than typed: U+25B6 renders as a tofu
+   box in some monospace stacks, and a shape that small cannot survive a
+   font fallback. */
 .stepper {
-  width: 24px;
+  --px: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
   height: 26px;
+  padding: 0;
   border: 0;
-  background: transparent;
-  color: var(--gold);
-  font-size: 13px;
   cursor: pointer;
-  opacity: .85;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
 }
-.stepper:disabled { opacity: .2; cursor: default; }
-.stepper:not(:disabled):active { transform: translateY(1px); }
+.stepper::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.stepper--prev::before { border-right: 6px solid var(--ink-dark); }
+.stepper--next::before { border-left: 6px solid var(--ink-dark); }
+.stepper:disabled { border-image-source: url(assets/ui/button_disabled.png); cursor: default; }
+.stepper:disabled::before { opacity: .45; }
+.stepper:not(:disabled):active {
+  transform: translateY(1px);
+  border-image-source: url(assets/ui/button_pressed.png);
+}
 
 /* Gold is the number that runs the game: it gets size, with the per-second
    rate below it, which is what tells you whether to wait or buy now. */
@@ -169,14 +241,10 @@ body { display: flex; justify-content: center; }
   gap: 5px;
   font-size: 18px;
   font-weight: 700;
-  color: var(--gold-lit);
-  text-shadow: 0 1px 0 #000, 0 0 12px #f0a63c33;
+  color: #ffe9ae;
 }
-.purse__rate {
-  font-size: 10px;
-  color: var(--ink-dim);
-}
-.purse__rate b { color: var(--green); font-weight: 700; }
+.purse__rate { font-size: 10px; color: #e2c9a5; }
+.purse__rate b { color: #b8f0bd; font-weight: 700; }
 
 /* experience bar */
 .hud__row--xp { gap: 6px; }
@@ -185,24 +253,30 @@ body { display: flex; justify-content: center; }
   align-items: baseline;
   gap: 3px;
   font-size: 9px;
-  color: #7b6f8c;
+  color: #e2c9a5;
   white-space: nowrap;
 }
-.hud__lvl b { color: var(--violet); font-size: 13px; font-weight: 700; }
+.hud__lvl b { color: #ffe9ae; font-size: 13px; font-weight: 700; }
 
 .xpbar {
+  --px: 2;
   position: relative;
   flex: 1 1 auto;
-  height: 9px;
-  background: #100d18;
-  border: 1px solid #000;
-  border-radius: 2px;
-  overflow: hidden;
+  height: 15px;
+  border-style: solid;
+  border-width: calc(var(--px) * 1px) calc(var(--px) * 1px) calc(var(--px) * 2px);
+  border-image-source: url(assets/ui/bar_track.png);
+  border-image-slice: 1 1 2 1;
+  border-image-repeat: stretch;
+  background: #150f0d;
+  image-rendering: pixelated;
 }
 .xpbar__fill {
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, #6f42a8, var(--violet));
+  background-image: url(assets/ui/bar_violet.png);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
   transition: width .2s linear;
 }
 .xpbar__text {
@@ -211,8 +285,8 @@ body { display: flex; justify-content: center; }
   display: grid;
   place-items: center;
   font-size: 8px;
-  color: #d9cdf0;
-  text-shadow: 0 1px 0 #000a;
+  color: #ffeede;
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
 }
 
 /* ============================================================
@@ -236,25 +310,26 @@ body { display: flex; justify-content: center; }
   image-rendering: crisp-edges;
 }
 
+/* stage progress runs edge to edge along the floor of the arena */
 .arena__progress {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  height: 5px;
-  background: #00000099;
+  height: 7px;
+  background: #150f0d;
+  box-shadow: inset 0 1px 0 #000, 0 -1px 0 #0006;
 }
 .arena__progress-fill {
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, var(--gold), var(--gold-lit));
-  box-shadow: 0 0 6px #f0a63c88;
+  background-image: url(assets/ui/bar_gold.png);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
   transition: width .18s linear;
 }
-.arena__progress-fill.is-boss {
-  background: linear-gradient(90deg, #8e2b28, var(--red));
-  box-shadow: 0 0 6px #d9534f88;
-}
+.arena__progress-fill.is-boss { background-image: url(assets/ui/bar_red.png); }
 
 .arena__boss {
+  --px: 1;
   position: absolute;
   top: 6px;
   left: 50%;
@@ -262,35 +337,46 @@ body { display: flex; justify-content: center; }
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  padding: 2px 6px 3px;
   font-size: 12px;
   font-weight: 700;
-  color: #ffdede;
-  background: #2a0f10cc;
-  border: 1px solid #d9534f66;
-  border-radius: 3px;
+  color: #ffdccd;
+  text-shadow: 0 1px 0 #000;
+  background: #2a1210ee;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
 }
 .arena__boss[hidden] { display: none; }
 
 .arena__toast {
+  --px: 1;
   position: absolute;
   top: 38%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 5px 12px;
+  padding: 3px 10px 4px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: .5px;
-  color: var(--gold-lit);
-  background: #000000cc;
-  border: 1px solid #f0a63c55;
-  border-radius: 4px;
+  color: var(--cream);
+  text-shadow: 0 1px 0 #000;
+  background: #1a120eee;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
   pointer-events: none;
   animation: toast .9s ease-out;
   white-space: nowrap;
 }
 .arena__toast[hidden] { display: none; }
-.arena__toast.is-bad { color: #ffb3b3; border-color: #d9534f66; }
+.arena__toast.is-bad { color: #ffbba6; }
 @keyframes toast {
   0%   { opacity: 0; transform: translate(-50%, -30%) scale(.9); }
   15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -306,51 +392,65 @@ body { display: flex; justify-content: center; }
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--panel-2);
+  background: var(--slate);
 }
 
+/* The tab row is a wooden shelf holding four pack buttons. */
 .tabs {
   flex: none;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  background: #16121f;
-  border-bottom: 1px solid #000;
+  gap: 3px;
+  padding: 4px 4px 5px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
+  background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+  image-rendering: pixelated;
+  box-shadow: inset 0 2px 0 var(--cream), inset 0 -2px 0 var(--wood-dkr);
+  border-bottom: 2px solid #000;
 }
 .tab {
+  --px: 2;
   position: relative;
-  padding: 8px 4px 7px;
+  padding: 3px 2px 4px;
   border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
   font: inherit;
-  font-size: 11px;
-  letter-spacing: .5px;
-  color: #6f6480;
+  font-size: 10px;
+  letter-spacing: .3px;
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
   cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button_disabled.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
 }
 .tab[hidden] { display: none; }
 .tab.is-on {
-  color: var(--gold-lit);
-  background: linear-gradient(#2a2337, #221c2e);
-  border-bottom-color: var(--gold);
+  color: var(--ink-dark);
+  font-weight: 700;
+  text-shadow: 0 1px 0 #fff3;
+  border-image-source: url(assets/ui/button.png);
 }
-.tab:not(.is-on):hover { color: var(--ink-dim); }
+.tab.is-on:active { transform: translateY(1px); border-image-source: url(assets/ui/button_pressed.png); }
+.tab:not(.is-on):active { transform: translateY(1px); }
 
 .pip {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   margin-left: 4px;
-  border-radius: 50%;
-  background: var(--violet);
-  box-shadow: 0 0 5px var(--violet);
+  background: var(--red);
+  box-shadow: 0 0 0 1px #000, 0 0 5px var(--red);
   vertical-align: 2px;
   animation: pulse 1.6s ease-in-out infinite;
 }
 .pip[hidden] { display: none; }
-.pip--gold { background: var(--gold); box-shadow: 0 0 5px var(--gold); }
-@keyframes pulse { 50% { opacity: .35; } }
+.pip--gold { background: var(--gold); box-shadow: 0 0 0 1px #000, 0 0 5px var(--gold); }
+@keyframes pulse { 50% { opacity: .3; } }
 
 .pane {
   display: none;
@@ -360,75 +460,119 @@ body { display: flex; justify-content: center; }
 }
 .pane.is-on { display: flex; }
 
+/* section headers ride on a thin plank */
 .pane__head {
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 10px;
-  border-bottom: 1px solid #000;
-  background: #221c2e;
+  padding: 5px 8px 6px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank_tall.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
+  border-bottom: 2px solid #000;
 }
-.pane__hint { font-size: 10px; color: #6f6480; }
-.pane__points { font-size: 11px; color: var(--ink-dim); white-space: nowrap; margin-left: auto; }
+.pane__head, .pane__head * { text-shadow: 0 1px 0 #000; }
+.pane__hint { font-size: 10px; color: #e2c9a5; }
+.pane__points { font-size: 11px; color: var(--cream); white-space: nowrap; margin-left: auto; }
 .pane__head .link[hidden] { display: none; }
-.pane__points b { color: var(--violet); }
-.pane__points.is-relic b { color: var(--gold); }
+.pane__points b { color: #ffe9ae; }
+.pane__points.is-relic b { color: #ffe9ae; }
 
+/* explanatory text sits on the parchment scroll from the pack */
 .pane__detail {
+  --px: 2;
   flex: none;
-  padding: 6px 10px;
+  margin: 6px 6px 0;
+  padding: 4px 10px 5px;
   font-size: 10px;
   line-height: 1.35;
-  color: var(--ink-dim);
-  background: #16121f;
-  border-bottom: 1px solid #000;
+  color: #4a3316;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 5px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/scroll.png);
+  border-image-slice: 3 5 4 5 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
 }
-.pane__detail b { color: var(--ink); }
+.pane__detail b { color: #2e1d07; }
 
 .toggle {
   display: flex;
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: var(--ink-dim);
+  color: var(--cream);
   cursor: pointer;
   user-select: none;
 }
-.toggle input { accent-color: var(--gold); width: 13px; height: 13px; }
-
-.segmented {
-  display: flex;
-  border: 1px solid #000;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.segmented button {
-  padding: 4px 10px;
-  border: 0;
-  background: #16121f;
-  font: inherit;
-  font-size: 10px;
-  color: #6f6480;
+/* real pack checkbox instead of the browser's */
+.toggle input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+  background-image: url(assets/ui/check_off.png);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
   cursor: pointer;
 }
-.segmented button.is-on { background: var(--gold); color: #3a2410; font-weight: 700; }
+.toggle input:checked { background-image: url(assets/ui/check_on.png); }
 
-/* stat strip at the top of the shop */
+.segmented { display: flex; gap: 3px; }
+.segmented button {
+  --px: 2;
+  padding: 2px 9px 3px;
+  border: 0;
+  font: inherit;
+  font-size: 10px;
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button_disabled.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.segmented button.is-on {
+  color: var(--ink-dark);
+  font-weight: 700;
+  text-shadow: 0 1px 0 #fff3;
+  border-image-source: url(assets/ui/button.png);
+}
+
+/* Stat strip: four studded plaques. Deliberately NOT on wood, because the
+   tab row right above it already is, and three plank bands stacked read as
+   noise. Dark here lets the plaques read as plaques. */
 .statbar {
+  --px: 1;
   flex: none;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: #000;
-  border-bottom: 1px solid #000;
+  gap: 3px;
+  padding: 5px 5px 6px;
+  background: var(--slate-2);
+  border-bottom: 2px solid #000;
 }
 .statbar > div {
-  padding: 5px 6px 6px;
-  background: #221c2e;
+  padding: 2px 1px 3px;
   text-align: center;
   min-width: 0;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
 }
 .statbar dt {
   display: flex;
@@ -437,13 +581,14 @@ body { display: flex; justify-content: center; }
   gap: 3px;
   font-size: 8px;
   letter-spacing: .5px;
-  color: #6f6480;
+  color: var(--ink-dim);
   white-space: nowrap;
 }
 .statbar dd {
   font-size: 13px;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--cream);
+  text-shadow: 0 1px 0 #000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -463,8 +608,8 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
-/* Upgrade button: 9-sliced from the Mini Medieval pack, on the thin frame
-   (--px:2) so more rows fit without losing the pack's look. */
+/* Upgrade button: 9-sliced from the pack, on the thin frame (--px:2) so more
+   rows fit without losing the pack's look. */
 .up {
   --px: 2;
   position: relative;
@@ -476,7 +621,7 @@ body { display: flex; justify-content: center; }
   padding: 4px 9px 5px;
   text-align: left;
   font: inherit;
-  color: #3a2410;
+  color: var(--ink-dark);
   cursor: pointer;
   overflow: hidden;
   border-style: solid;
@@ -486,15 +631,18 @@ body { display: flex; justify-content: center; }
   border-image-repeat: stretch;
   image-rendering: pixelated;
 }
-.up:active:not(:disabled) { transform: translateY(1px); filter: brightness(1.08); }
+.up:active:not(:disabled) {
+  transform: translateY(1px);
+  border-image-source: url(assets/ui/button_pressed.png);
+}
 .up:disabled {
   cursor: default;
-  color: #e6dccb;
+  color: #eae7ee;
   text-shadow: 0 1px 0 #00000088;
   border-image-source: url(assets/ui/button_disabled.png);
 }
-.up:disabled .up__effect { opacity: .7; }
-.up:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+.up:disabled .up__effect { opacity: .75; }
+.up:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* How far off the next level is. Without it a grey row only says "no", and
    you cannot tell whether that means one second or two minutes. */
@@ -502,8 +650,8 @@ body { display: flex; justify-content: center; }
   position: absolute;
   inset: 0;
   width: 0;
-  background: linear-gradient(90deg, #f0a63c22, #f0a63c40);
-  border-right: 1px solid #f0a63c55;
+  background: linear-gradient(90deg, #ebb85b26, #ebb85b4d);
+  border-right: 2px solid #ebb85b99;
   transition: width .25s ease-out;
   pointer-events: none;
 }
@@ -546,9 +694,7 @@ body { display: flex; justify-content: center; }
   color: #7a4f05;
   text-shadow: 0 0 6px #fff6;
 }
-.up--best {
-  box-shadow: 0 0 0 1px #fff5, 0 0 10px -2px var(--gold-lit);
-}
+.up--best { box-shadow: 0 0 0 1px #fff5, 0 0 10px -2px var(--gold); }
 
 /* little pop on purchase */
 .up.is-bought { animation: bought .32s ease-out; }
@@ -564,14 +710,14 @@ body { display: flex; justify-content: center; }
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 8px 6px 12px;
+  padding: 10px 6px 14px;
 }
 .tree-scroll[hidden] { display: none; }
 
 .tree {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  column-gap: 6px;
+  column-gap: 5px;
   row-gap: 18px;
 }
 
@@ -581,37 +727,56 @@ body { display: flex; justify-content: center; }
   flex-direction: column;
   align-items: center;
 }
+/* branch title on a little plank */
 .branch__name {
-  font-size: 10px;
+  align-self: stretch;
+  padding: 2px 2px 3px;
+  margin-bottom: 6px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
+  text-align: center;
   color: var(--accent);
-  margin-bottom: 6px;
+  text-shadow: 0 1px 0 #000, 0 0 4px #000;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
 }
 
 /* wire linking one node to the next */
 .branch__link {
-  width: 2px;
-  height: 10px;
-  background: #342c44;
+  width: 3px;
+  height: 9px;
+  background: #241b16;
+  box-shadow: 0 0 0 1px #000;
 }
-.branch__link.is-on { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+.branch__link.is-on { background: var(--gold); box-shadow: 0 0 0 1px #000, 0 0 5px var(--accent); }
 
+/* Nodes are the pack's gem frames: empty is the plain gold frame, invested
+   lights the gems, full swaps to the bright frame. */
 .node {
+  --px: 1;
   position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 2px 5px;
-  border: 1px solid #3a3048;
-  border-radius: 4px;
-  background: #221c2e;
+  padding: 3px 1px 2px;
+  background: #241b16;
   font: inherit;
   color: var(--ink-dim);
   cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/frame_gem.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+  filter: saturate(.35) brightness(.8);
 }
 .node__name {
   font-size: 9px;
@@ -625,32 +790,31 @@ body { display: flex; justify-content: center; }
 .node__rank {
   font-size: 9px;
   font-weight: 700;
-  color: #6f6480;
+  color: var(--ink-mute);
 }
 
 /* invested */
 .node.is-ranked {
-  border-color: var(--accent);
-  background: #2b2338;
+  background: #33251a;
   color: var(--ink);
-  box-shadow: inset 0 0 10px #0006, 0 0 0 1px #0006;
+  filter: none;
 }
-.node.is-ranked .node__rank { color: var(--accent); }
-.node.is-full { background: #332948; }
+.node.is-ranked .node__rank { color: var(--gold); }
+.node.is-full {
+  background: #3d2c1c;
+  border-image-source: url(assets/ui/frame_lit.png);
+}
 .node.is-full .node__rank::after { content: ' ✓'; }
 
 /* affordable right now, pulses gently to draw the eye */
-.node.can-buy {
-  border-color: var(--accent);
-  animation: nodeGlow 1.8s ease-in-out infinite;
-}
+.node.can-buy { filter: none; animation: nodeGlow 1.8s ease-in-out infinite; }
 @keyframes nodeGlow {
-  50% { box-shadow: 0 0 8px -1px var(--accent); }
+  50% { box-shadow: 0 0 12px -3px var(--accent); }
 }
 
 /* locked */
 .node:disabled { cursor: default; }
-.node.is-locked { opacity: .38; }
+.node.is-locked { opacity: .4; filter: grayscale(1) brightness(.7); }
 .node.is-locked .ico { filter: grayscale(1); }
 
 .node__cost {
@@ -659,7 +823,7 @@ body { display: flex; justify-content: center; }
   color: var(--gold);
   white-space: nowrap;
 }
-.node:disabled .node__cost { color: #6f6480; }
+.node:disabled .node__cost { color: var(--ink-mute); }
 
 /* --- tab 3: forge --- */
 .forge {
@@ -670,36 +834,51 @@ body { display: flex; justify-content: center; }
   list-style: none;
   padding: 6px;
   display: grid;
-  gap: 5px;
+  gap: 6px;
   align-content: start;
 }
 
+/* Each slot is a studded board; the rarity shows as a colour bar down the
+   left edge and in the item name, so the frame stays the pack's. */
 .slot {
-  --rar: #3a3048;
+  --px: 1;
+  --rar: var(--stone);
   position: relative;
   display: grid;
   grid-template-columns: 26px 1fr auto;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 6px 9px;
+  padding: 3px 6px 4px 9px;
   text-align: left;
   font: inherit;
   color: var(--ink);
   cursor: pointer;
-  background: #221c2e;
-  border: 1px solid var(--rar);
-  border-left-width: 3px;
-  border-radius: 3px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.slot::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 3px;
+  background: var(--rar);
+  box-shadow: 0 0 6px -1px var(--rar);
 }
 .slot:active:not(:disabled) { transform: translateY(1px); }
-.slot:disabled { cursor: default; opacity: .55; }
-.slot:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+.slot:disabled { cursor: default; opacity: .6; }
+.slot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .slot__name {
   display: block;
   font-size: 11px;
   font-weight: 700;
+  text-shadow: 0 1px 0 #000;
 }
 .slot__name em {
   font-style: normal;
@@ -713,10 +892,10 @@ body { display: flex; justify-content: center; }
 .slot__cost {
   font-size: 11px;
   font-weight: 700;
-  color: var(--violet);
+  color: var(--cream);
   white-space: nowrap;
 }
-.slot:disabled .slot__cost { color: #6f6480; }
+.slot:disabled .slot__cost { color: var(--ink-mute); }
 .slot--maxed .slot__cost { color: var(--gold); }
 
 /* glow when a new item lands */
@@ -730,13 +909,18 @@ body { display: flex; justify-content: center; }
   flex: none;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 1px;
-  background: #000;
-  border-top: 1px solid #000;
+  padding: 4px 4px 5px;
+  gap: 3px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank_tall.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
+  border-top: 2px solid #000;
 }
-.odds > div { padding: 4px 2px 5px; background: #1b1725; text-align: center; }
+.odds > div { padding: 2px 1px 3px; background: #1f1712cc; text-align: center; box-shadow: 0 0 0 1px #00000066; }
 .odds dt { font-size: 8px; color: var(--ink-dim); }
-.odds dd { font-size: 10px; font-weight: 700; }
+.odds dd { font-size: 10px; font-weight: 700; text-shadow: 0 1px 0 #000; }
 
 /* --- tab 4: prestige --- */
 .prestige {
@@ -744,26 +928,32 @@ body { display: flex; justify-content: center; }
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 12px 14px 16px;
+  padding: 12px 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .prestige__gain {
+  --px: 1;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  background: #221c2e;
-  border: 1px solid #3a3048;
-  border-radius: 4px;
+  padding: 6px 10px 7px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
 }
 .prestige__gain strong {
   font-size: 22px;
-  color: var(--gold-lit);
+  color: var(--gold);
+  text-shadow: 0 1px 0 #000;
 }
-.prestige__gain.is-empty strong { color: #6f6480; }
+.prestige__gain.is-empty strong { color: var(--ink-mute); }
 .prestige__gain small {
   display: block;
   font-size: 10px;
@@ -771,36 +961,41 @@ body { display: flex; justify-content: center; }
 }
 
 .facts {
+  --px: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: #000;
-  border: 1px solid #000;
-  border-radius: 4px;
-  overflow: hidden;
+  gap: 4px;
 }
 .facts > div {
-  padding: 7px 9px;
-  background: #221c2e;
+  padding: 3px 6px 4px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
 }
-.facts dt { font-size: 9px; color: #6f6480; }
-.facts dd { font-size: 13px; font-weight: 700; color: var(--ink); }
+.facts dt { font-size: 9px; color: var(--ink-dim); }
+.facts dd { font-size: 13px; font-weight: 700; color: var(--cream); text-shadow: 0 1px 0 #000; }
 
 .prestige__note {
   font-size: 10px;
   line-height: 1.5;
   color: var(--ink-dim);
 }
-.prestige__note b { color: var(--ink); }
+.prestige__note b { color: var(--cream); }
 
 .big-btn {
+  --px: 3;
   width: 100%;
-  padding: 12px 10px;
+  padding: 9px 10px 10px;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #3a2410;
+  color: var(--ink-dark);
+  text-shadow: 0 1px 0 #fff3;
   cursor: pointer;
   border-style: solid;
   border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
@@ -809,10 +1004,13 @@ body { display: flex; justify-content: center; }
   border-image-repeat: stretch;
   image-rendering: pixelated;
 }
-.big-btn:active:not(:disabled) { transform: translateY(1px); filter: brightness(1.08); }
+.big-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  border-image-source: url(assets/ui/button_pressed.png);
+}
 .big-btn:disabled {
   cursor: default;
-  color: #efe6d6;
+  color: #eae7ee;
   text-shadow: 0 1px 0 #00000066;
   border-image-source: url(assets/ui/button_disabled.png);
 }
@@ -823,7 +1021,7 @@ body { display: flex; justify-content: center; }
   font-size: 9px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #6f6480;
+  color: var(--ink-dim);
   margin-bottom: 6px;
 }
 .perks ul {
@@ -838,11 +1036,11 @@ body { display: flex; justify-content: center; }
   padding: 4px 7px;
   font-size: 10px;
   color: var(--ink-dim);
-  background: #221c2e;
-  border-left: 2px solid var(--gold);
-  border-radius: 0 3px 3px 0;
+  background: #241b16;
+  border-left: 3px solid var(--gold-dp);
+  box-shadow: 0 0 0 1px #00000088;
 }
-.perks li b { color: var(--gold-lit); margin-left: auto; }
+.perks li b { color: var(--gold); margin-left: auto; }
 
 /* --- footer --- */
 .foot {
@@ -850,40 +1048,45 @@ body { display: flex; justify-content: center; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  padding: 5px 10px 6px;
   padding-bottom: calc(6px + env(safe-area-inset-bottom));
   font-size: 10px;
-  color: var(--ink-dim);
-  border-top: 1px solid #000;
-  background: #191424;
+  color: var(--cream);
+  text-shadow: 0 1px 0 #000;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank_tall.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
+  border-top: 2px solid #000;
 }
-.foot b { color: var(--gold); }
+.foot b { color: #ffe9ae; }
 .link {
   border: 0;
   background: none;
   font: inherit;
   font-size: 10px;
-  color: #7b6f8c;
+  color: var(--cream);
   text-decoration: underline;
   cursor: pointer;
 }
-.link:hover { color: var(--gold); }
+.link:hover { color: #ffe9ae; }
 
 /* Erase everything lives next to prestige: destructive, not a shortcut. */
 .link--danger {
   align-self: center;
   margin-top: 4px;
-  color: #6b4550;
+  color: #7a4a44;
+  text-shadow: none;
 }
 .link--danger:hover { color: var(--red); }
 
 /* --- quiet scrollbars --- */
-.shop, .tree-scroll, .prestige { scrollbar-width: thin; scrollbar-color: #3a3048 transparent; }
-.shop::-webkit-scrollbar, .tree-scroll::-webkit-scrollbar, .prestige::-webkit-scrollbar { width: 6px; }
-.shop::-webkit-scrollbar-thumb, .tree-scroll::-webkit-scrollbar-thumb, .prestige::-webkit-scrollbar-thumb {
-  background: #3a3048;
-  border-radius: 3px;
-}
+.shop, .tree-scroll, .prestige, .forge { scrollbar-width: thin; scrollbar-color: var(--wood-dk) transparent; }
+.shop::-webkit-scrollbar, .tree-scroll::-webkit-scrollbar,
+.prestige::-webkit-scrollbar, .forge::-webkit-scrollbar { width: 6px; }
+.shop::-webkit-scrollbar-thumb, .tree-scroll::-webkit-scrollbar-thumb,
+.prestige::-webkit-scrollbar-thumb, .forge::-webkit-scrollbar-thumb { background: var(--wood-dk); }
 
 /* --- loading --- */
 .loading {
