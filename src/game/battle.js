@@ -28,6 +28,7 @@ class Actor {
     this.swung = false;
     this.attackTimer = 0;
     this.dead = false;
+    this.struck = false;   // já levou o primeiro golpe? (Emboscada)
     this.corpseTimer = 0;
     this.hover = def.hover ?? 0;
     this.bob = Math.random() * Math.PI * 2;
@@ -131,6 +132,7 @@ export class Battle {
   failBoss(reason) {
     this.enemy = null;
     this.bossTimer = 0;
+    this.state.hp = this.hero.hp = this.hero.maxHp;
     this.spawnTimer = 1.2;
     this.emit('toast', { text: reason, bad: true });
   }
@@ -176,7 +178,7 @@ export class Battle {
 
     this.enemy = actor;
     // O cronômetro do chefe só começa a correr quando ele entra em cena.
-    if (actor.isBoss) this.bossTimer = BOSS_TIME;
+    if (actor.isBoss) this.bossTimer = BOSS_TIME + this.state.bonus.bossTime;
     if (actor.isElite) this.emit('toast', { text: `MINI-CHEFE: ${def.name}` });
     if (actor.isBoss) this.emit('toast', { text: `CHEFE: ${def.name}`, bad: true });
     this.emit('spawn', actor);
@@ -256,12 +258,36 @@ export class Battle {
   }
 
   heroStrike(target) {
-    const { damage, crit } = this.state.rollHit();
-    const killed = target.hurt(damage);
-    this.pushFloater(target, damage, crit ? 'crit' : 'hit');
-    this.emit('hit', { target, damage, crit });
-    if (killed) this.killEnemy(target);
-    else if (target.anim.name !== 'attack') target.anim.play('hurt', { fps: 14, loop: false, force: true });
+    const { state, hero } = this;
+    // Golpe Duplo transforma um swing em dois; os dois passam pelas mesmas
+    // regras, então crítico, emboscada e execução valem pros dois.
+    const swings = 1 + (Math.random() < state.bonus.doubleHit ? 1 : 0);
+
+    for (let i = 0; i < swings; i++) {
+      if (target.dead) return;
+
+      const { damage, crit } = state.rollHit();
+      let dealt = damage;
+      if (!target.struck) {
+        target.struck = true;
+        dealt *= 1 + state.bonus.ambush;
+      }
+      if (target.hp / target.maxHp <= 0.3) dealt *= 1 + state.bonus.executeMul;
+
+      const killed = target.hurt(dealt);
+      this.pushFloater(target, dealt, crit ? 'crit' : 'hit');
+
+      if (state.bonus.lifesteal > 0 && !hero.dead && hero.hp < hero.maxHp) {
+        hero.hp = Math.min(hero.maxHp, hero.hp + dealt * state.bonus.lifesteal);
+      }
+
+      this.emit('hit', { target, damage: dealt, crit });
+      if (killed) {
+        this.killEnemy(target);
+        return;
+      }
+    }
+    if (target.anim.name !== 'attack') target.anim.play('hurt', { fps: 14, loop: false, force: true });
   }
 
   killEnemy(target) {
@@ -275,6 +301,13 @@ export class Battle {
 
     const gold = state.earn(target.gold);
     this.pushFloater(target, gold, 'gold');
+
+    const dust = state.rollDust(target.kind);
+    if (dust > 0) {
+      state.dust += dust;
+      this.pushFloater(target, dust, 'dust');
+      this.emit('dust', dust);
+    }
 
     const xpMul = target.isBoss ? LEVELS.bossXp : target.isElite ? LEVELS.eliteXp : 1;
     const levelsUp = state.gainXp(killXp(state.stage, xpMul));

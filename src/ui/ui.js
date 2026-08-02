@@ -2,6 +2,8 @@ import { UPGRADES } from '../data/upgrades.js';
 import { GameState } from '../game/state.js';
 import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talents.js';
 import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
+import { AUTO_BUY_BASE } from '../data/talents.js';
+import { SLOTS, RARITIES, RARITY_ODDS, describeGear } from '../data/gear.js';
 import { fmt, pct, mult, duration } from '../format.js';
 
 /**
@@ -59,6 +61,9 @@ export class UI {
       presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
       presGainBox: document.querySelector('.prestige__gain'),
       perks: $('perks'), perksList: $('perks-list'),
+      tabForge: $('tab-forge'), pipForge: $('pip-forge'),
+      dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
+      autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       reset: $('btn-reset'),
     };
 
@@ -67,9 +72,12 @@ export class UI {
     this.rows = new Map();
     this.nodes = [];
 
+    this.slots = new Map();
+
     this.buildShop();
     this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
+    this.buildForge();
     this.bind();
 
     battle.on('toast', (t) => this.toast(t));
@@ -106,6 +114,37 @@ export class UI {
       frag.append(li);
     }
     this.el.shop.append(frag);
+  }
+
+  /** Monta a forja: uma linha por slot e a tabela de chances embaixo. */
+  buildForge() {
+    const frag = document.createDocumentFragment();
+    for (const slot of SLOTS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'slot';
+      button.dataset.slot = slot.id;
+      button.innerHTML = `
+        <span class="slot__icon"><i class="ico ico--lg ico--${slot.icon}"></i></span>
+        <span class="slot__body">
+          <span class="slot__name">${slot.name}<em></em></span>
+          <span class="slot__effect"></span>
+        </span>
+        <span class="slot__cost"></span>`;
+      frag.append(button);
+      this.slots.set(slot.id, {
+        slot, button,
+        rarity: button.querySelector('em'),
+        effect: button.querySelector('.slot__effect'),
+        cost: button.querySelector('.slot__cost'),
+      });
+    }
+    this.el.forgeList.append(frag);
+
+    this.el.odds.innerHTML = RARITIES.map((r, i) =>
+      `<div style="--rar:${r.color}"><dt style="color:${r.color}">${r.name}</dt>` +
+      `<dd style="color:${r.color}">${(RARITY_ODDS[i] * 100).toFixed(1)}%</dd></div>`
+    ).join('');
   }
 
   /** Monta uma árvore: um galho por coluna, nós ligados por um fio. */
@@ -189,6 +228,17 @@ export class UI {
       entry.button.addEventListener('focus', show);
     }
 
+    el.forgeList.addEventListener('click', (e) => {
+      const button = e.target.closest('.slot');
+      if (button) this.doForge(button.dataset.slot);
+    });
+
+    el.autoCraft.checked = state.autoCraftOn !== false;
+    el.autoCraft.addEventListener('change', () => {
+      state.autoCraftOn = el.autoCraft.checked;
+      state.save();
+    });
+
     el.respec.addEventListener('click', () => {
       if (!state.spentPoints) return;
       if (!confirm('Devolver todos os pontos de talento pra redistribuir?')) return;
@@ -216,7 +266,11 @@ export class UI {
       this.refreshTrees(true);
       this.showTab('talents');
       this.showTree('relics');
-      this.toast({ text: `RENASCEU — +${gain} RELÍQUIA(S)` });
+      this.toast({
+        text: state.prestiges === 1
+          ? `RENASCEU — A FORJA ABRIU`
+          : `RENASCEU — +${gain} RELÍQUIA(S)`,
+      });
     });
 
     el.reset.addEventListener('click', () => {
@@ -235,6 +289,7 @@ export class UI {
       pane.classList.toggle('is-on', pane.id === `pane-${name}`);
     }
     if (name === 'talents') this.refreshTrees(true);
+    if (name === 'forge') this.refreshForge();
     if (name === 'prestige') this.refreshPrestige();
   }
 
@@ -321,6 +376,11 @@ export class UI {
     el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
     el.pipPrestige.hidden = state.pendingRelics <= 0;
     el.pipPrestige.classList.add('pip--gold');
+    el.tabForge.hidden = !state.forgeUnlocked;
+    el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
+    el.pipForge.classList.add('pip--gold');
+
+    this.tickAutomation(dt);
 
     this._timer = (this._timer ?? 0) + dt;
     if (this._timer < 0.15) return;
@@ -328,6 +388,7 @@ export class UI {
 
     if (this.tab === 'upgrades') this.refreshShop();
     else if (this.tab === 'talents') this.refreshTrees();
+    else if (this.tab === 'forge') this.refreshForge();
     else this.refreshPrestige();
   }
 
@@ -404,6 +465,88 @@ export class UI {
       setText(el.shopHint, `Próximo em ~${duration((cheapest - state.gold) / state.goldPerSec)}`);
     } else {
       setText(el.shopHint, 'Junte mais ouro');
+    }
+  }
+
+  // ── forja ─────────────────────────────────────────────────────────
+  /** Forja num slot e conta o que saiu. */
+  doForge(slotId, quiet = false) {
+    const result = this.state.forge(slotId);
+    if (!result) return null;
+    this.state.save();
+
+    const entry = this.slots.get(slotId);
+    const rarity = RARITIES[result.rolled];
+    if (result.equipped) {
+      entry.button.classList.remove('is-new');
+      void entry.button.offsetWidth;
+      entry.button.classList.add('is-new');
+      if (!quiet || result.rolled >= 3) {
+        this.toast({ text: `${entry.slot.name.toUpperCase()} ${rarity.name.toUpperCase()}!` });
+      }
+    } else if (!quiet) {
+      this.toast({ text: `${rarity.name} — pior que a atual, +${result.refund} poeira`, bad: true });
+    }
+    this.refreshForge();
+    return result;
+  }
+
+  refreshForge() {
+    const { state, el } = this;
+    setText(el.dustHave, fmt(state.dust));
+
+    const hasAnvil = state.bonus.autoCraft > 0;
+    el.autoCraftWrap.hidden = !hasAnvil;
+
+    for (const entry of this.slots.values()) {
+      const equipped = state.gear[entry.slot.id];
+      const maxed = equipped === RARITIES.length - 1;
+      const rarity = equipped == null ? null : RARITIES[equipped];
+      const cost = state.costToForge(entry.slot.id);
+
+      entry.button.style.setProperty('--rar', rarity?.color ?? '#3a3048');
+      entry.button.classList.toggle('slot--empty', equipped == null);
+      entry.button.classList.toggle('slot--maxed', maxed);
+      entry.button.disabled = !state.canForge(entry.slot.id);
+
+      setText(entry.rarity, rarity ? rarity.name : 'vazio');
+      setText(entry.effect, equipped == null
+        ? 'nada equipado'
+        : describeGear(entry.slot, equipped));
+      setHtml(entry.cost, maxed
+        ? 'no topo'
+        : `<i class="ico ico--sm ico--dust"></i> ${cost}`);
+    }
+  }
+
+  /**
+   * Arauto compra o melhor upgrade sozinho; Bigorna forja sozinha no slot
+   * mais barato. Os dois fazem o que o dedo faria — nada que o jogador não
+   * pudesse fazer na mão.
+   */
+  tickAutomation(dt) {
+    const { state } = this;
+
+    if (state.bonus.autoBuy > 0) {
+      this._autoBuy = (this._autoBuy ?? 0) + dt;
+      const every = Math.max(1, AUTO_BUY_BASE - state.bonus.autoBuy + 1);
+      if (this._autoBuy >= every) {
+        this._autoBuy = 0;
+        const key = this.bestBuy();
+        if (key && state.buy(key)) {
+          state.save();
+          if (this.tab === 'upgrades') this.refreshShop(true);
+        }
+      }
+    }
+
+    if (state.bonus.autoCraft > 0 && state.autoCraftOn !== false) {
+      this._autoForge = (this._autoForge ?? 0) + dt;
+      if (this._autoForge >= 1.5) {
+        this._autoForge = 0;
+        const slotId = state.cheapestForgeable();
+        if (slotId) this.doForge(slotId, true);
+      }
     }
   }
 

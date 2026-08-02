@@ -228,6 +228,16 @@
     "dagger",
     "bag",
     "scout",
-    "relic"
+    "relic",
+    "it_sword",
+    "it_chest",
+    "it_helm",
+    "it_pants",
+    "it_boot",
+    "it_amulet",
+    "it_ring",
+    "dust",
+    "gear",
+    "bolt"
   ]
 }

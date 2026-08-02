@@ -356,4 +356,5 @@ const FLOATER_STYLE = {
   crit:   { color: '#ffd24a', size: 30, prefix: '' },
   gold:   { color: '#8bd450', size: 20, prefix: '+' },
   player: { color: '#ff7b6b', size: 22, prefix: '-' },
+  dust:   { color: '#c79ae8', size: 20, prefix: '+' },
 };

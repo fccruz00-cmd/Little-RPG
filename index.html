@@ -57,6 +57,9 @@
       <button class="tab" data-tab="talents" type="button" role="tab">
         Talentos<i class="pip" id="pip-talents" hidden></i>
       </button>
+      <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
+        Forja<i class="pip" id="pip-forge" hidden></i>
+      </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
         Prestígio<i class="pip" id="pip-prestige" hidden></i>
       </button>
@@ -95,7 +98,24 @@
       <div class="tree-scroll" id="tree-relics" hidden></div>
     </div>
 
-    <!-- aba 3: renascer -->
+    <!-- aba 3: forja (aparece depois do 1º renascimento) -->
+    <div class="pane" id="pane-forge">
+      <div class="pane__head">
+        <span class="pane__points"><i class="ico ico--sm ico--dust"></i> <b id="dust-have">0</b> poeira</span>
+        <label class="toggle" id="autocraft-wrap" hidden>
+          <input type="checkbox" id="autocraft">
+          <span>Forja automática</span>
+        </label>
+      </div>
+      <p class="pane__detail" id="forge-detail">
+        Mobs largam <b>poeira de alma</b>. Cada forja sorteia uma raridade — se
+        vier melhor que a equipada, troca sozinho; se vier pior, vira troco.
+      </p>
+      <div class="forge" id="forge-list"></div>
+      <dl class="odds" id="odds"></dl>
+    </div>
+
+    <!-- aba 4: renascer -->
     <div class="pane" id="pane-prestige">
       <div class="prestige">
         <div class="prestige__gain">

@@ -17,6 +17,10 @@ export const BONUS_KEYS = [
   'dmgMul', 'atkSpeedMul', 'critAdd', 'critPowerAdd', 'hpMul', 'regenMul',
   'goldMul', 'xpMul', 'moveMul', 'damageTaken', 'respawnMul', 'killsLess',
   'startStage', 'extraPoints',
+  // forja e automação
+  'dustChance', 'dustMul', 'bossTime', 'autoBuy', 'autoCraft',
+  // skills de combate
+  'doubleHit', 'lifesteal', 'executeMul', 'ambush',
 ];
 
 // ── árvore de talentos (pontos de nível) ────────────────────────────
@@ -57,25 +61,54 @@ export const RELIC_TREE = [
   {
     id: 'poder', name: 'Poder', accent: '#d9534f',
     nodes: [
-      { id: 'legado',      name: 'Legado',       icon: 'torch',        max: 10, cost: 1, key: 'dmgMul',      mode: 'mul', per: 0.15 },
-      { id: 'furiaAntiga', name: 'Fúria Antiga', icon: 'attack_speed', max: 5,  cost: 3, key: 'atkSpeedMul', mode: 'mul', per: 0.05 },
-      { id: 'golpeMortal', name: 'Golpe Mortal', icon: 'dagger',       max: 5,  cost: 4, key: 'critAdd',     mode: 'add', per: 0.05 },
+      { id: 'legado',      name: 'Legado',       icon: 'torch',        max: 15, cost: 1, key: 'dmgMul',       mode: 'mul', per: 0.15 },
+      { id: 'furiaAntiga', name: 'Fúria Antiga', icon: 'attack_speed', max: 8,  cost: 3, key: 'atkSpeedMul',  mode: 'mul', per: 0.05 },
+      { id: 'golpeMortal', name: 'Golpe Mortal', icon: 'dagger',       max: 6,  cost: 4, key: 'critAdd',      mode: 'add', per: 0.05 },
+      { id: 'ira',         name: 'Ira',          icon: 'crit_power',   max: 8,  cost: 5, key: 'critPowerAdd', mode: 'add', per: 0.4 },
     ],
   },
   {
     id: 'riqueza', name: 'Riqueza', accent: '#f0a63c',
     nodes: [
-      { id: 'cofre',     name: 'Cofre',     icon: 'bag',   max: 10, cost: 1, key: 'goldMul',    mode: 'mul', per: 0.20 },
-      { id: 'sabedoria', name: 'Sabedoria', icon: 'book',  max: 10, cost: 2, key: 'xpMul',      mode: 'mul', per: 0.20 },
-      { id: 'heranca',   name: 'Herança',   icon: 'crown', max: 10, cost: 3, key: 'startStage', mode: 'add', per: 2 },
+      { id: 'cofre',     name: 'Cofre',     icon: 'bag',   max: 15, cost: 1, key: 'goldMul',    mode: 'mul',  per: 0.20 },
+      { id: 'sabedoria', name: 'Sabedoria', icon: 'book',  max: 12, cost: 2, key: 'xpMul',      mode: 'mul',  per: 0.20 },
+      { id: 'heranca',   name: 'Herança',   icon: 'crown', max: 12, cost: 3, key: 'startStage', mode: 'add',  per: 2 },
+      { id: 'atalho',    name: 'Atalho',    icon: 'scout', max: 4,  cost: 8, key: 'killsLess',  mode: 'add',  per: 1 },
     ],
   },
   {
     id: 'essencia', name: 'Essência', accent: '#8bc34a',
     nodes: [
-      { id: 'vigor',    name: 'Vigor',      icon: 'shield', max: 10, cost: 1, key: 'hpMul',       mode: 'mul', per: 0.20 },
-      { id: 'alma',     name: 'Alma',       icon: 'orb',    max: 10, cost: 2, key: 'regenMul',    mode: 'mul', per: 0.25 },
-      { id: 'veterano', name: 'Veterano',   icon: 'stage',  max: 5,  cost: 4, key: 'extraPoints', mode: 'add', per: 1 },
+      { id: 'vigor',    name: 'Vigor',    icon: 'shield', max: 15, cost: 1, key: 'hpMul',       mode: 'mul',  per: 0.20 },
+      { id: 'alma',     name: 'Alma',     icon: 'orb',    max: 12, cost: 2, key: 'regenMul',    mode: 'mul',  per: 0.25 },
+      { id: 'imortal',  name: 'Imortal',  icon: 'health', max: 8,  cost: 4, key: 'damageTaken', mode: 'less', per: 0.04 },
+      { id: 'veterano', name: 'Veterano', icon: 'stage',  max: 8,  cost: 4, key: 'extraPoints', mode: 'add',  per: 1 },
+    ],
+  },
+  {
+    id: 'automacao', name: 'Automação', accent: '#5fa8d3',
+    nodes: [
+      { id: 'arauto',  name: 'Arauto',   icon: 'gear',  max: 5,  cost: 3, key: 'autoBuy',    mode: 'add', per: 1 },
+      { id: 'coletor', name: 'Coletor',  icon: 'dust',  max: 10, cost: 2, key: 'dustChance', mode: 'add', per: 0.04 },
+      { id: 'moedor',  name: 'Moedor',   icon: 'bag',   max: 10, cost: 3, key: 'dustMul',    mode: 'mul', per: 0.25 },
+      { id: 'bigorna', name: 'Bigorna',  icon: 'stage', max: 1,  cost: 15, key: 'autoCraft', mode: 'add', per: 1 },
+    ],
+  },
+  {
+    id: 'skills', name: 'Skills', accent: '#e0c341',
+    nodes: [
+      { id: 'golpeDuplo', name: 'Golpe Duplo', icon: 'bolt',       max: 10, cost: 2, key: 'doubleHit',  mode: 'add', per: 0.04 },
+      { id: 'sedeSangue', name: 'Sede de Sangue', icon: 'regen',   max: 10, cost: 3, key: 'lifesteal',  mode: 'add', per: 0.01 },
+      { id: 'execucao',   name: 'Execução',    icon: 'dagger',     max: 8,  cost: 4, key: 'executeMul', mode: 'add', per: 0.20 },
+      { id: 'emboscada',  name: 'Emboscada',   icon: 'crit',       max: 8,  cost: 4, key: 'ambush',     mode: 'add', per: 0.30 },
+    ],
+  },
+  {
+    id: 'tempo', name: 'Tempo', accent: '#a678d6',
+    nodes: [
+      { id: 'folga',    name: 'Folga',     icon: 'boss',   max: 6,  cost: 3, key: 'bossTime',   mode: 'add',  per: 5 },
+      { id: 'levantar', name: 'Levantar',  icon: 'orb',    max: 4,  cost: 4, key: 'respawnMul', mode: 'less', per: 0.20 },
+      { id: 'marcha',   name: 'Marcha',    icon: 'stride', max: 8,  cost: 2, key: 'moveMul',    mode: 'mul',  per: 0.10 },
     ],
   },
 ];
@@ -92,12 +125,24 @@ export function describeNode(node, ranks) {
     case 'extraPoints':  return `+${total} ponto de talento`;
     case 'damageTaken':  return `−${pct(total)} de dano recebido`;
     case 'respawnMul':   return `−${pct(total)} pra levantar`;
+    case 'dustChance':   return `+${pct(total)} de chance de poeira`;
+    case 'bossTime':     return `+${total}s no prazo do chefe`;
+    case 'autoBuy':      return `compra sozinho a cada ${(AUTO_BUY_BASE - n + 1).toFixed(0)}s`;
+    case 'autoCraft':    return 'forja sozinho quando sobra poeira';
+    case 'doubleHit':    return `+${pct(total)} de chance de bater duas vezes`;
+    case 'lifesteal':    return `cura ${pct(total)} do dano causado`;
+    case 'executeMul':   return `+${pct(total)} de dano abaixo de 30% de vida`;
+    case 'ambush':       return `+${pct(total)} no primeiro golpe em cada inimigo`;
     default:             return `${mult(1 + total)} ${LABEL[node.key] ?? ''}`.trim();
   }
 }
 
+/** Segundos entre compras automáticas no 1º ponto de Arauto. */
+export const AUTO_BUY_BASE = 6;
+
 const LABEL = {
   dmgMul: 'de dano',
+  dustMul: 'de poeira',
   atkSpeedMul: 'de vel. de ataque',
   hpMul: 'de vida',
   regenMul: 'de regeneração',

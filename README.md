@@ -24,7 +24,7 @@ o painel embaixo, agora com três abas: **Upgrades**, **Talentos** e
 ## Rodando
 
 **Do jeito mais rápido:** baixe `little-rpg.html` e abra com dois cliques. É o
-jogo inteiro num arquivo só (384 KB) — CSS, código e sprites embutidos, sem
+jogo inteiro num arquivo só (420 KB) — CSS, código e sprites embutidos, sem
 servidor e sem pasta ao lado. Até o progresso salvo funciona.
 
 **Pra mexer no código:** sirva a pasta, porque o jogo usa módulos ES e o
@@ -73,10 +73,40 @@ python3 tools/build_single_file.py
      renascimento; dá pra redistribuir a qualquer momento.
    - *Relíquias*, a árvore de prestígio, paga com **relíquias**. É permanente.
    - Nos dois casos um nó só abre quando o anterior do galho tem 1 ponto.
-3. **Prestígio** — renascer. Zera fase, ouro, upgrades, nível e talentos, e
+3. **Forja** — só aparece depois do primeiro renascimento.
+4. **Prestígio** — renascer. Zera fase, ouro, upgrades, nível e talentos, e
    converte a profundidade da corrida em relíquias. A primeira sai na fase 25;
    como o cálculo é acumulado menos o que já foi recebido, repetir a mesma
    profundidade não paga de novo.
+
+A árvore de relíquias tem seis galhos: **Poder**, **Riqueza**, **Essência**,
+**Automação**, **Skills** e **Tempo** — 1.498 relíquias pra encher tudo.
+
+### Forja e poeira de alma
+
+Depois do primeiro renascimento os mobs passam a largar **poeira de alma**
+(20% por mob comum, sempre no mini-chefe e no chefe). A poeira forja equipamento
+em sete slots: espada, capacete, armadura, calça, bota, amuleto e anel.
+
+Cada forja **sorteia uma raridade** — o valor do atributo é fixo por raridade,
+o acaso está só em qual delas sai:
+
+| raridade | chance | multiplicador |
+|---|---:|---:|
+| Comum (branca)    | 50,0% | ×1 |
+| Incomum (verde)   | 27,0% | ×2,2 |
+| Rara (azul)       | 15,5% | ×4,5 |
+| Épica (roxa)      |  6,0% | ×9 |
+| Lendária (laranja)|  1,5% | ×18 |
+
+Veio melhor que a equipada, troca sozinho; veio pior, vira troco de poeira.
+Não tem inventário: a comparação é trivial porque a raridade define tudo.
+Forjar num slot custa mais conforme o que já está equipado (10 → 20 → 34 → 55
+→ 90 → 150), então perseguir uma lendária é caro de propósito.
+
+O galho **Automação** compra upgrade sozinho (*Arauto*) e forja sozinho
+(*Bigorna*); o galho **Skills** adiciona golpe duplo, roubo de vida, execução
+em alvo ferido e bônus no primeiro golpe.
 
 ### Nível e experiência
 

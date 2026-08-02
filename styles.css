@@ -52,7 +52,7 @@ body { display: flex; justify-content: center; }
 /* ── ícones (strip do Raven Fantasy, 32px cada) ─────────────── */
 .ico {
   --i: 0;
-  --n: 19;
+  --n: 29;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -64,25 +64,35 @@ body { display: flex; justify-content: center; }
   image-rendering: pixelated;
   vertical-align: -3px;
 }
-.ico--damage       { --i: 0; }
-.ico--attack_speed { --i: 1; }
-.ico--crit         { --i: 2; }
-.ico--crit_power   { --i: 3; }
-.ico--gold         { --i: 4; }
-.ico--health       { --i: 5; }
-.ico--regen        { --i: 6; }
-.ico--stride       { --i: 7; }
-.ico--boss         { --i: 8; }
-.ico--stage        { --i: 9; }
-.ico--book         { --i: 10; }
-.ico--shield       { --i: 11; }
-.ico--orb          { --i: 12; }
-.ico--crown        { --i: 13; }
-.ico--torch        { --i: 14; }
-.ico--dagger       { --i: 15; }
-.ico--bag          { --i: 16; }
-.ico--scout        { --i: 17; }
-.ico--relic        { --i: 18; }
+.ico--damage        { --i: 0; }
+.ico--attack_speed  { --i: 1; }
+.ico--crit          { --i: 2; }
+.ico--crit_power    { --i: 3; }
+.ico--gold          { --i: 4; }
+.ico--health        { --i: 5; }
+.ico--regen         { --i: 6; }
+.ico--stride        { --i: 7; }
+.ico--boss          { --i: 8; }
+.ico--stage         { --i: 9; }
+.ico--book          { --i: 10; }
+.ico--shield        { --i: 11; }
+.ico--orb           { --i: 12; }
+.ico--crown         { --i: 13; }
+.ico--torch         { --i: 14; }
+.ico--dagger        { --i: 15; }
+.ico--bag           { --i: 16; }
+.ico--scout         { --i: 17; }
+.ico--relic         { --i: 18; }
+.ico--it_sword      { --i: 19; }
+.ico--it_chest      { --i: 20; }
+.ico--it_helm       { --i: 21; }
+.ico--it_pants      { --i: 22; }
+.ico--it_boot       { --i: 23; }
+.ico--it_amulet     { --i: 24; }
+.ico--it_ring       { --i: 25; }
+.ico--dust          { --i: 26; }
+.ico--gear          { --i: 27; }
+.ico--bolt          { --i: 28; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
@@ -302,7 +312,8 @@ body { display: flex; justify-content: center; }
 .tabs {
   flex: none;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   background: #16121f;
   border-bottom: 1px solid #000;
 }
@@ -318,6 +329,7 @@ body { display: flex; justify-content: center; }
   color: #6f6480;
   cursor: pointer;
 }
+.tab[hidden] { display: none; }
 .tab.is-on {
   color: var(--gold-lit);
   background: linear-gradient(#2a2337, #221c2e);
@@ -559,7 +571,8 @@ body { display: flex; justify-content: center; }
 .tree {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  column-gap: 6px;
+  row-gap: 18px;
 }
 
 .branch {
@@ -648,7 +661,84 @@ body { display: flex; justify-content: center; }
 }
 .node:disabled .node__cost { color: #6f6480; }
 
-/* ── aba 3: prestígio ───────────────────────────────────────── */
+/* ── aba 3: forja ───────────────────────────────────────────── */
+.forge {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  padding: 6px;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+}
+
+.slot {
+  --rar: #3a3048;
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 9px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  background: #221c2e;
+  border: 1px solid var(--rar);
+  border-left-width: 3px;
+  border-radius: 3px;
+}
+.slot:active:not(:disabled) { transform: translateY(1px); }
+.slot:disabled { cursor: default; opacity: .55; }
+.slot:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
+
+.slot__name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+}
+.slot__name em {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--rar);
+  margin-left: 5px;
+}
+.slot__effect { display: block; font-size: 10px; color: var(--ink-dim); }
+.slot--empty .slot__effect { opacity: .6; }
+
+.slot__cost {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--violet);
+  white-space: nowrap;
+}
+.slot:disabled .slot__cost { color: #6f6480; }
+.slot--maxed .slot__cost { color: var(--gold); }
+
+/* brilho quando um item novo entra */
+.slot.is-new { animation: forged .6s ease-out; }
+@keyframes forged {
+  0%   { box-shadow: 0 0 0 0 var(--rar); filter: brightness(1.8); }
+  100% { box-shadow: 0 0 0 14px transparent; filter: none; }
+}
+
+.odds {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: #000;
+  border-top: 1px solid #000;
+}
+.odds > div { padding: 4px 2px 5px; background: #1b1725; text-align: center; }
+.odds dt { font-size: 8px; color: var(--ink-dim); }
+.odds dd { font-size: 10px; font-weight: 700; }
+
+/* ── aba 4: prestígio ───────────────────────────────────────── */
 .prestige {
   flex: 1 1 auto;
   min-height: 0;

@@ -11,6 +11,7 @@ imprimir o manifesto (frames + baseline) usado em src/data/sprites.js.
 """
 import json
 import os
+import re
 import sys
 from PIL import Image
 
@@ -70,6 +71,17 @@ ICONS = [
     ("bag",          13, 24),   # saco de moedas — cofre
     ("scout",         7, 0),    # corno — batedor
     ("relic",        11, 28),   # anel dourado — relíquia
+    # forja: um por slot de equipamento
+    ("it_sword",      6, 341),  # espada
+    ("it_chest",      1, 356),  # armadura
+    ("it_helm",       5, 424),  # capacete
+    ("it_pants",     15, 508),  # calça
+    ("it_boot",       6, 508),  # bota
+    ("it_amulet",     5, 505),  # amuleto
+    ("it_ring",       9, 505),  # anel
+    ("dust",          1, 481),  # poeira de alma
+    ("gear",          1, 0),    # engrenagem — automação
+    ("bolt",          0, 220),  # raio — skills
 ]
 ICON_SIZE = 32
 
@@ -155,6 +167,31 @@ def extract_icons(sheet_path):
     return order
 
 
+def patch_icon_css(icons):
+    """Regrava as classes `.ico--*` no styles.css.
+
+    O bloco e a strip precisam concordar no numero e na ordem: um icone novo
+    no fim da lista desloca todos os `background-position` se o CSS ficar pra
+    tras. Gerar aqui elimina esse desencontro.
+    """
+    path = os.path.join(ROOT, "styles.css")
+    with open(path, encoding="utf-8") as fh:
+        css = fh.read()
+
+    block = "\n".join(f".ico--{name:<13} {{ --i: {i}; }}" for i, name in enumerate(icons))
+    css = re.sub(r"  --n: \d+;", f"  --n: {len(icons)};", css, count=1)
+    css = re.sub(
+        r"\.ico--\w+\s*\{ --i: \d+; \}(\n\.ico--\w+\s*\{ --i: \d+; \})*",
+        block,
+        css,
+        count=1,
+    )
+
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(css)
+    print(f"  styles.css: {len(icons)} classes .ico--*")
+
+
 def main():
     if len(sys.argv) != 4:
         print(__doc__)
@@ -166,6 +203,7 @@ def main():
     extract_ui(ui_dir)
     print("icones:")
     icons = extract_icons(icon_sheet)
+    patch_icon_css(icons)
     out = os.path.join(ROOT, "assets", "manifest.json")
     with open(out, "w") as fh:
         json.dump({"characters": chars, "icons": icons}, fh, indent=2, sort_keys=True)

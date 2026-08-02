@@ -5,15 +5,16 @@ import { LEVELS, xpToNext } from '../data/levels.js';
 import { TALENT_TREE, RELIC_TREE, BONUS_KEYS, relicCost } from '../data/talents.js';
 import { relicsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
+import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 
 /** Chaves de bônus que se acumulam multiplicando; o resto soma. */
 const MULTIPLIER_KEYS = [
   'dmgMul', 'atkSpeedMul', 'hpMul', 'regenMul', 'goldMul', 'xpMul', 'moveMul',
-  'damageTaken', 'respawnMul',
+  'damageTaken', 'respawnMul', 'dustMul',
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const SAVE_EVERY = 5; // segundos
 
 function emptyLevels() {
@@ -39,18 +40,27 @@ function defaults() {
     relicTalents: {},
     prestiges: 0,
 
+    dust: 0,
+    gear: {},        // slotId -> índice da raridade equipada
+    autoCraftOn: true,
+
     buyMax: false,
     goldPerSec: 0,
     lastSeen: Date.now(),
   };
 }
 
-/** Save da v1 (antes de nível/talento/prestígio) ganha os campos novos. */
+/** Saves antigos ganham os campos novos em vez de virar lixo. */
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
   if (data.version === 1) {
+    // v1: antes de nível/talento/prestígio/forja
     return { ...defaults(), ...data, version: SAVE_VERSION, bestStage: data.maxStage ?? 1 };
+  }
+  if (data.version === 2) {
+    // v2: antes da forja
+    return { ...defaults(), ...data, version: SAVE_VERSION };
   }
   return null;
 }
@@ -61,6 +71,7 @@ export class GameState {
     this.levels = { ...emptyLevels(), ...(data.levels ?? {}) };
     this.talents = { ...(data.talents ?? {}) };
     this.relicTalents = { ...(data.relicTalents ?? {}) };
+    this.gear = { ...(data.gear ?? {}) };
     this._bonus = null;
     this.hp = this.maxHp;
     this._saveTimer = 0;
@@ -88,6 +99,17 @@ export class GameState {
     };
     for (const branch of TALENT_TREE) for (const n of branch.nodes) apply(n, this.talents[n.id] ?? 0);
     for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
+
+    // Equipamento entra pelo mesmo caminho: um slot é só mais uma fonte de
+    // bônus, com o valor fixado pela raridade.
+    for (const slot of SLOTS) {
+      const rarity = this.gear[slot.id];
+      if (rarity == null) continue;
+      const amount = gearValue(slot, rarity);
+      if (slot.mode === 'mul') b[slot.key] *= 1 + amount;
+      else if (slot.mode === 'less') b[slot.key] *= Math.max(0.1, 1 - amount);
+      else b[slot.key] += amount;
+    }
 
     this._bonus = b;
     return b;
@@ -206,6 +228,65 @@ export class GameState {
     this.invalidateBonus();
   }
 
+  // ── forja ─────────────────────────────────────────────────────────
+  /** A forja só existe depois do primeiro renascimento. */
+  get forgeUnlocked() {
+    return this.prestiges > 0;
+  }
+
+  /** Poeira que um abate rende (0 se não caiu nada). */
+  rollDust(kind) {
+    if (!this.forgeUnlocked) return 0;
+    const mul = this.bonus.dustMul;
+    if (kind === 'boss') return Math.round(DUST.bossAmount * mul);
+    if (kind === 'elite') return Math.round(DUST.eliteAmount * mul);
+    const chance = DUST.mobChance + this.bonus.dustChance;
+    return Math.random() < chance ? Math.max(1, Math.round(DUST.mobAmount * mul)) : 0;
+  }
+
+  costToForge(slotId) {
+    return craftCost(this.gear[slotId]);
+  }
+
+  canForge(slotId) {
+    return this.forgeUnlocked && this.dust >= this.costToForge(slotId);
+  }
+
+  /**
+   * Forja num slot. Sorteia a raridade; equipa se for melhor que a atual e
+   * devolve um troco de poeira se for pior — sem inventário pra administrar.
+   * @returns {{rolled: number, equipped: boolean, refund: number} | null}
+   */
+  forge(slotId) {
+    if (!this.canForge(slotId)) return null;
+    this.dust -= this.costToForge(slotId);
+
+    const rolled = rollRarity();
+    const current = this.gear[slotId];
+    const better = current == null || rolled > current;
+
+    if (better) {
+      this.gear[slotId] = rolled;
+      this.invalidateBonus();
+      return { rolled, equipped: true, refund: 0 };
+    }
+
+    const refund = Math.max(1, Math.round(craftCost(current) * DUST.scrapRefund));
+    this.dust += refund;
+    return { rolled, equipped: false, refund };
+  }
+
+  /** Slot mais barato que ainda dá pra melhorar — usado pela forja automática. */
+  cheapestForgeable() {
+    let best = null;
+    for (const slot of SLOTS) {
+      if ((this.gear[slot.id] ?? -1) >= RARITIES.length - 1) continue; // já lendário
+      const cost = this.costToForge(slot.id);
+      if (cost <= this.dust && (best === null || cost < this.costToForge(best))) best = slot.id;
+    }
+    return best;
+  }
+
   // ── prestígio ─────────────────────────────────────────────────────
   get pendingRelics() {
     return Math.max(0, relicsEarnedAt(this.maxStage) - this.relicsEarned);
@@ -293,13 +374,14 @@ export class GameState {
   toJSON() {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
-      relics, relicsEarned, relicTalents, prestiges, buyMax, goldPerSec,
+      relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
+      buyMax, goldPerSec,
     } = this;
     return {
       version: SAVE_VERSION,
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
-      relics, relicsEarned, relicTalents, prestiges, buyMax, goldPerSec,
-      lastSeen: Date.now(),
+      relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
+      buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }
 
