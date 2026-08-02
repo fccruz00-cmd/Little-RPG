@@ -30,12 +30,23 @@ export const HERO = {
 };
 
 export const BOSS_EVERY = 5;      // 1 chefe a cada N fases
-export const KILLS_PER_STAGE = 10;
+export const KILLS_PER_STAGE = 10; // mobs comuns antes do encontro final
 
 /** Pool de inimigos comuns disponível numa fase (os 4 mais recentes). */
 export function mobsForStage(stage) {
   const unlocked = MOBS.filter((m) => m.from <= stage);
   return unlocked.slice(-4);
+}
+
+/**
+ * Mini-chefe que fecha uma fase comum: o bicho mais encorpado já liberado,
+ * numa versão graúda. A lista não é estritamente crescente (o morcego é
+ * frágil de propósito), então escolhe pelo multiplicador de vida em vez de
+ * pegar o último — senão a fase 1 acabaria num mini-chefe morcego.
+ */
+export function eliteForStage(stage) {
+  return MOBS.filter((m) => m.from <= stage)
+    .reduce((best, m) => (m.hp >= best.hp ? m : best));
 }
 
 export function isBossStage(stage) {

@@ -42,11 +42,14 @@ python3 tools/build_single_file.py
 
 ## Como funciona
 
-- **Fases** — cada fase pede 10 abates. De 5 em 5 fases entra um **chefe**, que
-  tem 30 s de prazo. Perdeu o prazo ou morreu, o chefe volta com a vida cheia.
+- **Fases** — 10 mobs e um **encontro final**: mini-chefe nas fases comuns,
+  **chefe** de 5 em 5. Os dois entram em cena maiores que os mobs; o chefe
+  ainda tem 30 s de prazo, e perder o prazo ou morrer pra ele devolve a vida
+  cheia dele. Contra mob e mini-chefe, morrer só custa o tempo de levantar.
 - **Combate** — o herói caminha até o alcance do inimigo, para e bate no ritmo
   da Vel. de Ataque. O inimigo faz o mesmo. Morreu, ele levanta em 2 s.
-- **Ouro** — cai de cada abate e cresce junto com a fase. Chefe paga 14×.
+- **Ouro** — cai de cada abate e cresce junto com a fase. Mini-chefe paga 5×,
+  chefe paga 14×.
 - **Ocioso** — com o jogo fechado (ou a aba escondida) você acumula metade do
   seu ouro/segundo, até 8 h.
 - **◀ ▶** — dá pra voltar pra uma fase já vencida e farmar ouro nela.
@@ -86,20 +89,25 @@ renderização inteira sem encostar na simulação.
 ### Rebalancear
 
 Tudo que é número de progressão está em `src/data/balance.js`. A curva atual
-mira nisto:
+mira nisto — o mini-chefe fica em torno de 4× um mob e o chefe em 10×:
 
-| fase | tempo de morte do bicho | tempo do chefe |
-|-----:|------------------------:|---------------:|
-|   10 |                    1,2 s |         16 s |
-|   30 |                    1,8 s |         18 s |
-|   60 |                    0,4 s |          4 s |
-|  120 |                    0,6 s |          7 s |
+| fase | mob | mini-chefe | chefe |
+|-----:|----:|-----------:|------:|
+|   10 | 1,9 s | 7,2 s | 18,8 s |
+|   20 | 2,3 s | 9,1 s | 22,7 s |
+|   60 | 0,4 s | 1,5 s |  3,7 s |
+|  120 | 0,7 s | 3,4 s |  7,4 s |
 
 A folga do meio é de propósito: é quando os atributos com teto (crítico, vel.
 de ataque, ouro) enchem e você atropela um trecho antes da curva apertar de
 novo. Só **Dano**, **Vida Máxima** e **Regeneração** crescem sem teto — se o
 ganho de ouro também crescesse, ele se realimentava e o jogo virava trivial por
 volta da fase 25.
+
+O período de ataque dos mobs (1,25 s) é menor que o tempo que eles levam pra
+morrer, de propósito: se o mob nunca chega a encaixar um golpe ele vira boneco
+de pancada e a luta não tem tensão nenhuma. Pela simulação isso dá umas 30
+mortes até a fase 20, quase todas no mini-chefe, e aí você passa a aguentar.
 
 ### Trocar os sprites
 

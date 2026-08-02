@@ -121,16 +121,20 @@ export class UI {
     setText(el.gold, fmt(state.gold));
     setText(el.dps, fmt(state.dps));
 
-    const boss = battle.isBoss;
+    const encounter = battle.nextEncounter();
     setText(el.stageName, `Fase ${state.stage}`);
-    el.stageName.classList.toggle('is-boss', boss);
-    setText(el.stageSub, boss ? 'chefe' : `${state.kills} / ${KILLS_PER_STAGE}`);
+    el.stageName.classList.toggle('is-boss', encounter === 'boss');
+    setText(el.stageSub, {
+      boss: 'chefe',
+      elite: 'mini-chefe',
+      mob: `${state.kills} / ${KILLS_PER_STAGE}`,
+    }[encounter]);
     setText(el.best, String(state.maxStage));
 
     el.progress.style.width = `${(battle.stageProgress * 100).toFixed(1)}%`;
-    el.progress.classList.toggle('is-boss', boss);
+    el.progress.classList.toggle('is-boss', encounter !== 'mob');
 
-    const showTimer = boss && battle.enemy != null;
+    const showTimer = battle.enemy?.isBoss === true;
     el.bossTimer.hidden = !showTimer;
     if (showTimer) setText(el.bossValue, Math.max(0, battle.bossTimer).toFixed(1));
 

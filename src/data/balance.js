@@ -3,11 +3,19 @@
 
 // ── inimigos ────────────────────────────────────────────────────────
 export const ENEMY = {
-  hpBase: 8,      hpGrowth: 1.208,   // vida por fase
-  dmgBase: 3.2,   dmgGrowth: 1.15,  // dano por fase
+  hpBase: 9.5,    hpGrowth: 1.208,  // vida por fase
+  dmgBase: 4.6,   dmgGrowth: 1.155, // dano por fase
   goldBase: 4.5,  goldGrowth: 1.20, // ouro por abate
-  bossHp: 12,     bossGold: 14,     // multiplicadores do chefe
-  attackPeriod: 1.9,                // segundos entre golpes do inimigo
+
+  // Multiplicadores do encontro final de cada fase.
+  eliteHp: 5,     eliteDmg: 1.8,  eliteGold: 5,   // mini-chefe, toda fase (valores fixos)
+  bossHp: 12,     bossDmg: 1.0,   bossGold: 14,   // chefe, de 5 em 5 fases
+
+  // Cadência de ataque. O mob comum precisa conseguir encaixar um golpe
+  // antes de morrer, senão ele vira boneco de pancada e a luta não tem
+  // tensão nenhuma — por isso o período é menor que o tempo de morte típico.
+  attackPeriod: 1.25,
+  eliteAttackPeriod: 1.3,
   bossAttackPeriod: 1.5,
 };
 

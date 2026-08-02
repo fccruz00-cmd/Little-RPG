@@ -195,17 +195,26 @@ export class Renderer {
     const hover = actor.hover ? Math.sin(performance.now() / 260 + actor.bob) * 1.5 - actor.hover : 0;
     const dx = Math.round(actor.x - camX - FRAME / 2);
     const dy = Math.round(this.groundY - GROUND_LINE + hover);
+    const scale = actor.scale ?? 1;
 
     ctx.save();
     if (fade != null) ctx.globalAlpha = Math.max(0, Math.min(1, fade));
 
-    // sombra
+    // sombra — acompanha o tamanho do bicho
     ctx.globalAlpha *= 0.35;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.ellipse(dx + FRAME / 2, this.groundY + 1, 9, 2.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(dx + FRAME / 2, this.groundY + 1, 9 * scale, 2.5 * scale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = fade != null ? Math.max(0, Math.min(1, fade)) : 1;
+
+    // Mini-chefe e chefe são desenhados maiores, crescendo a partir dos pés
+    // pra continuarem pisando na mesma linha de chão.
+    if (scale !== 1) {
+      ctx.translate(dx + FRAME / 2, this.groundY);
+      ctx.scale(scale, scale);
+      ctx.translate(-(dx + FRAME / 2), -this.groundY);
+    }
 
     if (actor.facing < 0) {
       ctx.translate(dx + FRAME, dy);
@@ -216,11 +225,13 @@ export class Renderer {
     }
     ctx.restore();
 
-    if (actor.flash > 0) this.drawHitFlash(sheet.image, sx, dx, dy, actor.facing, actor.flash);
+    if (actor.flash > 0) {
+      this.drawHitFlash(sheet.image, sx, dx, dy, actor.facing, actor.flash, scale);
+    }
   }
 
   /** Silhueta branca por cima do sprite, no instante do acerto. */
-  drawHitFlash(image, sx, dx, dy, facing, amount) {
+  drawHitFlash(image, sx, dx, dy, facing, amount, scale = 1) {
     const { scratchCtx: s, ctx } = this;
     s.clearRect(0, 0, FRAME, FRAME);
     s.globalCompositeOperation = 'source-over';
@@ -231,6 +242,11 @@ export class Renderer {
 
     ctx.save();
     ctx.globalAlpha = Math.min(0.8, amount * 6);
+    if (scale !== 1) {
+      ctx.translate(dx + FRAME / 2, this.groundY);
+      ctx.scale(scale, scale);
+      ctx.translate(-(dx + FRAME / 2), -this.groundY);
+    }
     if (facing < 0) {
       ctx.translate(dx + FRAME, dy);
       ctx.scale(-1, 1);
@@ -245,7 +261,8 @@ export class Renderer {
   /** Altura da barrinha que flutua logo acima da cabeça do ator. */
   headY(actor) {
     const top = actor.sprite?.top ?? 38;
-    return this.groundY - (GROUND_LINE - top) - 3 - (actor.hover ?? 0);
+    const scale = actor.scale ?? 1;
+    return this.groundY - (GROUND_LINE - top) * scale - 3 - (actor.hover ?? 0) * scale;
   }
 
   drawBars(battle, camX) {
@@ -254,13 +271,20 @@ export class Renderer {
     if (!hero.dead) {
       this.bar(hero.x - camX - W / 2, this.headY(hero), W, 2, hero.hp / hero.maxHp, '#57b03a', '#2c1f18');
     }
-    if (enemy && !enemy.dead && !enemy.isBoss) {
-      this.bar(enemy.x - camX - W / 2, this.headY(enemy), W, 2, enemy.hp / enemy.maxHp, '#c0392b', '#2c1f18');
-    }
-    if (enemy && enemy.isBoss && !enemy.dead) {
+    if (!enemy || enemy.dead) return;
+
+    if (enemy.isBoss) {
       // Fica abaixo do cronômetro do chefe, que é um elemento de DOM no topo.
       const w = Math.min(this.width - 24, 90);
       this.bar((this.width - w) / 2, 17, w, 4, enemy.hp / enemy.maxHp, '#d9534f', '#20141a', '#f0a63c');
+    } else if (enemy.isElite) {
+      // Mini-chefe: barra âmbar, mais larga que a de mob e presa nele.
+      const w = 30;
+      this.bar(enemy.x - camX - w / 2, this.headY(enemy) - 1, w, 3,
+        enemy.hp / enemy.maxHp, '#e8862b', '#2c1f18', '#f0a63caa');
+    } else {
+      this.bar(enemy.x - camX - W / 2, this.headY(enemy), W, 2,
+        enemy.hp / enemy.maxHp, '#c0392b', '#2c1f18');
     }
   }
 
@@ -289,7 +313,7 @@ export class Renderer {
       const alpha = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
       const style = FLOATER_STYLE[f.kind];
       const x = (f.x - camX) * S;
-      const y = (this.groundY - 26 + f.y) * S;
+      const y = (this.groundY - (f.base ?? 26) + f.y) * S;
       const size = Math.max(11, Math.min(26, style.size * S * 0.32));
 
       ctx.globalAlpha = alpha;
