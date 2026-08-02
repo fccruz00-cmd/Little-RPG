@@ -20,7 +20,7 @@ FRAME = 100
 
 # personagem -> {nome-no-jogo: nome-do-arquivo-original}
 ROSTER = {
-    "soldier":             ("Soldier",             {}),
+    "knight":              ("Knight",              {}),
     "slime":               ("Slime",               {}),
     "orc":                 ("Orc",                 {}),
     "bat":                 ("Bat",                 {"idle": "Flying", "walk": "Flying"}),

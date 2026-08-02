@@ -4,7 +4,7 @@ export const FRAME = 100;
 
 // Linha de chão comum a todos os frames do pacote (os pés ficam por volta
 // de y=57 e a sombra original ia até y=60). Desenhar todo mundo com a mesma
-// origem é o que mantém o morcego voando e o resto pisando no chão — encostar
+// origem é o que mantém o morcego voando e o resto pisando no chão: encostar
 // cada sprite no piso pela própria caixa faria o morcego pousar.
 export const GROUND_LINE = 58;
 
@@ -28,6 +28,10 @@ export const SPRITES = {
   greatsword_skeleton: {
     top: 37, bottom: 57, left: 28, right: 59,
     anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 9 },
+  },
+  knight: {
+    top: 38, bottom: 57, left: 41, right: 67,
+    anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   knight_templar: {
     top: 39, bottom: 57, left: 43, right: 70,
@@ -53,10 +57,6 @@ export const SPRITES = {
     top: 40, bottom: 57, left: 36, right: 61,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
   },
-  soldier: {
-    top: 38, bottom: 60, left: 41, right: 58,
-    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
-  },
   swordsman: {
     top: 38, bottom: 60, left: 42, right: 66,
     anims: { attack: 7, death: 4, hurt: 5, idle: 6, walk: 8 },
@@ -75,5 +75,5 @@ export const SPRITES = {
   },
 };
 
-export const ICONS = ["damage", "attack_speed", "crit", "crit_power", "gold", "health", "regen", "stride", "boss", "stage"];
+export const ICONS = ["damage", "attack_speed", "crit", "crit_power", "gold", "health", "regen", "stride", "boss", "stage", "book", "shield", "orb", "crown", "torch", "dagger", "bag", "scout", "relic"];
 

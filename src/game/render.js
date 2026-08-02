@@ -200,12 +200,7 @@ export class Renderer {
     ctx.save();
     if (fade != null) ctx.globalAlpha = Math.max(0, Math.min(1, fade));
 
-    // sombra — acompanha o tamanho do bicho
-    ctx.globalAlpha *= 0.35;
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.ellipse(dx + FRAME / 2, this.groundY + 1, 9 * scale, 2.5 * scale, 0, 0, Math.PI * 2);
-    ctx.fill();
+    this.drawShadow(dx + FRAME / 2, scale, ctx.globalAlpha);
     ctx.globalAlpha = fade != null ? Math.max(0, Math.min(1, fade)) : 1;
 
     // Mini-chefe e chefe são desenhados maiores, crescendo a partir dos pés
@@ -228,6 +223,33 @@ export class Renderer {
     if (actor.flash > 0) {
       this.drawHitFlash(sheet.image, sx, dx, dy, actor.facing, actor.flash, scale);
     }
+  }
+
+  /**
+   * Sombra no chão. É um degradê radial em vez de uma elipse chapada: preto
+   * sólido vira um adesivo colado no piso, ainda mais em cima da grama clara.
+   */
+  drawShadow(cx, scale, alpha) {
+    const { ctx } = this;
+    const rx = 8 * scale;
+    const ry = 2.4 * scale;
+    const y = this.groundY + 1;
+
+    const grad = ctx.createRadialGradient(cx, y, 0, cx, y, rx);
+    grad.addColorStop(0, 'rgba(0,0,0,0.42)');
+    grad.addColorStop(0.6, 'rgba(0,0,0,0.24)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(cx, y);
+    ctx.scale(1, ry / rx);
+    ctx.translate(-cx, -y);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, y, rx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   /** Silhueta branca por cima do sprite, no instante do acerto. */

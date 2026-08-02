@@ -139,6 +139,11 @@ morrer, de propósito: se o mob nunca chega a encaixar um golpe ele vira boneco
 de pancada e a luta não tem tensão nenhuma. Pela simulação isso dá umas 30
 mortes até a fase 20, quase todas no mini-chefe, e aí você passa a aguentar.
 
+O herói é o **Knight**, definido em `HERO.id` no `enemies.js` — é uma linha
+só pra trocar por qualquer personagem do `ROSTER`. Vale saber: o **Soldier**
+do pacote é o único boneco que vem com uma sombra pintada dentro do sprite,
+mesmo na pasta "sem sombras", e ela briga com a sombra que o jogo desenha.
+
 ### Trocar os sprites
 
 `tools/extract_assets.py` recorta os pacotes originais e regrava

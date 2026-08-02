@@ -65,6 +65,19 @@
       "right": 59,
       "top": 37
     },
+    "knight": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 41,
+      "right": 67,
+      "top": 38
+    },
     "knight_templar": {
       "anims": {
         "attack": 7,
@@ -142,19 +155,6 @@
       "left": 36,
       "right": 61,
       "top": 40
-    },
-    "soldier": {
-      "anims": {
-        "attack": 6,
-        "death": 4,
-        "hurt": 4,
-        "idle": 6,
-        "walk": 8
-      },
-      "bottom": 60,
-      "left": 41,
-      "right": 58,
-      "top": 38
     },
     "swordsman": {
       "anims": {

@@ -23,8 +23,11 @@ export const BOSSES = [
   { id: 'wizard',         name: 'Arquimago',        hp: 1.35, dmg: 2.0, speed: 14, reach: 24, hit: 0.60 },
 ];
 
+// O Soldier do pacote é o único personagem que vem com uma sombra pintada
+// no sprite, mesmo na pasta "sem sombras" — e ela brigava com a sombra que o
+// jogo desenha. Trocar de boneco resolve; o Knight vem limpo.
 export const HERO = {
-  id: 'soldier',
+  id: 'knight',
   reach: 19,   // distância (px do mundo) em que o herói para pra bater
   hit: 0.5,    // fração da animação de ataque em que o golpe acerta
 };
