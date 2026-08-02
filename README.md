@@ -22,15 +22,23 @@ O layout segue as três faixas do rascunho: **UI** no topo, **Fight** no meio e
 
 ## Rodando
 
-Não tem build nem dependência. É só servir a pasta:
+**Do jeito mais rápido:** baixe `little-rpg.html` e abra com dois cliques. É o
+jogo inteiro num arquivo só (449 KB) — CSS, código e sprites embutidos, sem
+servidor e sem pasta ao lado. Até o progresso salvo funciona.
+
+**Pra mexer no código:** sirva a pasta, porque o jogo usa módulos ES e o
+`index.html` não abre direto pelo `file://`.
 
 ```sh
 python3 -m http.server 8000
 # abre http://localhost:8000
 ```
 
-Precisa de um servidor (não dá pra abrir o `index.html` direto pelo `file://`)
-porque o jogo usa módulos ES.
+Depois de mudar qualquer coisa, regere o arquivo único:
+
+```sh
+python3 tools/build_single_file.py
+```
 
 ## Como funciona
 
@@ -65,8 +73,10 @@ src/
     battle.js       simulação da arena (não conhece canvas nem DOM)
     render.js       canvas: cenário procedural, sprites, barras, números
   ui/ui.js          HUD e loja
+little-rpg.html     GERADO — o jogo inteiro num arquivo só
 tools/
-  extract_assets.py recorta os pacotes originais pro que o jogo usa
+  extract_assets.py    recorta os pacotes originais pro que o jogo usa
+  build_single_file.py empacota tudo no little-rpg.html
 ```
 
 `battle.js` só emite eventos (`stage`, `spawn`, `hit`, `kill`, `toast`); quem

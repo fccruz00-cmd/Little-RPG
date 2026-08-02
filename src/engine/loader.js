@@ -5,7 +5,9 @@ function loadImage(src) {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`falha ao carregar ${src}`));
-    img.src = src;
+    // No build de arquivo único (tools/build_single_file.py) as imagens viram
+    // data: URI e ficam neste mapa; servindo a pasta normalmente ele não existe.
+    img.src = globalThis.__ASSET_MAP?.[src] ?? src;
   });
 }
 
