@@ -1,215 +1,222 @@
 # Little RPG
 
-Idle auto-battler de navegador, feito pra celular em pé. O herói anda sozinho
-em linha reta, encontra os bichos, mata sozinho e avança de fase — você só
-decide onde gastar o ouro.
+A browser idle auto-battler built for a phone held upright. The hero walks a
+straight line on its own, runs into monsters, kills them without input and
+clears stages. All you decide is where the gold goes.
 
-O layout segue as três faixas do rascunho: **UI** no topo, **Fight** no meio e
-o painel embaixo, agora com três abas: **Upgrades**, **Talentos** e
-**Prestígio**.
+The layout follows the three bands from the original sketch: **UI** on top,
+**Fight** in the middle, and a tabbed panel below with **Upgrades**,
+**Skills**, **Forge** and **Prestige**.
 
 ```
-┌──────────────────────────────┐
-│ ◀  Fase 7   ▶      ouro / dps│  UI
-├──────────────────────────────┤
-│      🗡️ ————→  👹            │  Fight
-│  chão rolando, parallax      │
-├──────────────────────────────┤
-│ Upgrades │ Talentos │Prestígio│  abas
-│  Dano            Nv. 12  221 │
-│  Vel. de Ataque  Nv.  6  181 │
-└──────────────────────────────┘
++------------------------------+
+| < Stage 7 >         gold /s  |  UI
++------------------------------+
+|      hero ---->  monster     |  Fight
+|  scrolling ground, parallax  |
++------------------------------+
+| Upgrades | Skills | Prestige |  tabs
+|  Damage           Lv. 12 221 |
+|  Attack Speed     Lv.  6 181 |
++------------------------------+
 ```
 
-## Rodando
+## Running it
 
-**Do jeito mais rápido:** baixe `little-rpg.html` e abra com dois cliques. É o
-jogo inteiro num arquivo só (420 KB) — CSS, código e sprites embutidos, sem
-servidor e sem pasta ao lado. Até o progresso salvo funciona.
+**Fastest way:** download `little-rpg.html` and open it with two clicks. That
+is the whole game in one file, CSS, code and sprites inlined, no server and no
+folder beside it. Saved progress works too.
 
-**Pra mexer no código:** sirva a pasta, porque o jogo usa módulos ES e o
-`index.html` não abre direto pelo `file://`.
+**To work on the code:** serve the folder, because the game uses ES modules and
+`index.html` will not open straight from `file://`.
 
 ```sh
 python3 -m http.server 8000
-# abre http://localhost:8000
+# open http://localhost:8000
 ```
 
-Depois de mudar qualquer coisa, regere o arquivo único:
+After changing anything, regenerate the single file:
 
 ```sh
 python3 tools/build_single_file.py
 ```
 
-## Como funciona
+## How it plays
 
-- **Fases** — 10 mobs e um **encontro final**: mini-chefe nas fases comuns,
-  **chefe** de 5 em 5. Os dois entram em cena maiores que os mobs; o chefe
-  ainda tem 30 s de prazo, e perder o prazo ou morrer pra ele devolve a vida
-  cheia dele. Contra mob e mini-chefe, morrer só custa o tempo de levantar.
-- **Combate** — o herói caminha até o alcance do inimigo, para e bate no ritmo
-  da Vel. de Ataque. O inimigo faz o mesmo. Morreu, ele levanta em 2 s.
-- **Ouro** — cai de cada abate e cresce junto com a fase. Mini-chefe paga 5×,
-  chefe paga 14×.
-- **Ocioso** — com o jogo fechado (ou a aba escondida) você acumula metade do
-  seu ouro/segundo, até 8 h.
-- **◀ ▶** — dá pra voltar pra uma fase já vencida e farmar ouro nela.
-- O progresso salva sozinho no `localStorage` a cada 5 s.
+- **Stages** hold 10 mobs plus a **final encounter**: a mini boss on regular
+  stages, a **boss** every 5. Both walk in larger than the mobs; the boss also
+  runs a 30 s timer, and letting it expire or dying to it hands the boss its
+  health back. Against mobs and mini bosses, dying only costs the time to
+  stand up.
+- **Combat** has the hero walk into range, stop, and swing at the pace of the
+  Attack Speed stat. Enemies do the same. When the hero falls it gets up in 2 s.
+- **Gold** drops from every kill and scales with the stage. Mini bosses pay 5x,
+  bosses pay 14x.
+- **Idle** progress banks half your gold per second while the game is closed or
+  the tab is hidden, up to 8 hours.
+- **&lt; &gt;** step back to a cleared stage to farm it.
+- Progress autosaves to `localStorage` every 5 s.
 
-### Lendo a tela
+### Reading the screen
 
-- O **ouro** é o número grande do topo, com o ganho por segundo embaixo.
-- A **faixa de atributos** no topo da loja mostra dano/s, vida, crítico e o
-  multiplicador de ouro sem precisar abrir nada.
-- Upgrade que ainda não dá pra comprar mostra uma **barra de quanto falta** —
-  cinza só dizendo "não dá" não conta se falta um segundo ou dois minutos.
-- A **★** marca o upgrade com melhor poder por moeda entre os disponíveis.
+- **Gold** is the big number up top, with gold per second under it.
+- The **stat strip** above the shop shows damage/s, health, crit and the gold
+  multiplier without opening anything.
+- An upgrade you cannot afford yet shows a **progress bar behind the row**. A
+  grey row only saying "no" does not tell you whether that is one second away
+  or two minutes.
+- A **star** marks the upgrade with the best power per coin among the ones you
+  can afford.
 
-### As três abas
+### The four tabs
 
-1. **Upgrades** — atributos comprados com **ouro**, que zeram no renascimento.
-2. **Talentos** — duas árvores no mesmo lugar, no seletor do topo:
-   - *Talentos*, pagos com **pontos de nível** (1 por nível). Zeram no
-     renascimento; dá pra redistribuir a qualquer momento.
-   - *Relíquias*, a árvore de prestígio, paga com **relíquias**. É permanente.
-   - Nos dois casos um nó só abre quando o anterior do galho tem 1 ponto.
-3. **Forja** — só aparece depois do primeiro renascimento.
-4. **Prestígio** — renascer. Zera fase, ouro, upgrades, nível e talentos, e
-   converte a profundidade da corrida em relíquias. A primeira sai na fase 25;
-   como o cálculo é acumulado menos o que já foi recebido, repetir a mesma
-   profundidade não paga de novo.
+1. **Upgrades**: stats bought with **gold**, wiped on rebirth.
+2. **Skills**: two trees behind one switch at the top.
+   - *Skills*, paid with **level points** (one per level). Wiped on rebirth,
+     and you can respec at any time.
+   - *Relics*, the prestige tree, paid with **relics**. Permanent.
+   - In both, a node only opens once the previous one in its branch has a point.
+3. **Forge**: only appears after the first rebirth.
+4. **Prestige**: rebirth. Wipes stage, gold, upgrades, level and skill points,
+   and turns the depth of the run into relics. The first one lands at stage 25;
+   since the formula is cumulative minus what you already collected, repeating
+   the same depth does not pay twice.
 
-A árvore de relíquias tem seis galhos: **Poder**, **Riqueza**, **Essência**,
-**Automação**, **Skills** e **Tempo** — 1.498 relíquias pra encher tudo.
+The relic tree has six branches: **Power**, **Wealth**, **Essence**,
+**Automation**, **Skills** and **Time**, 1,498 relics to fill completely.
 
-### Forja e poeira de alma
+### Forge and soul dust
 
-Depois do primeiro renascimento os mobs passam a largar **poeira de alma**
-(20% por mob comum, sempre no mini-chefe e no chefe). A poeira forja equipamento
-em sete slots: espada, capacete, armadura, calça, bota, amuleto e anel.
+After the first rebirth mobs start dropping **soul dust** (20% per regular mob,
+always from mini bosses and bosses). Dust forges equipment across seven slots:
+sword, helmet, armor, pants, boots, amulet and ring.
 
-Cada forja **sorteia uma raridade** — o valor do atributo é fixo por raridade,
-o acaso está só em qual delas sai:
+Each forge **rolls a rarity**. The stat value is fixed per rarity, the only
+randomness is which one comes out:
 
-| raridade | chance | multiplicador |
+| rarity | odds | multiplier |
 |---|---:|---:|
-| Comum (branca)    | 50,0% | ×1 |
-| Incomum (verde)   | 27,0% | ×2,2 |
-| Rara (azul)       | 15,5% | ×4,5 |
-| Épica (roxa)      |  6,0% | ×9 |
-| Lendária (laranja)|  1,5% | ×18 |
+| Common (white)     | 50.0% | x1 |
+| Uncommon (green)   | 27.0% | x2.2 |
+| Rare (blue)        | 15.5% | x4.5 |
+| Epic (purple)      |  6.0% | x9 |
+| Legendary (orange) |  1.5% | x18 |
 
-Veio melhor que a equipada, troca sozinho; veio pior, vira troco de poeira.
-Não tem inventário: a comparação é trivial porque a raridade define tudo.
-Forjar num slot custa mais conforme o que já está equipado (10 → 20 → 34 → 55
-→ 90 → 150), então perseguir uma lendária é caro de propósito.
+Better than what you wear and it swaps itself in; worse and it turns back into
+dust. There is no inventory, because with the value pinned to the rarity the
+comparison is trivial and choosing would just be list management. Forging a
+slot costs more the better its current item is (10, 20, 34, 55, 90, 150), so
+chasing a legendary is expensive on purpose.
 
-O galho **Automação** compra upgrade sozinho (*Arauto*) e forja sozinho
-(*Bigorna*); o galho **Skills** adiciona golpe duplo, roubo de vida, execução
-em alvo ferido e bônus no primeiro golpe.
+The **Automation** branch buys upgrades for you (*Herald*) and forges for you
+(*Anvil*); the **Skills** branch adds double strikes, lifesteal, extra damage
+against wounded targets and a bonus on the first hit.
 
-### Nível e experiência
+### Levels and experience
 
-Cada abate dá XP (mini-chefe ×5, chefe ×12) e cada nível dá 1 ponto de talento.
-O nível não mexe em atributo nenhum sozinho — quem dá poder é a árvore, senão
-seria mais uma curva escondida. A árvore inteira custa 80 pontos e enche por
-volta da fase 120; o talento *Veterano*, na árvore de relíquias, adiciona
-pontos extras que sobrevivem ao renascimento.
+Every kill grants XP (mini boss x5, boss x12) and every level grants one skill
+point. Levelling does not touch a stat on its own; the tree is where the power
+comes from, otherwise it would be one more hidden curve. The whole tree costs
+80 points and fills up around stage 120. *Veteran*, on the relic tree, adds
+extra points that survive rebirth.
 
-## Organização
+## Layout
 
 ```
-index.html          três faixas do layout
-styles.css          UI (botões e molduras são 9-slice do pacote Mini Medieval)
+index.html          the three layout bands
+styles.css          UI (buttons and frames are 9-sliced Mini Medieval art)
 src/
-  main.js           bootstrap + game loop (passo fixo de 1/60 s)
-  format.js         1.2K, 340M, 5.07aa…
+  main.js           bootstrap plus the game loop (fixed 1/60 s step)
+  format.js         1.2K, 340M, 5.07aa...
   data/
-    balance.js      TODAS as curvas numéricas — é o arquivo pra rebalancear
-    enemies.js      elenco, quando cada bicho aparece, chefes
-    upgrades.js     o que aparece na loja
-    levels.js       curva de XP e ganho por abate
-    talents.js      as duas árvores (nós, efeitos e custos)
-    prestige.js     quantas relíquias uma corrida vale
-    sprites.js      GERADO — contagem de frames e caixa de cada sprite
+    balance.js      EVERY progression number, the file to rebalance
+    enemies.js      roster, when each mob unlocks, bosses
+    upgrades.js     what shows up in the shop
+    levels.js       XP curve and gain per kill
+    talents.js      both trees (nodes, effects, costs)
+    gear.js         forge: slots, rarities, odds and costs
+    prestige.js     what a run is worth in relics
+    sprites.js      GENERATED, frame counts and body box per sprite
   engine/
-    loader.js       carregamento das imagens
-    anim.js         tocador de spritesheet
+    loader.js       image loading
+    anim.js         spritesheet player
   game/
-    state.js        atributos derivados, árvores, nível, prestígio, save/load
-    battle.js       simulação da arena (não conhece canvas nem DOM)
-    render.js       canvas: cenário procedural, sprites, barras, números
-  ui/ui.js          HUD, abas, loja, árvores e painel de prestígio
-little-rpg.html     GERADO — o jogo inteiro num arquivo só
+    state.js        derived stats, trees, level, forge, prestige, save/load
+    battle.js       arena simulation (knows nothing about canvas or DOM)
+    render.js       canvas: procedural scenery, sprites, bars, numbers
+  ui/ui.js          HUD, tabs, shop, trees, forge and prestige panel
+little-rpg.html     GENERATED, the whole game in one file
 tools/
-  extract_assets.py    recorta os pacotes originais pro que o jogo usa
-  build_single_file.py empacota tudo no little-rpg.html
+  extract_assets.py    crops the source packs down to what the game uses
+  build_single_file.py bundles everything into little-rpg.html
 ```
 
-`battle.js` só emite eventos (`stage`, `spawn`, `hit`, `kill`, `toast`); quem
-desenha e quem mexe no DOM são o `render.js` e a `ui.js`. Dá pra trocar a
-renderização inteira sem encostar na simulação.
+`battle.js` only emits events (`stage`, `spawn`, `hit`, `kill`, `dust`,
+`toast`); drawing and DOM work live in `render.js` and `ui.js`. The whole
+renderer could be swapped without touching the simulation.
 
-Os nós das árvores não conhecem os atributos: cada um só acumula numa chave de
-bônus (`dmgMul`, `goldMul`, `critAdd`…), e o `GameState` aplica essas chaves em
-cima do que foi comprado com ouro. Pra criar um talento novo basta uma linha em
-`talents.js` — se a chave já existir, não precisa mexer em mais nada.
+Tree nodes know nothing about stats: each one accumulates into a bonus key
+(`dmgMul`, `goldMul`, `critAdd`...) and `GameState` applies those keys on top
+of what gold bought. Adding a talent is one line in `talents.js`, and if the
+key already exists nothing else needs to change.
 
-### Rebalancear
+### Rebalancing
 
-Tudo que é número de progressão está em `src/data/balance.js`. A curva atual
-mira nisto — o mini-chefe fica em torno de 4× um mob e o chefe em 10×:
+Every progression number lives in `src/data/balance.js`. The current curve aims
+at this, with the mini boss around 4x a mob and the boss around 10x:
 
-| fase | mob | mini-chefe | chefe |
-|-----:|----:|-----------:|------:|
-|   10 | 1,9 s | 7,2 s | 18,8 s |
-|   20 | 2,3 s | 9,1 s | 22,7 s |
-|   60 | 0,4 s | 1,5 s |  3,7 s |
-|  120 | 0,7 s | 3,4 s |  7,4 s |
+| stage | mob | mini boss | boss |
+|------:|----:|----------:|-----:|
+|    10 | 1.9 s | 7.2 s | 18.8 s |
+|    20 | 2.3 s | 9.1 s | 22.7 s |
+|    60 | 0.4 s | 1.5 s |  3.7 s |
+|   120 | 0.7 s | 3.4 s |  7.4 s |
 
-A folga do meio é de propósito: é quando os atributos com teto (crítico, vel.
-de ataque, ouro) enchem e você atropela um trecho antes da curva apertar de
-novo. Só **Dano**, **Vida Máxima** e **Regeneração** crescem sem teto — se o
-ganho de ouro também crescesse, ele se realimentava e o jogo virava trivial por
-volta da fase 25.
+The slack in the middle is deliberate: that is when the capped stats (crit,
+attack speed, gold) fill up and you steamroll a stretch before the curve
+tightens again. Only **Damage**, **Max Health** and **Regeneration** grow
+uncapped. If gold gain grew too it would feed itself and the game would go
+trivial around stage 25.
 
-O período de ataque dos mobs (1,25 s) é menor que o tempo que eles levam pra
-morrer, de propósito: se o mob nunca chega a encaixar um golpe ele vira boneco
-de pancada e a luta não tem tensão nenhuma. Pela simulação isso dá umas 30
-mortes até a fase 20, quase todas no mini-chefe, e aí você passa a aguentar.
+Mob attack period (1.25 s) sits below how long they take to die, on purpose. A
+mob that never lands a hit is a punching bag and the fight carries no tension.
+By simulation that costs about 30 deaths up to stage 20, nearly all of them to
+the mini boss, and then you start holding.
 
-O herói é o **Knight**, definido em `HERO.id` no `enemies.js` — é uma linha
-só pra trocar por qualquer personagem do `ROSTER`. Vale saber: o **Soldier**
-do pacote é o único boneco que vem com uma sombra pintada dentro do sprite,
-mesmo na pasta "sem sombras", e ela briga com a sombra que o jogo desenha.
+The hero is the **Knight**, set by `HERO.id` in `enemies.js`, one line to swap
+for any character in the `ROSTER`. Worth knowing: the **Soldier** is the only
+model in the pack shipping with a shadow painted into the sprite, even in the
+"no shadows" folder, and it clashes with the shadow the game draws.
 
-### Trocar os sprites
+### Swapping sprites
 
-`tools/extract_assets.py` recorta os pacotes originais e regrava
-`assets/manifest.json`:
+`tools/extract_assets.py` crops the source packs, rewrites
+`assets/manifest.json`, regenerates `src/data/sprites.js` and patches the
+`.ico--*` classes in `styles.css`:
 
 ```sh
 python3 tools/extract_assets.py \
-  "<pacote de personagens>/Characters(100x100 split)" \
+  "<character pack>/Characters(100x100 split)" \
   "<Mini-Medieval-User-Interface-8x8>" \
   "<Raven Fantasy Icons>/Full Spritesheet/32x32.png"
 ```
 
-Depois é só regerar `src/data/sprites.js` a partir do manifesto. O elenco fica
-no dicionário `ROSTER` e os ícones na lista `ICONS`, ambos no topo do script.
+The roster lives in the `ROSTER` dict and the icons in the `ICONS` list, both
+at the top of that script.
 
-## Créditos dos assets
+## Asset credits
 
-O jogo usa recortes de três pacotes de terceiros:
+The game uses crops from three third-party packs:
 
-- **Tiny RPG Character Asset Pack 01** — personagens e animações
-- **Mini Medieval User Interface v1.1** — [VEXED](https://v3x3d.itch.io/) — botões e molduras
-- **Premium — Raven Fantasy Icons** — ícones dos upgrades
+- **Tiny RPG Character Asset Pack 01**, characters and animations
+- **Mini Medieval User Interface v1.1** by [VEXED](https://v3x3d.itch.io/),
+  buttons and frames
+- **Premium - Raven Fantasy Icons**, upgrade and item icons
 
-Nenhum dos três traz arquivo de licença junto. O de ícones em particular é
-vendido como pacote pago, e licenças desse tipo costumam liberar o uso em jogos
-mas **proibir redistribuir a arte crua** — o que é exatamente o que acontece ao
-versionar `assets/` num repositório público. Se for publicar, confira os termos
-de cada pacote; se não puderem ir junto, é só colocar `assets/characters/`,
-`assets/ui/` e `assets/icons/` no `.gitignore` e cada pessoa roda o
-`tools/extract_assets.py` com os pacotes originais.
+None of the three ships a licence file. The icon pack in particular is sold as
+a paid product, and licences like that usually allow use in a game but
+**forbid redistributing the raw art**, which is exactly what versioning
+`assets/` in a public repository does. If you publish this, check the terms of
+each pack. If they cannot ship along, put `assets/characters/`, `assets/ui/`
+and `assets/icons/` in `.gitignore` and have everyone run
+`tools/extract_assets.py` against the original packs.

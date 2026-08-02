@@ -7,8 +7,8 @@ import { SLOTS, RARITIES, RARITY_ODDS, describeGear } from '../data/gear.js';
 import { fmt, pct, mult, duration } from '../format.js';
 
 /**
- * Como medir o ganho de um upgrade, pra apontar o de melhor custo-benefício.
- * Sobreviver e andar valem menos que matar, daí os pesos.
+ * How to measure an upgrade's payoff, so the best value can be flagged.
+ * Surviving and walking are worth less than killing, hence the weights.
  */
 const SCORE = {
   damage:     [(s) => s.dps, 1],
@@ -23,7 +23,7 @@ const SCORE = {
 
 const $ = (id) => document.getElementById(id);
 
-/** Atualiza `el.textContent` só quando o valor muda de verdade. */
+/** Writes `el.textContent` only when the value actually changed. */
 function setText(el, value) {
   if (el.textContent !== value) el.textContent = value;
 }
@@ -83,7 +83,7 @@ export class UI {
     battle.on('toast', (t) => this.toast(t));
   }
 
-  // ── construção ────────────────────────────────────────────────────
+  // --- building -----------------------------------------------------
   buildShop() {
     const frag = document.createDocumentFragment();
     for (const up of UPGRADES) {
@@ -116,7 +116,7 @@ export class UI {
     this.el.shop.append(frag);
   }
 
-  /** Monta a forja: uma linha por slot e a tabela de chances embaixo. */
+  /** Builds the forge: one row per slot plus the odds table below. */
   buildForge() {
     const frag = document.createDocumentFragment();
     for (const slot of SLOTS) {
@@ -147,7 +147,7 @@ export class UI {
     ).join('');
   }
 
-  /** Monta uma árvore: um galho por coluna, nós ligados por um fio. */
+  /** Builds a tree: one branch per column, nodes joined by a wire. */
   buildTree(host, tree, kind) {
     const grid = document.createElement('div');
     grid.className = 'tree';
@@ -187,7 +187,7 @@ export class UI {
     host.append(grid);
   }
 
-  // ── eventos ───────────────────────────────────────────────────────
+  // --- events -------------------------------------------------------
   bind() {
     const { el, state, battle } = this;
 
@@ -212,8 +212,8 @@ export class UI {
       button.classList.add('is-bought');
     });
 
-    // Comprar e mostrar o detalhe do nó vivem no mesmo toque: o clique
-    // investe (se der) e o texto de baixo explica o que aconteceu.
+    // Buying and reading a node share one tap: the click invests when it
+    // can, and the line below explains what happened.
     for (const entry of this.nodes) {
       entry.button.addEventListener('click', () => {
         const bought = entry.kind === 'talent'
@@ -241,7 +241,7 @@ export class UI {
 
     el.respec.addEventListener('click', () => {
       if (!state.spentPoints) return;
-      if (!confirm('Devolver todos os pontos de talento pra redistribuir?')) return;
+      if (!confirm('Refund every skill point so you can respend them?')) return;
       state.respecTalents();
       state.save();
       this.refreshTrees(true);
@@ -259,7 +259,7 @@ export class UI {
     el.presGo.addEventListener('click', () => {
       const gain = state.pendingRelics;
       if (gain <= 0) return;
-      if (!confirm(`Renascer agora rende ${gain} relíquia(s).\n\nVocê perde fase, ouro, upgrades, nível e talentos. Confirma?`)) return;
+      if (!confirm(`Rebirth now pays ${gain} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?`)) return;
       state.prestige();
       battle.enterStage(state.startStage, { silent: true });
       this.refreshShop(true);
@@ -268,13 +268,13 @@ export class UI {
       this.showTree('relics');
       this.toast({
         text: state.prestiges === 1
-          ? `RENASCEU — A FORJA ABRIU`
-          : `RENASCEU — +${gain} RELÍQUIA(S)`,
+          ? 'REBORN: THE FORGE IS OPEN'
+          : `REBORN: +${gain} RELIC(S)`,
       });
     });
 
     el.reset.addEventListener('click', () => {
-      if (!confirm('Apagar TUDO, inclusive relíquias e prestígio?')) return;
+      if (!confirm('Erase EVERYTHING, relics and prestige included?')) return;
       GameState.wipe();
       location.reload();
     });
@@ -302,26 +302,26 @@ export class UI {
     this.el.treeRelics.hidden = name !== 'relics';
     this.el.treePoints.classList.toggle('is-relic', name === 'relics');
     this.el.respec.hidden = name !== 'talents';
-    setText(this.el.treeDetail, 'Toque num nó pra investir.');
+    setText(this.el.treeDetail, 'Tap a node to invest.');
     this.refreshTrees(true);
   }
 
-  /** Linha de explicação do nó tocado. */
+  /** Explanation line for the node being touched. */
   describe(entry) {
     const { state } = this;
     const { node, kind, branch, index } = entry;
     const ranks = (kind === 'talent' ? state.talents : state.relicTalents)[node.id] ?? 0;
     const locked = !state.isUnlocked(branch, index, kind === 'talent' ? state.talents : state.relicTalents);
 
-    const now = ranks > 0 ? `agora: ${describeNode(node, ranks)}` : 'ainda sem pontos';
+    const now = ranks > 0 ? `now: ${describeNode(node, ranks)}` : 'no points yet';
     let line;
     if (locked) {
-      line = `<b>${node.name}</b> — trancado: invista em <b>${branch.nodes[index - 1].name}</b> primeiro.`;
+      line = `<b>${node.name}</b> is locked: invest in <b>${branch.nodes[index - 1].name}</b> first.`;
     } else if (ranks >= node.max) {
-      line = `<b>${node.name}</b> — no máximo. ${describeNode(node, ranks)}.`;
+      line = `<b>${node.name}</b> is maxed. ${describeNode(node, ranks)}.`;
     } else {
-      const price = kind === 'relic' ? `${relicCost(node, ranks)} relíquia(s)` : '1 ponto';
-      line = `<b>${node.name}</b> (${ranks}/${node.max}) — ${now}. Próximo ponto: <b>${describeNode(node, ranks + 1)}</b> por ${price}.`;
+      const price = kind === 'relic' ? `${relicCost(node, ranks)} relic(s)` : '1 point';
+      line = `<b>${node.name}</b> (${ranks}/${node.max}), ${now}. Next point: <b>${describeNode(node, ranks + 1)}</b> for ${price}.`;
     }
     setHtml(this.el.treeDetail, line);
   }
@@ -331,7 +331,7 @@ export class UI {
     el.hidden = false;
     el.textContent = text;
     el.classList.toggle('is-bad', bad);
-    // Reinicia a animação mesmo se o toast anterior ainda estiver na tela.
+    // Restart the animation even if the previous toast is still on screen.
     el.style.animation = 'none';
     void el.offsetWidth;
     el.style.animation = '';
@@ -339,7 +339,7 @@ export class UI {
     this._toastTimer = setTimeout(() => { el.hidden = true; }, 900);
   }
 
-  // ── atualização por quadro ────────────────────────────────────────
+  // --- per-frame update -----------------------------------------------
   update(dt) {
     const { state, battle, el } = this;
 
@@ -352,11 +352,11 @@ export class UI {
     setText(el.xpText, `${fmt(state.xp)} / ${fmt(need)}`);
 
     const encounter = battle.nextEncounter();
-    setText(el.stageName, `Fase ${state.stage}`);
+    setText(el.stageName, `Stage ${state.stage}`);
     el.stageName.classList.toggle('is-boss', encounter === 'boss');
     setText(el.stageSub, {
-      boss: 'chefe',
-      elite: 'mini-chefe',
+      boss: 'boss',
+      elite: 'mini boss',
       mob: `${state.kills} / ${state.killsPerStage}`,
     }[encounter]);
     setText(el.best, String(state.bestStage));
@@ -372,7 +372,7 @@ export class UI {
     el.stagePrev.disabled = state.stage <= 1;
     el.stageNext.disabled = state.stage >= state.maxStage;
 
-    // marcadores de "tem coisa pra gastar aqui"
+    // "there is something to spend here" markers
     el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
     el.pipPrestige.hidden = state.pendingRelics <= 0;
     el.pipPrestige.classList.add('pip--gold');
@@ -393,9 +393,9 @@ export class UI {
   }
 
   /**
-   * Qual upgrade dá mais poder por moeda agora. Mede o ganho relativo
-   * subindo o nível por um instante e desfazendo — `statValue` é puro, então
-   * isso não deixa rastro no estado.
+   * Which upgrade gives the most power per coin right now. It measures the
+   * relative gain by bumping the level for an instant and undoing it;
+   * `statValue` is pure, so this leaves no trace on the state.
    */
   bestBuy() {
     const { state } = this;
@@ -449,10 +449,10 @@ export class UI {
       setText(row.effect, row.up.describe(lvl));
       setText(row.lvl, n > 1 ? `Nv. ${lvl} → ${lvl + n}` : `Nv. ${lvl}`);
       setHtml(row.cost, maxed
-        ? 'MÁX'
+        ? 'MAX'
         : `<i class="ico ico--gold"></i> ${fmt(price)}`);
 
-      // barra de "quanto falta" nas linhas que ainda não dá pra comprar
+      // "how much is missing" bar on rows you cannot afford yet
       row.meter.style.width = can || maxed
         ? '0%'
         : `${Math.min(100, (state.gold / state.costOf(key)) * 100).toFixed(1)}%`;
@@ -460,16 +460,16 @@ export class UI {
 
     this.refreshStatbar();
     if (affordable > 0) {
-      setText(el.shopHint, affordable === 1 ? '1 upgrade disponível' : `${affordable} upgrades disponíveis`);
+      setText(el.shopHint, affordable === 1 ? '1 upgrade available' : `${affordable} upgrades available`);
     } else if (isFinite(cheapest) && state.goldPerSec > 0) {
-      setText(el.shopHint, `Próximo em ~${duration((cheapest - state.gold) / state.goldPerSec)}`);
+      setText(el.shopHint, `Next one in ~${duration((cheapest - state.gold) / state.goldPerSec)}`);
     } else {
-      setText(el.shopHint, 'Junte mais ouro');
+      setText(el.shopHint, 'Gather more gold');
     }
   }
 
-  // ── forja ─────────────────────────────────────────────────────────
-  /** Forja num slot e conta o que saiu. */
+  // --- forge --------------------------------------------------------
+  /** Forges a slot and reports what came out. */
   doForge(slotId, quiet = false) {
     const result = this.state.forge(slotId);
     if (!result) return null;
@@ -482,10 +482,10 @@ export class UI {
       void entry.button.offsetWidth;
       entry.button.classList.add('is-new');
       if (!quiet || result.rolled >= 3) {
-        this.toast({ text: `${entry.slot.name.toUpperCase()} ${rarity.name.toUpperCase()}!` });
+        this.toast({ text: `${rarity.name.toUpperCase()} ${entry.slot.name.toUpperCase()}!` });
       }
     } else if (!quiet) {
-      this.toast({ text: `${rarity.name} — pior que a atual, +${result.refund} poeira`, bad: true });
+      this.toast({ text: `${rarity.name}: worse than equipped, +${result.refund} dust`, bad: true });
     }
     this.refreshForge();
     return result;
@@ -509,20 +509,20 @@ export class UI {
       entry.button.classList.toggle('slot--maxed', maxed);
       entry.button.disabled = !state.canForge(entry.slot.id);
 
-      setText(entry.rarity, rarity ? rarity.name : 'vazio');
+      setText(entry.rarity, rarity ? rarity.name : 'empty');
       setText(entry.effect, equipped == null
-        ? 'nada equipado'
+        ? 'nothing equipped'
         : describeGear(entry.slot, equipped));
       setHtml(entry.cost, maxed
-        ? 'no topo'
+        ? 'maxed'
         : `<i class="ico ico--sm ico--dust"></i> ${cost}`);
     }
   }
 
   /**
-   * Arauto compra o melhor upgrade sozinho; Bigorna forja sozinha no slot
-   * mais barato. Os dois fazem o que o dedo faria — nada que o jogador não
-   * pudesse fazer na mão.
+   * Herald buys the best upgrade on its own; Anvil forges the cheapest slot.
+   * Both only do what a finger would do, nothing the player could not do by
+   * hand.
    */
   tickAutomation(dt) {
     const { state } = this;
@@ -563,12 +563,12 @@ export class UI {
     const relicMode = this.tree === 'relics';
 
     setHtml(el.treePoints, relicMode
-      ? `<i class="ico ico--sm ico--relic"></i> <b>${fmt(state.relics)}</b> relíquias`
-      : `<b>${state.freePoints}</b> ponto(s) livre(s)`);
+      ? `<i class="ico ico--sm ico--relic"></i> <b>${fmt(state.relics)}</b> relics`
+      : `<b>${state.freePoints}</b> free point(s)`);
 
     for (const entry of this.nodes) {
       const isRelic = entry.kind === 'relic';
-      if (isRelic !== relicMode) continue; // a outra árvore está escondida
+      if (isRelic !== relicMode) continue; // the other tree is hidden
 
       const ranksOf = isRelic ? state.relicTalents : state.talents;
       const ranks = ranksOf[entry.node.id] ?? 0;
@@ -584,7 +584,7 @@ export class UI {
       entry.button.classList.toggle('is-locked', !unlocked);
       entry.button.classList.toggle('can-buy', canBuy);
       setText(entry.rank, `${ranks}/${entry.node.max}`);
-      if (entry.cost) setText(entry.cost, full ? '—' : `${relicCost(entry.node, ranks)} ⬦`);
+      if (entry.cost) setText(entry.cost, full ? 'max' : `${relicCost(entry.node, ranks)}r`);
       if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
     }
   }
@@ -597,22 +597,22 @@ export class UI {
     setText(el.presCount, String(state.prestiges));
     setText(el.presBest, String(state.maxStage));
 
-    // A próxima relíquia é medida a partir do que a corrida atual já vale,
-    // não do que já foi recebido: senão, quem está na fase 38 com 3 relíquias
-    // pendentes leria "fase 25", que já passou.
+    // The next relic is measured from what the current run is already worth
+    // rather than what was collected, otherwise someone on stage 38 with 3
+    // pending relics would read "stage 25", which is long gone.
     const next = nextRelicStage(relicsEarnedAt(state.maxStage));
-    setText(el.presNext, isFinite(next) ? `fase ${next}` : '—');
+    setText(el.presNext, isFinite(next) ? `stage ${next}` : 'n/a');
 
     el.presGainBox.classList.toggle('is-empty', gain <= 0);
     this.refreshPerks();
 
     el.presGo.disabled = gain <= 0;
     setText(el.presGo, gain > 0
-      ? `Renascer por ${gain} relíquia(s)`
-      : `Avance até a fase ${isFinite(next) ? next : PRESTIGE.minStage}`);
+      ? `Rebirth for ${gain} relic(s)`
+      : `Reach stage ${isFinite(next) ? next : PRESTIGE.minStage}`);
   }
 
-  /** Lista o que a árvore de relíquias já garante — some se ainda não há nada. */
+  /** Lists what the relic tree already grants; hides itself when empty. */
   refreshPerks() {
     const { state, el } = this;
     const active = RELIC_TREE
@@ -629,8 +629,8 @@ export class UI {
     setHtml(el.perksList, html);
   }
 
-  /** Aviso de ganho enquanto o jogo estava fechado. */
+  /** Notice for gold banked while the game was closed. */
   showOffline({ seconds, gold }) {
-    this.toast({ text: `+${fmt(gold)} de ouro em ${duration(seconds)}` });
+    this.toast({ text: `+${fmt(gold)} gold over ${duration(seconds)}` });
   }
 }

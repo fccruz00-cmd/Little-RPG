@@ -1,4 +1,4 @@
-// Tocador de animação de spritesheet horizontal.
+// Player for horizontal spritesheet animations.
 
 export class Animator {
   /**
@@ -22,20 +22,20 @@ export class Animator {
     return this.sheet.frames;
   }
 
-  /** Índice do frame atual, já respeitando loop/one-shot. */
+  /** Current frame index, honouring loop vs one-shot. */
   get frame() {
     const i = Math.floor(this.time * this.fps);
     return this.loop ? i % this.frameCount : Math.min(i, this.frameCount - 1);
   }
 
-  /** Progresso de 0 a 1 dentro da animação (útil pra saber quando o golpe sai). */
+  /** Progress from 0 to 1 inside the animation (tells when a hit lands). */
   get progress() {
     return Math.min(1, (this.time * this.fps) / this.frameCount);
   }
 
   /**
-   * Troca de animação. Se já estiver tocando essa mesma, não reinicia —
-   * a menos que `force` seja verdadeiro.
+   * Switches animation. Playing the same one again does not restart it
+   * unless `force` is set.
    */
   play(name, { fps = 12, loop = true, force = false } = {}) {
     if (this.name === name && !force) {
@@ -51,8 +51,8 @@ export class Animator {
   }
 
   /**
-   * Ajusta o fps pra animação inteira durar `seconds`.
-   * Usado no ataque, que precisa acompanhar a cadência do personagem.
+   * Sets the fps so the whole animation lasts `seconds`.
+   * Used by attacks, which must track the character's cadence.
    */
   playTimed(name, seconds, { loop = false, force = false } = {}) {
     const sheet = this.sheets[name] ?? this.sheets.idle;

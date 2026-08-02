@@ -6,14 +6,14 @@ import {
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 
-const SPAWN_MARGIN = 12;   // px do mundo além da borda direita da tela
-const RESPAWN_DELAY = 2.2; // segundos parado depois de morrer
-const CORPSE_TIME = 1.1;   // quanto tempo o cadáver fica na tela
-const LOOT_PAUSE = 0.35;   // respiro entre um inimigo e o próximo
+const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
+const RESPAWN_DELAY = 2.2; // seconds down after dying
+const CORPSE_TIME = 1.1;   // how long a corpse stays on screen
+const LOOT_PAUSE = 0.35;   // breather between one enemy and the next
 
 let nextId = 1;
 
-/** Um ator na arena: herói, inimigo ou cadáver. */
+/** An actor in the arena: hero, enemy or corpse. */
 class Actor {
   constructor(def, sheets, { x, facing }) {
     this.id = nextId++;
@@ -28,7 +28,7 @@ class Actor {
     this.swung = false;
     this.attackTimer = 0;
     this.dead = false;
-    this.struck = false;   // já levou o primeiro golpe? (Emboscada)
+    this.struck = false;   // has it taken the first hit yet? (Ambush)
     this.corpseTimer = 0;
     this.hover = def.hover ?? 0;
     this.bob = Math.random() * Math.PI * 2;
@@ -42,21 +42,21 @@ class Actor {
 }
 
 /**
- * Simulação da arena. Não sabe nada de canvas nem de DOM: só avança o
- * mundo e emite eventos que a renderização e a UI consomem.
+ * Arena simulation. It knows nothing about canvas or DOM: it only advances
+ * the world and emits events the renderer and UI consume.
  */
 export class Battle {
   /**
    * @param {import('./state.js').GameState} state
-   * @param {Record<string, any>} actorSheets sprites já carregados
+   * @param {Record<string, any>} actorSheets already loaded sprites
    */
   constructor(state, actorSheets) {
     this.state = state;
     this.sheets = actorSheets;
     this.listeners = {};
 
-    this.viewWidth = 200;           // largura lógica da arena, ajustada no resize
-    this.heroAnchor = 0.3;          // onde o herói fica preso na tela (0..1)
+    this.viewWidth = 200;           // logical arena width, set on resize
+    this.heroAnchor = 0.3;          // where the hero sits on screen (0..1)
 
     this.hero = new Actor(HERO, actorSheets[HERO.id], { x: 0, facing: 1 });
     this.hero.maxHp = state.maxHp;
@@ -69,12 +69,12 @@ export class Battle {
     this.spawnTimer = 0;
     this.bossTimer = 0;
 
-    // Ao carregar o save mantém os abates já feitos: fechar o jogo no meio de
-    // uma fase não devolve você pro começo dela.
+    // Loading a save keeps the kills already made: closing the game mid
+    // stage does not send you back to its start.
     this.enterStage(state.stage, { silent: true, keepKills: true });
   }
 
-  // ── eventos ───────────────────────────────────────────────────────
+  // --- events -------------------------------------------------------
   on(name, fn) {
     (this.listeners[name] ??= []).push(fn);
     return this;
@@ -84,7 +84,7 @@ export class Battle {
     for (const fn of this.listeners[name] ?? []) fn(payload);
   }
 
-  // ── fases ─────────────────────────────────────────────────────────
+  // --- stages -------------------------------------------------------
   get isBoss() {
     return isBossStage(this.state.stage);
   }
@@ -94,8 +94,8 @@ export class Battle {
   }
 
   /**
-   * Toda fase termina num encontro final: mini-chefe nas fases comuns,
-   * chefe de verdade (com cronômetro) de 5 em 5.
+   * Every stage ends on a final encounter: a mini boss on regular stages,
+   * a real boss (with a timer) every 5.
    */
   get atFinalEncounter() {
     return this.state.kills >= this.state.killsPerStage;
@@ -111,8 +111,8 @@ export class Battle {
     this.emit('stage', this.state.stage);
     if (!silent) {
       this.emit('toast', this.isBoss
-        ? { text: `FASE ${this.state.stage} — CHEFE À FRENTE`, bad: true }
-        : { text: `FASE ${this.state.stage}` });
+        ? { text: `STAGE ${this.state.stage}: BOSS AHEAD`, bad: true }
+        : { text: `STAGE ${this.state.stage}` });
     }
   }
 
@@ -137,8 +137,8 @@ export class Battle {
     this.emit('toast', { text: reason, bad: true });
   }
 
-  // ── spawn ─────────────────────────────────────────────────────────
-  /** Que tipo de inimigo vem agora: `'mob'`, `'elite'` ou `'boss'`. */
+  // --- spawning -----------------------------------------------------
+  /** Which enemy comes next: `'mob'`, `'elite'` or `'boss'`. */
   nextEncounter() {
     if (!this.atFinalEncounter) return 'mob';
     return this.isBoss ? 'boss' : 'elite';
@@ -152,9 +152,9 @@ export class Battle {
       : kind === 'elite' ? eliteForStage(stage)
       : pool[(Math.random() * pool.length) | 0];
 
-    // O mini-chefe usa multiplicadores fixos em vez dos do próprio bicho:
-    // os mobs variam de 0,55× a 2,6× de vida, e herdar isso faria o
-    // mini-chefe pular de trivial a mais duro que o chefe conforme a fase.
+    // The mini boss uses flat multipliers instead of the mob's own: mobs
+    // range from 0.55x to 2.6x health, and inheriting that would swing the
+    // mini boss from trivial to harder than the boss depending on the stage.
     const stats = {
       mob:   { hp: def.hp,                 dmg: def.dmg,        gold: 1,               period: ENEMY.attackPeriod },
       elite: { hp: ENEMY.eliteHp,          dmg: ENEMY.eliteDmg, gold: ENEMY.eliteGold, period: ENEMY.eliteAttackPeriod },
@@ -177,14 +177,14 @@ export class Battle {
     actor.attackTimer = actor.period * 0.6;
 
     this.enemy = actor;
-    // O cronômetro do chefe só começa a correr quando ele entra em cena.
+    // The boss timer only starts running once it walks on screen.
     if (actor.isBoss) this.bossTimer = BOSS_TIME + this.state.bonus.bossTime;
-    if (actor.isElite) this.emit('toast', { text: `MINI-CHEFE: ${def.name}` });
-    if (actor.isBoss) this.emit('toast', { text: `CHEFE: ${def.name}`, bad: true });
+    if (actor.isElite) this.emit('toast', { text: `MINI BOSS: ${def.name}` });
+    if (actor.isBoss) this.emit('toast', { text: `BOSS: ${def.name}`, bad: true });
     this.emit('spawn', actor);
   }
 
-  // ── loop ──────────────────────────────────────────────────────────
+  // --- loop ---------------------------------------------------------
   update(dt) {
     const { state, hero } = this;
 
@@ -201,7 +201,7 @@ export class Battle {
 
     if (this.enemy?.isBoss && !hero.dead) {
       this.bossTimer -= dt;
-      if (this.bossTimer <= 0) this.failBoss('O CHEFE FUGIU');
+      if (this.bossTimer <= 0) this.failBoss('THE BOSS GOT AWAY');
     }
 
     hero.anim.update(dt);
@@ -215,9 +215,9 @@ export class Battle {
     this.hero.dead = false;
     this.hero.hp = this.hero.maxHp;
     this.hero.anim.play('idle', { fps: 8 });
-    // Cair pro chefe custa a tentativa: ele volta com a vida cheia. Contra
-    // mob e mini-chefe você só perde o tempo de levantar.
-    if (this.enemy?.isBoss) this.failBoss('VOCÊ CAIU');
+    // Falling to the boss costs the attempt: it comes back at full health.
+    // Against mobs and mini bosses you only lose the time to get up.
+    if (this.enemy?.isBoss) this.failBoss('YOU WENT DOWN');
   }
 
   updateHero(dt) {
@@ -240,7 +240,7 @@ export class Battle {
       return;
     }
 
-    // Em alcance: ataca no ritmo do atributo de velocidade de ataque.
+    // In range: swing at the pace of the attack speed stat.
     const period = 1 / state.attackRate;
     hero.attackTimer -= dt;
     if (hero.attackTimer <= 0) {
@@ -259,8 +259,8 @@ export class Battle {
 
   heroStrike(target) {
     const { state, hero } = this;
-    // Golpe Duplo transforma um swing em dois; os dois passam pelas mesmas
-    // regras, então crítico, emboscada e execução valem pros dois.
+    // Double Strike turns one swing into two; both go through the same
+    // rules, so crit, ambush and execute apply to each.
     const swings = 1 + (Math.random() < state.bonus.doubleHit ? 1 : 0);
 
     for (let i = 0; i < swings; i++) {
@@ -311,17 +311,17 @@ export class Battle {
 
     const xpMul = target.isBoss ? LEVELS.bossXp : target.isElite ? LEVELS.eliteXp : 1;
     const levelsUp = state.gainXp(killXp(state.stage, xpMul));
-    if (levelsUp) this.emit('toast', { text: `NÍVEL ${state.level}!` });
+    if (levelsUp) this.emit('toast', { text: `LEVEL ${state.level}!` });
     this.emit('kill', { target, gold, levelsUp });
 
     if (target.isBoss || target.isElite) {
-      this.emit('toast', { text: target.isBoss ? 'CHEFE DERROTADO!' : 'MINI-CHEFE DERROTADO!' });
+      this.emit('toast', { text: target.isBoss ? 'BOSS DOWN!' : 'MINI BOSS DOWN!' });
       this.advance();
       return;
     }
 
-    // Bate o número de mobs e a fase segura o contador ali: o próximo a
-    // aparecer é o encontro final.
+    // Once the mob count is reached the stage pins the counter there: the
+    // next one to show up is the final encounter.
     state.kills = Math.min(state.killsPerStage, state.kills + 1);
   }
 
@@ -367,7 +367,7 @@ export class Battle {
       hero.dead = true;
       hero.anim.play('death', { fps: 8, loop: false, force: true });
       this.respawnTimer = RESPAWN_DELAY * this.state.respawnMul;
-      this.emit('toast', { text: 'VOCÊ CAIU', bad: true });
+      this.emit('toast', { text: 'YOU WENT DOWN', bad: true });
     } else if (hero.anim.name !== 'attack') {
       hero.anim.play('hurt', { fps: 14, loop: false, force: true });
     }
@@ -382,15 +382,15 @@ export class Battle {
     }
   }
 
-  // ── números flutuantes ────────────────────────────────────────────
-  /** Altura do topo de um ator, em px do mundo acima do chão. */
+  // --- floating numbers -----------------------------------------------
+  /** Top of an actor, in world px above the ground. */
   static topOf(actor) {
     const top = actor.sprite?.top ?? 38;
     return (GROUND_LINE - top) * (actor.scale ?? 1) + (actor.hover ?? 0);
   }
 
-  /** O número sai de cima da cabeça de quem levou o golpe, não de uma
-   *  altura fixa — senão ele atravessa a barra de vida do mini-chefe. */
+  /** The number comes off the head of whoever got hit rather than a fixed
+   *  height, otherwise it cuts through the mini boss health bar. */
   pushFloater(actor, value, kind) {
     this.floaters.push({
       x: actor.x + (Math.random() * 10 - 5),
@@ -413,8 +413,8 @@ export class Battle {
   }
 
   /**
-   * Progresso da fase, de 0 a 1: os mobs enchem os primeiros 80% e o
-   * encontro final vale os 20% restantes, pela vida que já levou.
+   * Stage progress, 0 to 1: mobs fill the first 80% and the final encounter
+   * is worth the remaining 20%, by the health it has already lost.
    */
   get stageProgress() {
     const mobs = Math.min(1, this.state.kills / this.state.killsPerStage) * 0.8;

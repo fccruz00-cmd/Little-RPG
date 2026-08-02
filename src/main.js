@@ -6,8 +6,8 @@ import { Battle } from './game/battle.js';
 import { Renderer } from './game/render.js';
 import { UI } from './ui/ui.js';
 
-const STEP = 1 / 60;      // passo fixo da simulação
-const MAX_CATCHUP = 0.25; // no máximo 15 passos por quadro
+const STEP = 1 / 60;      // fixed simulation step
+const MAX_CATCHUP = 0.25; // at most 15 steps per frame
 
 async function boot() {
   const loading = document.getElementById('loading');
@@ -18,7 +18,7 @@ async function boot() {
   const battle = new Battle(state, sheets);
   const ui = new UI(state, battle);
 
-  // Handle de depuração: dá pra inspecionar/forçar estado pelo console.
+  // Debug handle: lets you inspect and poke state from the console.
   globalThis.__rpg = { state, battle, renderer, ui };
 
   const fitCanvas = () => { battle.viewWidth = renderer.resize(); };
@@ -49,7 +49,7 @@ async function boot() {
     requestAnimationFrame(frame);
   }
 
-  // Aba escondida: o rAF para. Ao voltar, credita o período como tempo ocioso.
+  // Hidden tab: rAF stops. On return, credit that span as idle time.
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -71,6 +71,6 @@ async function boot() {
 boot().catch((err) => {
   console.error(err);
   const loading = document.getElementById('loading');
-  loading.textContent = 'não deu pra carregar os assets';
+  loading.textContent = 'could not load the assets';
   loading.style.color = '#d9534f';
 });

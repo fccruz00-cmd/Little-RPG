@@ -1,25 +1,25 @@
-// Todas as curvas numéricas do jogo ficam aqui — é o único arquivo que
-// precisa ser mexido pra rebalancear.
+// Every progression number lives here. This is the only file you need to
+// touch to rebalance the game.
 
-// ── inimigos ────────────────────────────────────────────────────────
+// --- enemies --------------------------------------------------------
 export const ENEMY = {
-  hpBase: 9.5,    hpGrowth: 1.208,  // vida por fase
-  dmgBase: 4.6,   dmgGrowth: 1.155, // dano por fase
-  goldBase: 4.5,  goldGrowth: 1.20, // ouro por abate
+  hpBase: 9.5,    hpGrowth: 1.208,  // health per stage
+  dmgBase: 4.6,   dmgGrowth: 1.155, // damage per stage
+  goldBase: 4.5,  goldGrowth: 1.20, // gold per kill
 
-  // Multiplicadores do encontro final de cada fase.
-  eliteHp: 5,     eliteDmg: 1.8,  eliteGold: 5,   // mini-chefe, toda fase (valores fixos)
-  bossHp: 12,     bossDmg: 1.0,   bossGold: 14,   // chefe, de 5 em 5 fases
+  // Multipliers for the encounter that closes a stage.
+  eliteHp: 5,     eliteDmg: 1.8,  eliteGold: 5,   // mini boss, every stage (flat values)
+  bossHp: 12,     bossDmg: 1.0,   bossGold: 14,   // boss, every 5 stages
 
-  // Cadência de ataque. O mob comum precisa conseguir encaixar um golpe
-  // antes de morrer, senão ele vira boneco de pancada e a luta não tem
-  // tensão nenhuma — por isso o período é menor que o tempo de morte típico.
+  // Attack cadence. A regular mob has to land a hit before it dies, otherwise
+  // it is just a punching bag and the fight carries no tension, which is why
+  // the period sits below the typical time to kill.
   attackPeriod: 1.25,
   eliteAttackPeriod: 1.3,
   bossAttackPeriod: 1.5,
 };
 
-export const BOSS_TIME = 30;        // segundos pra derrubar o chefe
+export const BOSS_TIME = 30;        // seconds to bring the boss down
 
 export function enemyHp(stage, mul = 1) {
   return ENEMY.hpBase * Math.pow(ENEMY.hpGrowth, stage - 1) * mul;
@@ -31,14 +31,13 @@ export function enemyGold(stage, mul = 1) {
   return ENEMY.goldBase * Math.pow(ENEMY.goldGrowth, stage - 1) * mul;
 }
 
-// ── herói ───────────────────────────────────────────────────────────
-// Cada upgrade tem: valor(lvl) e custo(lvl). `lvl` começa em 0.
+// --- hero -----------------------------------------------------------
+// Each upgrade has value(lvl) and cost(lvl). `lvl` starts at 0.
 //
-// Só `damage`, `maxHp` e `regen` crescem sem teto — são os trilhos
-// exponenciais que acompanham a curva das fases. Todo o resto tem `cap`,
-// senão os multiplicadores se somam e o herói passa a matar tudo em um
-// golpe por volta da fase 25 (o ganho de ouro em especial se
-// realimentava: mais ouro → mais ouro).
+// Only `damage`, `maxHp` and `regen` grow without a ceiling: they are the
+// exponential rails that track the stage curve. Everything else has a `cap`,
+// otherwise the multipliers pile up and the hero one-shots everything around
+// stage 25 (gold gain in particular fed itself: more gold, more gold).
 export const STATS = {
   damage:    { base: 6,    growth: 1.115, cost: 15,  costGrowth: 1.130 },
   attackRate:{ base: 0.85, growth: 1.038, cost: 45,  costGrowth: 1.260, cap: 5 },
@@ -50,7 +49,7 @@ export const STATS = {
   moveSpeed: { base: 34,   step: 3.2,     cost: 70,  costGrowth: 1.280, cap: 110 },
 };
 
-/** Valor de um atributo num certo nível. */
+/** Value of a stat at a given level. */
 export function statValue(key, lvl) {
   const s = STATS[key];
   const v = s.growth != null
@@ -59,7 +58,7 @@ export function statValue(key, lvl) {
   return s.cap != null ? Math.min(s.cap, v) : v;
 }
 
-/** Último nível útil de um atributo com teto (Infinity se não tiver). */
+/** Last useful level of a capped stat (Infinity when uncapped). */
 export function statMaxLevel(key) {
   const s = STATS[key];
   if (s.cap == null) return Infinity;
@@ -68,15 +67,13 @@ export function statMaxLevel(key) {
     : Math.ceil((s.cap - s.base) / s.step);
 }
 
-/** Custo pra comprar o próximo nível (sair de `lvl` para `lvl + 1`). */
+/** Cost of the next level (going from `lvl` to `lvl + 1`). */
 export function statCost(key, lvl) {
   const s = STATS[key];
   return Math.ceil(s.cost * Math.pow(s.costGrowth, lvl));
 }
 
-/**
- * Custo de comprar `n` níveis de uma vez (soma da PG).
- */
+/** Cost of buying `n` levels at once (geometric series sum). */
 export function statCostBulk(key, lvl, n) {
   const s = STATS[key];
   const r = s.costGrowth;
@@ -84,8 +81,8 @@ export function statCostBulk(key, lvl, n) {
 }
 
 /**
- * Quantos níveis dá pra comprar com `gold` a partir de `lvl`.
- * Inverte a soma da PG e depois corrige o arredondamento.
+ * How many levels `gold` buys starting from `lvl`. Inverts the series sum,
+ * then fixes up the rounding.
  */
 export function affordableLevels(key, lvl, gold) {
   const s = STATS[key];
@@ -100,8 +97,8 @@ export function affordableLevels(key, lvl, gold) {
   return Math.min(n, room);
 }
 
-// ── ocioso ──────────────────────────────────────────────────────────
+// --- idle -----------------------------------------------------------
 export const OFFLINE = {
-  maxHours: 8,    // teto de tempo contabilizado
-  rate: 0.5,      // eficiência do ganho enquanto o jogo está fechado
+  maxHours: 8,    // cap on the time credited
+  rate: 0.5,      // efficiency while the game is closed
 };

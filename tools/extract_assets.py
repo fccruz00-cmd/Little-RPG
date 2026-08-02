@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Extrai do pacote original apenas os sprites usados pelo jogo.
+"""Extract only the sprites the game actually uses from the source packs.
 
-Uso:
-    python3 tools/extract_assets.py <pasta-do-pacote-de-personagens> \
-                                    <pasta-Mini-Medieval-UI> \
+Usage:
+    python3 tools/extract_assets.py <character-pack-folder> \
+                                    <Mini-Medieval-UI-folder> \
                                     <Raven-Fantasy-32x32.png>
 
-Gera assets/characters/**, assets/ui/** e assets/icons/icons.png, alem de
-imprimir o manifesto (frames + baseline) usado em src/data/sprites.js.
+Writes assets/characters/**, assets/ui/** and assets/icons/icons.png, and
+prints the manifest (frames + body box) used by src/data/sprites.js.
 """
 import json
 import os
@@ -19,7 +19,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "assets")
 FRAME = 100
 
-# personagem -> {nome-no-jogo: nome-do-arquivo-original}
+# character -> {in-game anim name: original file name}
 ROSTER = {
     "knight":              ("Knight",              {}),
     "slime":               ("Slime",               {}),
@@ -40,7 +40,7 @@ ROSTER = {
 }
 ANIMS = {"idle": "Idle", "walk": "Walk", "attack": "Attack01", "hurt": "Hurt", "death": "Death"}
 
-# recortes do Mini Medieval UI (sheet, x, y, w, h) -> assets/ui/<nome>.png
+# Mini Medieval UI crops (sheet, x, y, w, h) -> assets/ui/<name>.png
 UI_CROPS = {
     "button":          ("Inputs.png", 7, 7, 26, 12),
     "button_pressed":  ("Inputs.png", 8, 24, 24, 10),
@@ -49,55 +49,55 @@ UI_CROPS = {
     "banner":          ("Inputs.png", 3, 165, 34, 15),
 }
 
-# icones Raven Fantasy: nome, coluna, linha na spritesheet 32x32 (16 colunas)
+# Raven Fantasy icons: name, column, row on the 32x32 sheet (16 columns)
 ICONS = [
-    ("damage",        3, 1),    # espada
-    ("attack_speed",  2, 1),    # flecha de velocidade
-    ("crit",         11, 0),    # estrela
-    ("crit_power",   12, 24),   # espada encantada
-    ("gold",         12, 10),   # pilha de moedas
-    ("health",        8, 24),   # peitoral
-    ("regen",         8, 20),   # frasco verde
-    ("stride",        5, 20),   # ferradura
-    ("boss",          4, 28),   # caveira
-    ("stage",        14, 0),    # troféu
-    # árvores de talento
-    ("book",          2, 10),   # livro — experiência
-    ("shield",        1, 23),   # armadura — defesa
-    ("orb",           0, 22),   # orbe — alma
-    ("crown",         2, 22),   # coroa — herança
-    ("torch",         0, 14),   # tocha — fúria antiga
-    ("dagger",        9, 24),   # adaga — golpe mortal
-    ("bag",          13, 24),   # saco de moedas — cofre
-    ("scout",         7, 0),    # corno — batedor
-    ("relic",        11, 28),   # anel dourado — relíquia
-    # forja: um por slot de equipamento
-    ("it_sword",      6, 341),  # espada
-    ("it_chest",      1, 356),  # armadura
-    ("it_helm",       5, 424),  # capacete
-    ("it_pants",     15, 508),  # calça
-    ("it_boot",       6, 508),  # bota
-    ("it_amulet",     5, 505),  # amuleto
-    ("it_ring",       9, 505),  # anel
-    ("dust",          1, 481),  # poeira de alma
-    ("gear",          1, 0),    # engrenagem — automação
-    ("bolt",          0, 220),  # raio — skills
+    ("damage",        3, 1),    # sword
+    ("attack_speed",  2, 1),    # speed arrow
+    ("crit",         11, 0),    # star
+    ("crit_power",   12, 24),   # enchanted sword
+    ("gold",         12, 10),   # coin pile
+    ("health",        8, 24),   # breastplate
+    ("regen",         8, 20),   # green flask
+    ("stride",        5, 20),   # horseshoe
+    ("boss",          4, 28),   # skull
+    ("stage",        14, 0),    # trophy
+    # skill trees
+    ("book",          2, 10),   # book, experience
+    ("shield",        1, 23),   # armor, defence
+    ("orb",           0, 22),   # orb, soul
+    ("crown",         2, 22),   # crown, heirloom
+    ("torch",         0, 14),   # torch, ancient fury
+    ("dagger",        9, 24),   # dagger, deadly strike
+    ("bag",          13, 24),   # coin bag, vault
+    ("scout",         7, 0),    # scroll, scout
+    ("relic",        11, 28),   # gold ring, relic
+    # forge: one per equipment slot
+    ("it_sword",      6, 341),  # sword
+    ("it_chest",      1, 356),  # body armor
+    ("it_helm",       5, 424),  # helmet
+    ("it_pants",     15, 508),  # pants
+    ("it_boot",       6, 508),  # boots
+    ("it_amulet",     5, 505),  # amulet
+    ("it_ring",       9, 505),  # ring
+    ("dust",          1, 481),  # soul dust
+    ("gear",          1, 0),    # cog, automation
+    ("bolt",          0, 220),  # bolt, skills
 ]
 ICON_SIZE = 32
 
 
 def char_dir(pack, folder):
-    """Variante sem sombra: o jogo desenha a sombra por baixo, senão o
-    morcego (que voa) levaria a sombra junto pro alto."""
+    """No-shadow variant: the game draws the shadow itself, otherwise the bat
+    (which flies) would carry its shadow up into the air."""
     for cand in (os.path.join(pack, folder, folder),
                  os.path.join(pack, folder, folder + " with shadows")):
         if os.path.isdir(cand):
             return cand
-    raise SystemExit(f"nao achei os sprites de {folder}")
+    raise SystemExit(f"could not find sprites for {folder}")
 
 
 def content_box(im):
-    """Bounding box do conteudo visivel, em coordenadas do frame de 100x100."""
+    """Bounding box of the visible content, in 100x100 frame coordinates."""
     bbox = im.getbbox()
     if not bbox:
         return None
@@ -120,14 +120,11 @@ def extract_characters(pack):
             im = Image.open(path).convert("RGBA")
             im.save(os.path.join(dst, f"{anim}.png"))
             entry["anims"][anim] = im.width // FRAME
-        # Todas as animacoes compartilham o mesmo frame de 100x100 e o artista
-        # alinhou o personagem entre elas, entao a base do idle serve de chao
-        # para o conjunto todo (death/hurt deitam o sprite e falseariam a conta).
-        # Caixa do conteúdo no idle: o jogo usa `top` pra pendurar a barra
-        # de vida na altura certa e `left`/`right` pra saber a largura do corpo.
-        # A posição vertical do desenho NÃO vem daqui — todo frame do pacote
-        # compartilha a mesma linha de chão (GROUND_LINE), e é ela que mantém
-        # o morcego voando e o resto pisando no chão.
+        # Content box of the idle animation: the game uses `top` to hang the
+        # health bar at the right height and `left`/`right` for body width.
+        # The vertical draw position does NOT come from here. Every frame in
+        # the pack shares one ground line (GROUND_LINE), and that is what
+        # keeps the bat flying and everyone else standing on the floor.
         idle = Image.open(os.path.join(dst, "idle.png")).convert("RGBA")
         left, right, top, bottom = FRAME, 0, FRAME, 0
         for i in range(idle.width // FRAME):
@@ -141,7 +138,7 @@ def extract_characters(pack):
         entry["left"] = left
         entry["right"] = right
         manifest[slug] = entry
-        print(f"  {slug:22s} {entry['anims']}  corpo y=[{top},{bottom}] x=[{left},{right}]")
+        print(f"  {slug:22s} {entry['anims']}  body y=[{top},{bottom}] x=[{left},{right}]")
     return manifest
 
 
@@ -167,12 +164,40 @@ def extract_icons(sheet_path):
     return order
 
 
-def patch_icon_css(icons):
-    """Regrava as classes `.ico--*` no styles.css.
+def write_sprites_module(chars):
+    """Writes src/data/sprites.js from the manifest."""
+    lines = [
+        "// GENERATED by tools/extract_assets.py, do not edit by hand.", "",
+        "export const FRAME = 100;", "",
+        "// Ground line shared by every frame in the pack (feet sit around y=57",
+        "// and the original baked shadow ran to y=60). Drawing everyone from",
+        "// the same origin is what keeps the bat flying and the rest on the",
+        "// floor: snapping each sprite down by its own box would land the bat.",
+        "export const GROUND_LINE = 58;", "",
+        "export const SPRITES = {",
+    ]
+    for slug in sorted(chars):
+        c = chars[slug]
+        anims = ", ".join(f"{k}: {v}" for k, v in sorted(c["anims"].items()))
+        lines += [
+            f"  {slug}: {{",
+            f"    top: {c['top']}, bottom: {c['bottom']}, left: {c['left']}, right: {c['right']},",
+            f"    anims: {{ {anims} }},",
+            "  },",
+        ]
+    lines += ["};", ""]
+    path = os.path.join(ROOT, "src", "data", "sprites.js")
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+    print(f"  src/data/sprites.js: {len(chars)} characters")
 
-    O bloco e a strip precisam concordar no numero e na ordem: um icone novo
-    no fim da lista desloca todos os `background-position` se o CSS ficar pra
-    tras. Gerar aqui elimina esse desencontro.
+
+def patch_icon_css(icons):
+    """Rewrites the `.ico--*` classes in styles.css.
+
+    The block and the strip must agree on count and order: one new icon at the
+    end of the list shifts every `background-position` if the CSS lags behind.
+    Generating it here removes that whole class of mismatch.
     """
     path = os.path.join(ROOT, "styles.css")
     with open(path, encoding="utf-8") as fh:
@@ -189,7 +214,7 @@ def patch_icon_css(icons):
 
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(css)
-    print(f"  styles.css: {len(icons)} classes .ico--*")
+    print(f"  styles.css: {len(icons)} .ico--* classes")
 
 
 def main():
@@ -197,17 +222,18 @@ def main():
         print(__doc__)
         raise SystemExit(1)
     pack, ui_dir, icon_sheet = sys.argv[1:4]
-    print("personagens:")
+    print("characters:")
     chars = extract_characters(pack)
     print("ui:")
     extract_ui(ui_dir)
-    print("icones:")
+    print("icons:")
     icons = extract_icons(icon_sheet)
     patch_icon_css(icons)
+    write_sprites_module(chars)
     out = os.path.join(ROOT, "assets", "manifest.json")
     with open(out, "w") as fh:
         json.dump({"characters": chars, "icons": icons}, fh, indent=2, sort_keys=True)
-    print("manifesto ->", out)
+    print("manifest ->", out)
 
 
 if __name__ == "__main__":

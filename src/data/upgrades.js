@@ -1,41 +1,41 @@
 import { statValue } from './balance.js';
 import { fmt, pct, mult } from '../format.js';
 
-// Ordem em que os upgrades aparecem na loja.
+// Order the upgrades show up in the shop.
 export const UPGRADES = [
   {
-    key: 'damage', icon: 'damage', name: 'Dano',
-    describe: (lvl) => `${fmt(statValue('damage', lvl))} por golpe`,
+    key: 'damage', icon: 'damage', name: 'Damage',
+    describe: (lvl) => `${fmt(statValue('damage', lvl))} per hit`,
   },
   {
-    key: 'attackRate', icon: 'attack_speed', name: 'Vel. de Ataque',
-    describe: (lvl) => `${statValue('attackRate', lvl).toFixed(2)} golpes/s`,
+    key: 'attackRate', icon: 'attack_speed', name: 'Attack Speed',
+    describe: (lvl) => `${statValue('attackRate', lvl).toFixed(2)} hits/s`,
   },
   {
-    key: 'critChance', icon: 'crit', name: 'Crítico',
-    describe: (lvl) => `${pct(statValue('critChance', lvl))} de chance`,
+    key: 'critChance', icon: 'crit', name: 'Crit Chance',
+    describe: (lvl) => `${pct(statValue('critChance', lvl))} chance`,
   },
   {
-    key: 'critPower', icon: 'crit_power', name: 'Dano Crítico',
-    describe: (lvl) => `${mult(statValue('critPower', lvl))} no crítico`,
+    key: 'critPower', icon: 'crit_power', name: 'Crit Damage',
+    describe: (lvl) => `${mult(statValue('critPower', lvl))} on crits`,
   },
   {
-    key: 'maxHp', icon: 'health', name: 'Vida Máxima',
-    describe: (lvl) => `${fmt(statValue('maxHp', lvl))} de vida`,
+    key: 'maxHp', icon: 'health', name: 'Max Health',
+    describe: (lvl) => `${fmt(statValue('maxHp', lvl))} health`,
   },
   {
-    key: 'regen', icon: 'regen', name: 'Regeneração',
-    describe: (lvl) => `${fmt(statValue('regen', lvl))} vida/s`,
+    key: 'regen', icon: 'regen', name: 'Regeneration',
+    describe: (lvl) => `${fmt(statValue('regen', lvl))} health/s`,
   },
   {
-    key: 'moveSpeed', icon: 'stride', name: 'Passada',
+    key: 'moveSpeed', icon: 'stride', name: 'Stride',
     describe: (lvl) => {
       const v = statValue('moveSpeed', lvl);
-      return v >= 110 ? 'no máximo' : `${v.toFixed(0)} de velocidade`;
+      return v >= 110 ? 'maxed out' : `${v.toFixed(0)} move speed`;
     },
   },
   {
-    key: 'goldGain', icon: 'gold', name: 'Ganho de Ouro',
-    describe: (lvl) => `${mult(statValue('goldGain', lvl))} de ouro`,
+    key: 'goldGain', icon: 'gold', name: 'Gold Gain',
+    describe: (lvl) => `${mult(statValue('goldGain', lvl))} gold`,
   },
 ];

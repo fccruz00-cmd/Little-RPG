@@ -1,6 +1,6 @@
 /* ============================================================
-   Little RPG — idle auto-battler
-   Layout em 3 faixas: UI (topo) / Fight (arena) / painel com abas
+   Little RPG, an idle auto-battler
+   Three bands: UI (top) / Fight (arena) / tabbed panel
    ============================================================ */
 
 :root {
@@ -17,7 +17,7 @@
   --blue:      #5fa8d3;
   --violet:    #a678d6;
 
-  /* escala do pixel-art da UI (sprites de 8px do Mini Medieval) */
+  /* pixel scale for the UI art (8px Mini Medieval sprites) */
   --px: 3;
   --hud-h: 76px;
 }
@@ -49,7 +49,7 @@ body { display: flex; justify-content: center; }
   overflow: hidden;
 }
 
-/* ── ícones (strip do Raven Fantasy, 32px cada) ─────────────── */
+/* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
   --n: 29;
@@ -98,7 +98,7 @@ body { display: flex; justify-content: center; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
 
 /* ============================================================
-   UI — faixa do topo
+   UI: top band
    ============================================================ */
 .hud {
   flex: none;
@@ -155,8 +155,8 @@ body { display: flex; justify-content: center; }
 .stepper:disabled { opacity: .2; cursor: default; }
 .stepper:not(:disabled):active { transform: translateY(1px); }
 
-/* Ouro é o número que manda no jogo: ganha tamanho e a taxa por segundo
-   embaixo, que é o que diz se vale esperar ou comprar agora. */
+/* Gold is the number that runs the game: it gets size, with the per-second
+   rate below it, which is what tells you whether to wait or buy now. */
 .purse {
   display: flex;
   flex-direction: column;
@@ -178,7 +178,7 @@ body { display: flex; justify-content: center; }
 }
 .purse__rate b { color: var(--green); font-weight: 700; }
 
-/* barra de experiência */
+/* experience bar */
 .hud__row--xp { gap: 6px; }
 .hud__lvl {
   display: flex;
@@ -216,7 +216,7 @@ body { display: flex; justify-content: center; }
 }
 
 /* ============================================================
-   FIGHT — arena
+   FIGHT: arena
    ============================================================ */
 .arena {
   position: relative;
@@ -299,7 +299,7 @@ body { display: flex; justify-content: center; }
 }
 
 /* ============================================================
-   Painel com abas
+   Tabbed panel
    ============================================================ */
 .panel {
   flex: 1 1 auto;
@@ -415,7 +415,7 @@ body { display: flex; justify-content: center; }
 }
 .segmented button.is-on { background: var(--gold); color: #3a2410; font-weight: 700; }
 
-/* faixa de atributos, no topo da loja */
+/* stat strip at the top of the shop */
 .statbar {
   flex: none;
   display: grid;
@@ -449,7 +449,7 @@ body { display: flex; justify-content: center; }
   text-overflow: ellipsis;
 }
 
-/* ── aba 1: loja de upgrades ────────────────────────────────── */
+/* --- tab 1: upgrade shop --- */
 .shop {
   flex: 1 1 auto;
   min-height: 0;
@@ -463,8 +463,8 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
-/* botão de upgrade — 9-slice do Mini Medieval UI, na moldura fina (--px:2)
-   pra caber mais linha na tela sem perder o visual do pacote */
+/* Upgrade button: 9-sliced from the Mini Medieval pack, on the thin frame
+   (--px:2) so more rows fit without losing the pack's look. */
 .up {
   --px: 2;
   position: relative;
@@ -496,8 +496,8 @@ body { display: flex; justify-content: center; }
 .up:disabled .up__effect { opacity: .7; }
 .up:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
 
-/* Quanto falta pra bancar o próximo nível. Sem isso a linha cinza só diz
-   "não dá", e você fica sem saber se falta um segundo ou dois minutos. */
+/* How far off the next level is. Without it a grey row only says "no", and
+   you cannot tell whether that means one second or two minutes. */
 .up__meter {
   position: absolute;
   inset: 0;
@@ -539,8 +539,8 @@ body { display: flex; justify-content: center; }
 .up__cost { display: block; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .up--max .up__cost { color: #4b3a12; }
 
-/* melhor poder por moeda entre os que dá pra comprar agora — a estrela vai
-   colada no nome pra não brigar com o nível, que fica no canto oposto */
+/* Best power per coin among what is affordable. The star sits next to the
+   name so it does not fight the level, which lives in the opposite corner. */
 .up--best .up__name::before {
   content: '★ ';
   color: #7a4f05;
@@ -550,14 +550,14 @@ body { display: flex; justify-content: center; }
   box-shadow: 0 0 0 1px #fff5, 0 0 10px -2px var(--gold-lit);
 }
 
-/* pulinho ao comprar */
+/* little pop on purchase */
 .up.is-bought { animation: bought .32s ease-out; }
 @keyframes bought {
   0%   { filter: brightness(1.6) saturate(1.3); transform: scale(1.015); }
   100% { filter: none; transform: none; }
 }
 
-/* ── aba 2: árvores ─────────────────────────────────────────── */
+/* --- tab 2: trees --- */
 .tree-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -590,7 +590,7 @@ body { display: flex; justify-content: center; }
   margin-bottom: 6px;
 }
 
-/* fio que liga um nó ao seguinte */
+/* wire linking one node to the next */
 .branch__link {
   width: 2px;
   height: 10px;
@@ -628,7 +628,7 @@ body { display: flex; justify-content: center; }
   color: #6f6480;
 }
 
-/* investido */
+/* invested */
 .node.is-ranked {
   border-color: var(--accent);
   background: #2b2338;
@@ -639,7 +639,7 @@ body { display: flex; justify-content: center; }
 .node.is-full { background: #332948; }
 .node.is-full .node__rank::after { content: ' ✓'; }
 
-/* comprável agora — pisca de leve pra puxar o olho */
+/* affordable right now, pulses gently to draw the eye */
 .node.can-buy {
   border-color: var(--accent);
   animation: nodeGlow 1.8s ease-in-out infinite;
@@ -648,7 +648,7 @@ body { display: flex; justify-content: center; }
   50% { box-shadow: 0 0 8px -1px var(--accent); }
 }
 
-/* trancado */
+/* locked */
 .node:disabled { cursor: default; }
 .node.is-locked { opacity: .38; }
 .node.is-locked .ico { filter: grayscale(1); }
@@ -661,7 +661,7 @@ body { display: flex; justify-content: center; }
 }
 .node:disabled .node__cost { color: #6f6480; }
 
-/* ── aba 3: forja ───────────────────────────────────────────── */
+/* --- tab 3: forge --- */
 .forge {
   flex: 1 1 auto;
   min-height: 0;
@@ -719,7 +719,7 @@ body { display: flex; justify-content: center; }
 .slot:disabled .slot__cost { color: #6f6480; }
 .slot--maxed .slot__cost { color: var(--gold); }
 
-/* brilho quando um item novo entra */
+/* glow when a new item lands */
 .slot.is-new { animation: forged .6s ease-out; }
 @keyframes forged {
   0%   { box-shadow: 0 0 0 0 var(--rar); filter: brightness(1.8); }
@@ -738,7 +738,7 @@ body { display: flex; justify-content: center; }
 .odds dt { font-size: 8px; color: var(--ink-dim); }
 .odds dd { font-size: 10px; font-weight: 700; }
 
-/* ── aba 4: prestígio ───────────────────────────────────────── */
+/* --- tab 4: prestige --- */
 .prestige {
   flex: 1 1 auto;
   min-height: 0;
@@ -817,7 +817,7 @@ body { display: flex; justify-content: center; }
   border-image-source: url(assets/ui/button_disabled.png);
 }
 
-/* o que as relíquias já compraram — some quando não há nenhuma */
+/* what the relics already bought; hidden when there are none */
 .perks[hidden] { display: none; }
 .perks h3 {
   font-size: 9px;
@@ -844,7 +844,7 @@ body { display: flex; justify-content: center; }
 }
 .perks li b { color: var(--gold-lit); margin-left: auto; }
 
-/* ── rodapé ─────────────────────────────────────────────────── */
+/* --- footer --- */
 .foot {
   flex: none;
   display: flex;
@@ -869,7 +869,7 @@ body { display: flex; justify-content: center; }
 }
 .link:hover { color: var(--gold); }
 
-/* Apagar tudo mora junto do prestígio: é destrutivo, não é atalho. */
+/* Erase everything lives next to prestige: destructive, not a shortcut. */
 .link--danger {
   align-self: center;
   margin-top: 4px;
@@ -877,7 +877,7 @@ body { display: flex; justify-content: center; }
 }
 .link--danger:hover { color: var(--red); }
 
-/* ── rolagem discreta ───────────────────────────────────────── */
+/* --- quiet scrollbars --- */
 .shop, .tree-scroll, .prestige { scrollbar-width: thin; scrollbar-color: #3a3048 transparent; }
 .shop::-webkit-scrollbar, .tree-scroll::-webkit-scrollbar, .prestige::-webkit-scrollbar { width: 6px; }
 .shop::-webkit-scrollbar-thumb, .tree-scroll::-webkit-scrollbar-thumb, .prestige::-webkit-scrollbar-thumb {
@@ -885,7 +885,7 @@ body { display: flex; justify-content: center; }
   border-radius: 3px;
 }
 
-/* ── carregando ─────────────────────────────────────────────── */
+/* --- loading --- */
 .loading {
   position: fixed;
   inset: 0;
@@ -900,7 +900,7 @@ body { display: flex; justify-content: center; }
 }
 .loading.is-done { opacity: 0; pointer-events: none; }
 
-/* ── ajustes por altura de tela ─────────────────────────────── */
+/* --- tweaks by screen height --- */
 @media (min-height: 720px) {
   .arena { height: 33%; }
 }

@@ -7,15 +7,15 @@ import { relicsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 
-/** Chaves de bônus que se acumulam multiplicando; o resto soma. */
+/** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
   'dmgMul', 'atkSpeedMul', 'hpMul', 'regenMul', 'goldMul', 'xpMul', 'moveMul',
   'damageTaken', 'respawnMul', 'dustMul',
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 3;
-const SAVE_EVERY = 5; // segundos
+const SAVE_VERSION = 4;
+const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
   return Object.fromEntries(Object.keys(STATS).map((k) => [k, 0]));
@@ -41,7 +41,7 @@ function defaults() {
     prestiges: 0,
 
     dust: 0,
-    gear: {},        // slotId -> índice da raridade equipada
+    gear: {},        // slotId -> index of the equipped rarity
     autoCraftOn: true,
 
     buyMax: false,
@@ -50,17 +50,49 @@ function defaults() {
   };
 }
 
-/** Saves antigos ganham os campos novos em vez de virar lixo. */
+// v3 and earlier used Portuguese ids for tree nodes and gear slots. The save
+// stores those ids as keys, so renaming them means remapping on load,
+// otherwise every point and item silently vanishes.
+const RENAMED = {
+  // skill tree
+  gume: 'edge', pressa: 'haste', precisao: 'precision', carnificina: 'carnage',
+  couro: 'leather', folego: 'stamina', casco: 'carapace', reerguer: 'rally',
+  bolso: 'pockets', saber: 'lore', passada: 'stride', batedor: 'scout',
+  // relic tree
+  legado: 'legacy', furiaAntiga: 'ancientFury', golpeMortal: 'deadlyStrike',
+  ira: 'wrath', cofre: 'vault', sabedoria: 'wisdom', heranca: 'heirloom',
+  atalho: 'shortcut', alma: 'soul', imortal: 'immortal', veterano: 'veteran',
+  arauto: 'herald', coletor: 'collector', moedor: 'grinder', bigorna: 'anvil',
+  golpeDuplo: 'doubleStrike', sedeSangue: 'bloodthirst', execucao: 'execute',
+  emboscada: 'ambush', folga: 'respite', levantar: 'revive', marcha: 'march',
+  // gear slots
+  espada: 'sword', capacete: 'helmet', armadura: 'armor', calca: 'pants',
+  bota: 'boots', amuleto: 'amulet', anel: 'ring',
+};
+
+function renameKeys(map) {
+  if (!map) return {};
+  return Object.fromEntries(
+    Object.entries(map).map(([key, value]) => [RENAMED[key] ?? key, value]),
+  );
+}
+
+/** Old saves gain the new fields instead of being thrown away. */
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version === 1) {
-    // v1: antes de nível/talento/prestígio/forja
-    return { ...defaults(), ...data, version: SAVE_VERSION, bestStage: data.maxStage ?? 1 };
-  }
-  if (data.version === 2) {
-    // v2: antes da forja
-    return { ...defaults(), ...data, version: SAVE_VERSION };
+  if (data.version >= 1 && data.version <= 3) {
+    // v1: before levels/talents/prestige. v2: before the forge.
+    // v3: before the ids were translated.
+    return {
+      ...defaults(),
+      ...data,
+      version: SAVE_VERSION,
+      bestStage: data.bestStage ?? data.maxStage ?? 1,
+      talents: renameKeys(data.talents),
+      relicTalents: renameKeys(data.relicTalents),
+      gear: renameKeys(data.gear),
+    };
   }
   return null;
 }
@@ -78,15 +110,15 @@ export class GameState {
     this._goldWindow = [];
   }
 
-  // ── bônus das árvores ─────────────────────────────────────────────
+  // --- tree bonuses -------------------------------------------------
   /**
-   * Junta os dois galhos de progressão num único objeto de multiplicadores.
-   * Recalculado só quando um ponto é gasto — não vale a pena refazer isso a
-   * cada quadro, e `damage`/`maxHp` são lidos várias vezes por quadro.
+   * Folds both progression tracks into a single object of multipliers.
+   * Recomputed only when a point is spent: redoing it every frame is not
+   * worth it, and `damage`/`maxHp` are read several times per frame.
    */
   get bonus() {
     if (this._bonus) return this._bonus;
-    // Multiplicadores começam em 1; somas começam em 0.
+    // Multipliers start at 1; sums start at 0.
     const b = Object.fromEntries(BONUS_KEYS.map((k) => [k, 0]));
     for (const k of MULTIPLIER_KEYS) b[k] = 1;
 
@@ -100,8 +132,8 @@ export class GameState {
     for (const branch of TALENT_TREE) for (const n of branch.nodes) apply(n, this.talents[n.id] ?? 0);
     for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
 
-    // Equipamento entra pelo mesmo caminho: um slot é só mais uma fonte de
-    // bônus, com o valor fixado pela raridade.
+    // Gear comes in through the same path: a slot is just one more bonus
+    // source, with the value pinned by rarity.
     for (const slot of SLOTS) {
       const rarity = this.gear[slot.id];
       if (rarity == null) continue;
@@ -119,7 +151,7 @@ export class GameState {
     this._bonus = null;
   }
 
-  // ── atributos derivados ───────────────────────────────────────────
+  // --- derived stats ------------------------------------------------
   get damage()     { return statValue('damage', this.levels.damage) * this.bonus.dmgMul; }
   get attackRate() { return statValue('attackRate', this.levels.attackRate) * this.bonus.atkSpeedMul; }
   get critChance() { return Math.min(0.95, statValue('critChance', this.levels.critChance) + this.bonus.critAdd); }
@@ -132,28 +164,28 @@ export class GameState {
   get damageTaken(){ return this.bonus.damageTaken; }
   get respawnMul() { return this.bonus.respawnMul; }
 
-  /** Mobs comuns antes do encontro final, já com o talento Batedor. */
+  /** Regular mobs before the final encounter, Scout included. */
   get killsPerStage() {
     return Math.max(4, KILLS_PER_STAGE - this.bonus.killsLess);
   }
 
-  /** Fase em que uma nova corrida começa (talento Herança). */
+  /** Stage a fresh run starts on (Heirloom). */
   get startStage() {
     return 1 + this.bonus.startStage;
   }
 
-  /** Dano médio por segundo, contando crítico. */
+  /** Average damage per second, crits included. */
   get dps() {
     return this.damage * this.attackRate * (1 + this.critChance * (this.critPower - 1));
   }
 
-  /** Sorteia um golpe: `{ damage, crit }`. */
+  /** Rolls one swing: `{ damage, crit }`. */
   rollHit() {
     const crit = Math.random() < this.critChance;
     return { damage: this.damage * (crit ? this.critPower : 1), crit };
   }
 
-  // ── nível e experiência ───────────────────────────────────────────
+  // --- level and experience -----------------------------------------
   get xpNeeded() {
     return xpToNext(this.level);
   }
@@ -170,7 +202,7 @@ export class GameState {
     return this.totalPoints - this.spentPoints;
   }
 
-  /** Devolve quantos níveis subiu (0 se nenhum). */
+  /** Returns how many levels were gained (0 if none). */
   gainXp(amount) {
     this.xp += amount * this.xpGain;
     let gained = 0;
@@ -182,8 +214,8 @@ export class GameState {
     return gained;
   }
 
-  // ── árvores ───────────────────────────────────────────────────────
-  /** Um nó só abre quando o anterior do mesmo galho tem ao menos 1 ponto. */
+  // --- trees --------------------------------------------------------
+  /** A node opens once the previous one in the branch has 1+ point. */
   isUnlocked(branch, index, ranksOf) {
     return index === 0 || (ranksOf[branch.nodes[index - 1].id] ?? 0) > 0;
   }
@@ -222,19 +254,19 @@ export class GameState {
     return true;
   }
 
-  /** Zera todos os talentos e devolve os pontos. */
+  /** Wipes every skill point so they can be spent again. */
   respecTalents() {
     this.talents = {};
     this.invalidateBonus();
   }
 
-  // ── forja ─────────────────────────────────────────────────────────
-  /** A forja só existe depois do primeiro renascimento. */
+  // --- forge --------------------------------------------------------
+  /** The forge only exists after the first rebirth. */
   get forgeUnlocked() {
     return this.prestiges > 0;
   }
 
-  /** Poeira que um abate rende (0 se não caiu nada). */
+  /** Dust a kill yields (0 when nothing drops). */
   rollDust(kind) {
     if (!this.forgeUnlocked) return 0;
     const mul = this.bonus.dustMul;
@@ -253,8 +285,8 @@ export class GameState {
   }
 
   /**
-   * Forja num slot. Sorteia a raridade; equipa se for melhor que a atual e
-   * devolve um troco de poeira se for pior — sem inventário pra administrar.
+   * Forges a slot. Rolls the rarity, equips it when it beats what you wear
+   * and refunds some dust when it does not, so there is no inventory to keep.
    * @returns {{rolled: number, equipped: boolean, refund: number} | null}
    */
   forge(slotId) {
@@ -276,23 +308,23 @@ export class GameState {
     return { rolled, equipped: false, refund };
   }
 
-  /** Slot mais barato que ainda dá pra melhorar — usado pela forja automática. */
+  /** Cheapest slot still worth upgrading, used by the automatic forge. */
   cheapestForgeable() {
     let best = null;
     for (const slot of SLOTS) {
-      if ((this.gear[slot.id] ?? -1) >= RARITIES.length - 1) continue; // já lendário
+      if ((this.gear[slot.id] ?? -1) >= RARITIES.length - 1) continue; // already legendary
       const cost = this.costToForge(slot.id);
       if (cost <= this.dust && (best === null || cost < this.costToForge(best))) best = slot.id;
     }
     return best;
   }
 
-  // ── prestígio ─────────────────────────────────────────────────────
+  // --- prestige -----------------------------------------------------
   get pendingRelics() {
     return Math.max(0, relicsEarnedAt(this.maxStage) - this.relicsEarned);
   }
 
-  /** Renasce. Devolve quantas relíquias entraram (0 se não deu). */
+  /** Rebirth. Returns how many relics came in (0 when it did not fire). */
   prestige() {
     const gain = this.pendingRelics;
     if (gain <= 0) return 0;
@@ -318,7 +350,7 @@ export class GameState {
     return gain;
   }
 
-  // ── economia ──────────────────────────────────────────────────────
+  // --- economy ------------------------------------------------------
   earn(amount) {
     const value = amount * this.goldGain;
     this.gold += value;
@@ -330,12 +362,12 @@ export class GameState {
     return statCost(key, this.levels[key]);
   }
 
-  /** `true` quando o atributo bateu no teto e não vale mais comprar. */
+  /** `true` once the stat hit its cap and is not worth buying. */
   isMaxed(key) {
     return this.levels[key] >= statMaxLevel(key);
   }
 
-  /** Quantos níveis a compra atual leva (1, ou o máximo possível). */
+  /** How many levels this purchase takes (1, or as many as affordable). */
   bulkFor(key) {
     if (this.isMaxed(key)) return 0;
     if (!this.buyMax) return this.gold >= this.costOf(key) ? 1 : 0;
@@ -354,13 +386,13 @@ export class GameState {
     this.gold -= price;
     const hpBefore = this.maxHp;
     this.levels[key] += n;
-    // Ganhar vida máxima também cura o que foi ganho, senão o upgrade
-    // parece não fazer nada no meio de uma luta.
+    // Buying max health also heals what was gained, otherwise the upgrade
+    // looks like it did nothing in the middle of a fight.
     if (key === 'maxHp') this.hp += this.maxHp - hpBefore;
     return n;
   }
 
-  /** Média de ouro/s dos últimos 20 s — usada no cálculo de ganho ocioso. */
+  /** Rolling gold/s over the last 20s, used for the idle payout. */
   refreshGoldRate(now = performance.now()) {
     const cutoff = now - 20_000;
     while (this._goldWindow.length && this._goldWindow[0].t < cutoff) this._goldWindow.shift();
@@ -370,7 +402,7 @@ export class GameState {
     this.goldPerSec = total / span;
   }
 
-  // ── persistência ──────────────────────────────────────────────────
+  // --- persistence --------------------------------------------------
   toJSON() {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
@@ -389,7 +421,7 @@ export class GameState {
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this));
     } catch {
-      /* modo privado / cota cheia: seguir sem salvar */
+      /* private mode or full quota: carry on without saving */
     }
   }
 
@@ -415,7 +447,7 @@ export class GameState {
     return { state, offline };
   }
 
-  /** Credita o ouro acumulado com o jogo fechado. Devolve `{seconds, gold}`. */
+  /** Credits gold banked while the game was closed. Returns `{seconds, gold}`. */
   collectOffline(lastSeen) {
     if (!lastSeen || !this.goldPerSec) return null;
     const seconds = Math.min((Date.now() - lastSeen) / 1000, OFFLINE.maxHours * 3600);
@@ -429,7 +461,7 @@ export class GameState {
     try {
       localStorage.removeItem(SAVE_KEY);
     } catch {
-      /* nada a fazer */
+      /* nothing to do */
     }
   }
 }

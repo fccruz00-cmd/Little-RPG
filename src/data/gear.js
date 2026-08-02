@@ -1,46 +1,46 @@
 import { pct, mult } from '../format.js';
 
 /**
- * Forja de equipamentos, liberada no primeiro renascimento.
+ * Equipment forge, unlocked on the first rebirth.
  *
- * O sorteio é só da RARIDADE — o valor do atributo é fixo por raridade, como
- * pedido. Isso mantém a comparação trivial ("laranja é sempre melhor que roxa")
- * e deixa o jogo trocar de item sozinho sem inventário nem gestão.
+ * Only the RARITY is rolled; the stat value is fixed per rarity. That keeps
+ * comparison trivial ("orange always beats purple") and lets the game swap
+ * items for you with no inventory to manage.
  */
 
 export const RARITIES = [
-  { id: 'branca',  name: 'Comum',    color: '#cfc9be', mul: 1 },
-  { id: 'verde',   name: 'Incomum',  color: '#7fc45a', mul: 2.2 },
-  { id: 'azul',    name: 'Rara',     color: '#5fa8d3', mul: 4.5 },
-  { id: 'roxa',    name: 'Épica',    color: '#a678d6', mul: 9 },
-  { id: 'laranja', name: 'Lendária', color: '#f0a63c', mul: 18 },
+  { id: 'white',  name: 'Common',    color: '#cfc9be', mul: 1 },
+  { id: 'green',  name: 'Uncommon',  color: '#7fc45a', mul: 2.2 },
+  { id: 'blue',   name: 'Rare',      color: '#5fa8d3', mul: 4.5 },
+  { id: 'purple', name: 'Epic',      color: '#a678d6', mul: 9 },
+  { id: 'orange', name: 'Legendary', color: '#f0a63c', mul: 18 },
 ];
 
-/** Pesos do sorteio, na mesma ordem das raridades. Somam 1. */
+/** Roll weights, same order as the rarities. They add up to 1. */
 export const RARITY_ODDS = [0.50, 0.27, 0.155, 0.06, 0.015];
 
-// Um slot, um atributo. `per` é o valor na raridade branca; as outras
-// multiplicam por `RARITIES[i].mul`.
+// One slot, one stat. `per` is the value at Common; the other rarities
+// multiply it by `RARITIES[i].mul`.
 export const SLOTS = [
-  { id: 'espada',   name: 'Espada',   icon: 'it_sword',  key: 'dmgMul',      mode: 'mul',  per: 0.04 },
-  { id: 'capacete', name: 'Capacete', icon: 'it_helm',   key: 'hpMul',       mode: 'mul',  per: 0.05 },
-  { id: 'armadura', name: 'Armadura', icon: 'it_chest',  key: 'damageTaken', mode: 'less', per: 0.01 },
-  { id: 'calca',    name: 'Calça',    icon: 'it_pants',  key: 'regenMul',    mode: 'mul',  per: 0.06 },
-  { id: 'bota',     name: 'Bota',     icon: 'it_boot',   key: 'moveMul',     mode: 'mul',  per: 0.03 },
-  { id: 'amuleto',  name: 'Amuleto',  icon: 'it_amulet', key: 'goldMul',     mode: 'mul',  per: 0.04 },
-  { id: 'anel',     name: 'Anel',     icon: 'it_ring',   key: 'critAdd',     mode: 'add',  per: 0.006 },
+  { id: 'sword',  name: 'Sword',  icon: 'it_sword',  key: 'dmgMul',      mode: 'mul',  per: 0.04 },
+  { id: 'helmet', name: 'Helmet', icon: 'it_helm',   key: 'hpMul',       mode: 'mul',  per: 0.05 },
+  { id: 'armor',  name: 'Armor',  icon: 'it_chest',  key: 'damageTaken', mode: 'less', per: 0.01 },
+  { id: 'pants',  name: 'Pants',  icon: 'it_pants',  key: 'regenMul',    mode: 'mul',  per: 0.06 },
+  { id: 'boots',  name: 'Boots',  icon: 'it_boot',   key: 'moveMul',     mode: 'mul',  per: 0.03 },
+  { id: 'amulet', name: 'Amulet', icon: 'it_amulet', key: 'goldMul',     mode: 'mul',  per: 0.04 },
+  { id: 'ring',   name: 'Ring',   icon: 'it_ring',   key: 'critAdd',     mode: 'add',  per: 0.006 },
 ];
 
-// Poeira de alma
+// Soul dust
 export const DUST = {
-  mobChance: 0.20,   // por mob comum
+  mobChance: 0.20,   // per regular mob
   mobAmount: 1,
-  eliteAmount: 4,    // mini-chefe sempre dropa
-  bossAmount: 10,    // chefe sempre dropa
-  scrapRefund: 0.3,  // devolvido quando o item sorteado é pior que o equipado
+  eliteAmount: 4,    // the mini boss always drops
+  bossAmount: 10,    // the boss always drops
+  scrapRefund: 0.3,  // returned when the roll is worse than what you wear
 };
 
-/** Custo em poeira pra forjar num slot, pelo que já está equipado. */
+/** Dust cost to forge a slot, based on what is already equipped. */
 const COST_BY_RARITY = [20, 34, 55, 90, 150];
 export const EMPTY_COST = 10;
 
@@ -48,7 +48,7 @@ export function craftCost(rarityIndex) {
   return rarityIndex == null ? EMPTY_COST : COST_BY_RARITY[rarityIndex];
 }
 
-/** Sorteia uma raridade pelos pesos de `RARITY_ODDS`. */
+/** Rolls a rarity using the `RARITY_ODDS` weights. */
 export function rollRarity(random = Math.random) {
   let r = random();
   for (let i = 0; i < RARITY_ODDS.length; i++) {
@@ -58,22 +58,22 @@ export function rollRarity(random = Math.random) {
   return 0;
 }
 
-/** Valor do atributo de um item. */
+/** Stat value of an item. */
 export function gearValue(slot, rarityIndex) {
   return slot.per * RARITIES[rarityIndex].mul;
 }
 
 export function describeGear(slot, rarityIndex) {
   const total = gearValue(slot, rarityIndex);
-  if (slot.key === 'critAdd') return `+${pct(total)} de crítico`;
-  if (slot.key === 'damageTaken') return `−${pct(total)} de dano recebido`;
+  if (slot.key === 'critAdd') return `+${pct(total)} crit chance`;
+  if (slot.key === 'damageTaken') return `${pct(total)} less damage taken`;
   return `${mult(1 + total)} ${GEAR_LABEL[slot.key]}`;
 }
 
 const GEAR_LABEL = {
-  dmgMul: 'de dano',
-  hpMul: 'de vida',
-  regenMul: 'de regeneração',
-  moveMul: 'de passada',
-  goldMul: 'de ouro',
+  dmgMul: 'damage',
+  hpMul: 'health',
+  regenMul: 'regen',
+  moveMul: 'stride',
+  goldMul: 'gold',
 };

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#14121c">
-<meta name="description" content="Idle RPG: o herói anda em linha reta, mata os bichos sozinho e avança de fase enquanto você compra upgrades, sobe de nível e gasta talentos.">
+<meta name="description" content="Idle RPG: the hero walks a straight line, kills on its own and clears stages while you buy upgrades, level up and spend skill points.">
 <title>Little RPG</title>
 <link rel="icon" href="assets/icons/icons.png" type="image/png">
 <link rel="stylesheet" href="styles.css">
@@ -13,16 +13,16 @@
 
 <div id="app">
 
-  <!-- ── UI ──────────────────────────────────────────────────────── -->
+  <!-- ===== UI ===== -->
   <header class="hud" id="hud">
     <div class="hud__row">
       <div class="hud__stage">
-        <button class="stepper" id="stage-prev" type="button" aria-label="Fase anterior">◀</button>
+        <button class="stepper" id="stage-prev" type="button" aria-label="Previous stage">&#9664;</button>
         <div class="hud__stage-label">
-          <span class="hud__stage-name" id="stage-name">Fase 1</span>
+          <span class="hud__stage-name" id="stage-name">Stage 1</span>
           <span class="hud__stage-sub" id="stage-sub">0 / 10</span>
         </div>
-        <button class="stepper" id="stage-next" type="button" aria-label="Próxima fase">▶</button>
+        <button class="stepper" id="stage-next" type="button" aria-label="Next stage">&#9654;</button>
       </div>
       <div class="purse">
         <span class="purse__now"><i class="ico ico--lg ico--gold"></i><b id="stat-gold">0</b></span>
@@ -30,15 +30,15 @@
       </div>
     </div>
     <div class="hud__row hud__row--xp">
-      <span class="hud__lvl">Nv.<b id="stat-level">1</b></span>
-      <div class="xpbar" role="progressbar" aria-label="Experiência">
+      <span class="hud__lvl">Lv.<b id="stat-level">1</b></span>
+      <div class="xpbar" role="progressbar" aria-label="Experience">
         <div class="xpbar__fill" id="xp-fill"></div>
         <span class="xpbar__text" id="xp-text">0 / 20</span>
       </div>
     </div>
   </header>
 
-  <!-- ── FIGHT ───────────────────────────────────────────────────── -->
+  <!-- ===== FIGHT ===== -->
   <section class="arena" id="arena">
     <canvas id="stage"></canvas>
     <div class="arena__progress">
@@ -50,115 +50,115 @@
     <div class="arena__toast" id="toast" hidden></div>
   </section>
 
-  <!-- ── PAINEL COM ABAS ─────────────────────────────────────────── -->
+  <!-- ===== TABBED PANEL ===== -->
   <section class="panel">
     <nav class="tabs" id="tabs" role="tablist">
       <button class="tab is-on" data-tab="upgrades" type="button" role="tab">Upgrades</button>
       <button class="tab" data-tab="talents" type="button" role="tab">
-        Talentos<i class="pip" id="pip-talents" hidden></i>
+        Skills<i class="pip" id="pip-talents" hidden></i>
       </button>
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
-        Forja<i class="pip" id="pip-forge" hidden></i>
+        Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
-        Prestígio<i class="pip" id="pip-prestige" hidden></i>
+        Prestige<i class="pip" id="pip-prestige" hidden></i>
       </button>
     </nav>
 
-    <!-- aba 1: upgrades de ouro -->
+    <!-- tab 1: gold upgrades -->
     <div class="pane is-on" id="pane-upgrades">
       <dl class="statbar">
-        <div><dt><i class="ico ico--sm ico--damage"></i>dano/s</dt><dd id="sb-dps">0</dd></div>
-        <div><dt><i class="ico ico--sm ico--health"></i>vida</dt><dd id="sb-hp">0</dd></div>
-        <div><dt><i class="ico ico--sm ico--crit"></i>crítico</dt><dd id="sb-crit">0%</dd></div>
-        <div><dt><i class="ico ico--sm ico--gold"></i>ouro</dt><dd id="sb-gold">×1</dd></div>
+        <div><dt><i class="ico ico--sm ico--damage"></i>dmg/s</dt><dd id="sb-dps">0</dd></div>
+        <div><dt><i class="ico ico--sm ico--health"></i>health</dt><dd id="sb-hp">0</dd></div>
+        <div><dt><i class="ico ico--sm ico--crit"></i>crit</dt><dd id="sb-crit">0%</dd></div>
+        <div><dt><i class="ico ico--sm ico--gold"></i>gold</dt><dd id="sb-gold">x1</dd></div>
       </dl>
       <div class="pane__head">
-        <span class="pane__hint" id="shop-hint">—</span>
+        <span class="pane__hint" id="shop-hint"></span>
         <label class="toggle">
           <input type="checkbox" id="buy-max">
-          <span>Comprar máx.</span>
+          <span>Buy max</span>
         </label>
       </div>
       <ul class="shop" id="shop-list"></ul>
     </div>
 
-    <!-- aba 2: árvores de talento (níveis e relíquias) -->
+    <!-- tab 2: skill trees (levels and relics) -->
     <div class="pane" id="pane-talents">
       <div class="pane__head">
         <div class="segmented" id="tree-switch">
-          <button class="is-on" data-tree="talents" type="button">Talentos</button>
-          <button data-tree="relics" type="button">Relíquias</button>
+          <button class="is-on" data-tree="talents" type="button">Skills</button>
+          <button data-tree="relics" type="button">Relics</button>
         </div>
         <span class="pane__points" id="tree-points"></span>
-        <button class="link" id="btn-respec" type="button">redistribuir</button>
+        <button class="link" id="btn-respec" type="button">respec</button>
       </div>
-      <p class="pane__detail" id="tree-detail">Toque num nó pra investir.</p>
+      <p class="pane__detail" id="tree-detail">Tap a node to invest.</p>
       <div class="tree-scroll" id="tree-talents"></div>
       <div class="tree-scroll" id="tree-relics" hidden></div>
     </div>
 
-    <!-- aba 3: forja (aparece depois do 1º renascimento) -->
+    <!-- tab 3: forge (shows up after the first rebirth) -->
     <div class="pane" id="pane-forge">
       <div class="pane__head">
-        <span class="pane__points"><i class="ico ico--sm ico--dust"></i> <b id="dust-have">0</b> poeira</span>
+        <span class="pane__points"><i class="ico ico--sm ico--dust"></i> <b id="dust-have">0</b> dust</span>
         <label class="toggle" id="autocraft-wrap" hidden>
           <input type="checkbox" id="autocraft">
-          <span>Forja automática</span>
+          <span>Auto forge</span>
         </label>
       </div>
       <p class="pane__detail" id="forge-detail">
-        Mobs largam <b>poeira de alma</b>. Cada forja sorteia uma raridade — se
-        vier melhor que a equipada, troca sozinho; se vier pior, vira troco.
+        Mobs drop <b>soul dust</b>. Each forge rolls a rarity: better than what
+        you wear and it swaps itself in, worse and it turns back into dust.
       </p>
       <div class="forge" id="forge-list"></div>
       <dl class="odds" id="odds"></dl>
     </div>
 
-    <!-- aba 4: renascer -->
+    <!-- tab 4: rebirth -->
     <div class="pane" id="pane-prestige">
       <div class="prestige">
         <div class="prestige__gain">
           <i class="ico ico--lg ico--relic"></i>
           <div>
-            <strong id="pres-gain">0</strong> relíquia(s)
-            <small>se renascer agora</small>
+            <strong id="pres-gain">0</strong> relic(s)
+            <small>if you rebirth now</small>
           </div>
         </div>
 
         <dl class="facts">
-          <div><dt>Relíquias guardadas</dt><dd id="pres-have">0</dd></div>
-          <div><dt>Renascimentos</dt><dd id="pres-count">0</dd></div>
-          <div><dt>Fase mais longe</dt><dd id="pres-best">1</dd></div>
-          <div><dt>Próxima relíquia</dt><dd id="pres-next">fase 25</dd></div>
+          <div><dt>Relics banked</dt><dd id="pres-have">0</dd></div>
+          <div><dt>Rebirths</dt><dd id="pres-count">0</dd></div>
+          <div><dt>Deepest stage</dt><dd id="pres-best">1</dd></div>
+          <div><dt>Next relic</dt><dd id="pres-next">stage 25</dd></div>
         </dl>
 
         <p class="prestige__note">
-          Renascer zera <b>fase, ouro, upgrades, nível e talentos</b>.<br>
-          Ficam com você as <b>relíquias</b> e a <b>árvore de relíquias</b>,
-          que você gasta na aba Talentos.
+          Rebirth wipes <b>stage, gold, upgrades, level and skill points</b>.<br>
+          You keep your <b>relics</b> and the <b>relic tree</b>, which you spend
+          on the Skills tab.
         </p>
 
-        <button class="big-btn" id="pres-go" type="button" disabled>Renascer</button>
+        <button class="big-btn" id="pres-go" type="button" disabled>Rebirth</button>
 
         <section class="perks" id="perks" hidden>
-          <h3>Bônus permanentes</h3>
+          <h3>Permanent bonuses</h3>
           <ul id="perks-list"></ul>
         </section>
 
-        <button class="link link--danger" id="btn-reset" type="button">Apagar tudo e começar do zero</button>
+        <button class="link link--danger" id="btn-reset" type="button">Erase everything and start over</button>
       </div>
     </div>
 
     <footer class="foot">
-      <span>Fase atual <b id="stat-stage-foot">1</b></span>
-      <span class="foot__best">Recorde: fase <b id="stat-best">1</b></span>
+      <span>Stage <b id="stat-stage-foot">1</b></span>
+      <span class="foot__best">Best: stage <b id="stat-best">1</b></span>
     </footer>
   </section>
 
 </div>
 
-<div class="loading" id="loading"><span>carregando…</span></div>
+<div class="loading" id="loading"><span>loading...</span></div>
 
 <script type="module" src="src/main.js"></script>
 </body>

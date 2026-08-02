@@ -1,13 +1,13 @@
 import { FRAME, GROUND_LINE } from '../data/sprites.js';
 import { fmt } from '../format.js';
 
-// Altura lógica alvo da arena. Os personagens têm ~22 px de altura visível,
-// então isso põe o herói ocupando ~1/4 da arena e deixa uns 5 corpos de
-// largura na tela — dá pra ver o bicho chegando antes da porrada.
+// Target logical height for the arena. Characters are ~22 px tall, so this
+// puts the hero at about a quarter of the arena and leaves roughly 5 body
+// widths on screen, enough to watch the enemy walk in before the clash.
 const TARGET_WORLD_H = 92;
 const GROUND_FROM_BOTTOM = 16;
 
-/** Ruído determinístico: mesma entrada, mesmo cenário — sem popping. */
+/** Deterministic noise: same input, same scenery, no popping. */
 function hash(n) {
   let x = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
   x ^= x >>> 13;
@@ -15,7 +15,7 @@ function hash(n) {
   return ((x ^ (x >>> 16)) >>> 0) / 4294967295;
 }
 
-// Paletas de bioma — trocam a cada 10 fases.
+// Biome palettes, swapped every 10 stages.
 const BIOMES = [
   { sky: ['#1b2340', '#3d3357'], far: '#2a2743', mid: '#1d1b31', tree: '#12101f', ground: '#2f2a3d', grass: '#4a4460' },
   { sky: ['#152a2a', '#37543f'], far: '#22402f', mid: '#17301f', tree: '#0d1c12', ground: '#243a26', grass: '#3d6b3f' },
@@ -34,14 +34,14 @@ export class Renderer {
     this.height = 64;
     this.dpr = 1;
 
-    // canvas auxiliar pro flash branco de acerto
+    // scratch canvas for the white hit flash
     this.scratch = document.createElement('canvas');
     this.scratch.width = FRAME;
     this.scratch.height = FRAME;
     this.scratchCtx = this.scratch.getContext('2d');
   }
 
-  /** Recalcula resolução lógica. Devolve a largura do mundo visível. */
+  /** Recomputes the logical resolution. Returns the visible world width. */
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     const cssW = Math.max(1, rect.width);
@@ -76,12 +76,12 @@ export class Renderer {
 
     this.drawBars(battle, camX);
 
-    // Texto vai por cima, em resolução de tela (fica legível em qualquer zoom).
+    // Text goes on top at screen resolution so it stays readable at any zoom.
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.drawFloaters(battle, camX);
   }
 
-  // ── cenário ───────────────────────────────────────────────────────
+  // --- scenery ------------------------------------------------------
   drawBackground(camX, biome, time) {
     const { ctx, width: W, height: H, groundY } = this;
 
@@ -91,7 +91,7 @@ export class Renderer {
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
 
-    // estrelas
+    // stars
     ctx.fillStyle = '#ffffff';
     for (let i = 0; i < 40; i++) {
       const sx = (hash(i) * 400 - camX * 0.05) % 400;
@@ -103,7 +103,7 @@ export class Renderer {
     }
     ctx.globalAlpha = 1;
 
-    // lua
+    // moon
     const moonX = 20 - ((camX * 0.02) % (W + 60));
     ctx.fillStyle = '#f6f0dc';
     ctx.globalAlpha = 0.85;
@@ -116,13 +116,13 @@ export class Renderer {
     this.drawHills(camX * 0.38, groundY + 2, 16, 31, biome.mid);
     this.drawTrees(camX * 0.62, groundY, biome.tree);
 
-    // chão
+    // ground
     ctx.fillStyle = biome.ground;
     ctx.fillRect(0, groundY, W, H - groundY);
     ctx.fillStyle = biome.grass;
     ctx.fillRect(0, groundY, W, 2);
 
-    // detalhes do chão (rolam junto com o mundo)
+    // ground detail (scrolls with the world)
     ctx.fillStyle = '#00000038';
     const step = 7;
     const first = Math.floor(camX / step);
@@ -133,7 +133,7 @@ export class Renderer {
       ctx.fillRect(x, groundY + 4 + Math.floor(r * 8), 2 + Math.floor(r * 4), 1);
     }
 
-    // tufos de grama em primeiro plano
+    // foreground grass tufts
     ctx.fillStyle = biome.grass;
     for (let k = Math.floor(camX / 11); k * 11 - camX < W + 11; k++) {
       const r = hash(k * 17 + 3);
@@ -184,7 +184,7 @@ export class Renderer {
     }
   }
 
-  // ── atores ────────────────────────────────────────────────────────
+  // --- actors -------------------------------------------------------
   drawActor(actor, camX, { fade = null } = {}) {
     const { ctx } = this;
     const sheet = actor.anim.sheet;
@@ -203,8 +203,8 @@ export class Renderer {
     this.drawShadow(dx + FRAME / 2, scale, ctx.globalAlpha);
     ctx.globalAlpha = fade != null ? Math.max(0, Math.min(1, fade)) : 1;
 
-    // Mini-chefe e chefe são desenhados maiores, crescendo a partir dos pés
-    // pra continuarem pisando na mesma linha de chão.
+    // Mini bosses and bosses are drawn larger, growing from the feet so
+    // they keep standing on the same ground line.
     if (scale !== 1) {
       ctx.translate(dx + FRAME / 2, this.groundY);
       ctx.scale(scale, scale);
@@ -226,8 +226,8 @@ export class Renderer {
   }
 
   /**
-   * Sombra no chão. É um degradê radial em vez de uma elipse chapada: preto
-   * sólido vira um adesivo colado no piso, ainda mais em cima da grama clara.
+   * Ground shadow. A radial gradient rather than a flat ellipse: solid black
+   * reads as a sticker glued to the floor, especially over light grass.
    */
   drawShadow(cx, scale, alpha) {
     const { ctx } = this;
@@ -252,7 +252,7 @@ export class Renderer {
     ctx.restore();
   }
 
-  /** Silhueta branca por cima do sprite, no instante do acerto. */
+  /** White silhouette over the sprite at the moment of impact. */
   drawHitFlash(image, sx, dx, dy, facing, amount, scale = 1) {
     const { scratchCtx: s, ctx } = this;
     s.clearRect(0, 0, FRAME, FRAME);
@@ -279,8 +279,8 @@ export class Renderer {
     ctx.restore();
   }
 
-  // ── barras de vida ────────────────────────────────────────────────
-  /** Altura da barrinha que flutua logo acima da cabeça do ator. */
+  // --- health bars --------------------------------------------------
+  /** Height of the little bar floating just above an actor's head. */
   headY(actor) {
     const top = actor.sprite?.top ?? 38;
     const scale = actor.scale ?? 1;
@@ -296,11 +296,11 @@ export class Renderer {
     if (!enemy || enemy.dead) return;
 
     if (enemy.isBoss) {
-      // Fica abaixo do cronômetro do chefe, que é um elemento de DOM no topo.
+      // Sits below the boss timer, which is a DOM element pinned up top.
       const w = Math.min(this.width - 24, 90);
       this.bar((this.width - w) / 2, 17, w, 4, enemy.hp / enemy.maxHp, '#d9534f', '#20141a', '#f0a63c');
     } else if (enemy.isElite) {
-      // Mini-chefe: barra âmbar, mais larga que a de mob e presa nele.
+      // Mini boss: amber bar, wider than a mob's and pinned to it.
       const w = 30;
       this.bar(enemy.x - camX - w / 2, this.headY(enemy) - 1, w, 3,
         enemy.hp / enemy.maxHp, '#e8862b', '#2c1f18', '#f0a63caa');
@@ -324,7 +324,7 @@ export class Renderer {
     ctx.fillRect(px, py, w, 1);
   }
 
-  // ── números flutuantes ────────────────────────────────────────────
+  // --- floating numbers ----------------------------------------------
   drawFloaters(battle, camX) {
     const { ctx, scale: S } = this;
     ctx.textAlign = 'center';

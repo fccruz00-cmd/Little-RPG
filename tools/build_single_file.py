@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Empacota o jogo inteiro num único .html que abre com dois cliques.
+"""Bundle the whole game into a single .html you can open with two clicks.
 
-    python3 tools/build_single_file.py [saida.html]
+    python3 tools/build_single_file.py [output.html]
 
-Sem servidor, sem pasta ao lado: CSS embutido, cada módulo ES vira uma
-`data:` URL (mantendo o grafo de imports intacto) e as imagens viram data URI
-num mapa que o loader consulta.
+No server, no folder alongside it: CSS inlined, every ES module becomes a
+`data:` URL (with the import graph intact) and images become data URIs in a
+map the loader reads.
 """
 import base64
 import json
@@ -37,20 +37,20 @@ def resolve(importer, spec):
 
 
 def bare(rel):
-    """Especificador nu de um módulo, resolvido pelo import map."""
+    """Bare specifier for a module, resolved through the import map."""
     return "@rpg/" + rel
 
 
 def build_modules(entry):
     """
-    Cada módulo vira uma data: URL registrada num import map, e os imports
-    relativos viram especificadores nus.
+    Every module becomes a data: URL registered in an import map, and relative
+    imports become bare specifiers.
 
-    A tentação é embutir a data: URL da dependência dentro de quem importa,
-    mas aí um módulo usado por três outros entra três vezes no arquivo — e
-    como isso é transitivo, o tamanho explode (o `format.js`, importado por
-    meio projeto, chegou a aparecer umas dez vezes). Com o import map cada
-    módulo aparece exatamente uma vez.
+    The tempting shortcut is inlining a dependency's data: URL inside whoever
+    imports it, but then a module used by three others lands in the file three
+    times, and since that is transitive the size explodes (`format.js`,
+    imported by half the project, ended up appearing about ten times). With an
+    import map every module appears exactly once.
     """
     imports = {}
     seen = set()
@@ -74,7 +74,7 @@ def build_modules(entry):
 
 
 def collect_images():
-    """Todo PNG de assets/, indexado pelo caminho que o jogo pede em runtime."""
+    """Every PNG under assets/, keyed by the path the game asks for at runtime."""
     out = {}
     for folder, _dirs, files in os.walk(os.path.join(ROOT, "assets")):
         for name in sorted(files):
@@ -94,7 +94,7 @@ def main():
         css = css.replace(f"url({rel})", f"url({uri})")
 
     html = read("index.html")
-    # remove os links externos: tudo passa a ser embutido
+    # drop the external links: everything is inlined from here on
     html = re.sub(r'\s*<link rel="stylesheet"[^>]*>', "", html)
     html = re.sub(r'\s*<link rel="icon"[^>]*>', "", html)
     html = re.sub(r'\s*<script type="module"[^>]*></script>', "", html)
@@ -117,7 +117,7 @@ def main():
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(html)
     size = os.path.getsize(out_path) / 1024
-    print(f"{out_path}  ({size:.0f} KB, {len(images)} imagens, {len(modules)} módulos)")
+    print(f"{out_path}  ({size:.0f} KB, {len(images)} images, {len(modules)} modules)")
 
 
 if __name__ == "__main__":
