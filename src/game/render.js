@@ -78,7 +78,7 @@ export class Renderer {
     ctx.imageSmoothingEnabled = false;
 
     this.drawBackground(camX, biome, time);
-    this.drawVeins(battle, camX);
+    this.drawNodes(battle, camX);
 
     for (const corpse of battle.corpses) this.drawActor(corpse, camX, { fade: corpse.corpseTimer });
     if (battle.enemy) this.drawActor(battle.enemy, camX);
@@ -194,62 +194,97 @@ export class Renderer {
     }
   }
 
-  // --- ore veins ----------------------------------------------------
+  // --- gathering nodes ----------------------------------------------
   /**
-   * A boulder with the ore showing through it. Drawn rather than blitted,
-   * because the arena is about 92 world px tall and a vein has to read at
-   * ten pixels wide, which no icon from the packs survives being scaled to.
-   * A locked vein keeps its ore colour but goes grey and gets a chain of
-   * dots over it, so "come back with a better pick" is legible at a glance.
+   * A vein, a tree or a fishing spot, drawn rather than blitted. The arena is
+   * about 92 world px tall and a node has to read at ten pixels wide, which
+   * no icon from the packs survives being scaled down to. A node you cannot
+   * work yet keeps its shape but goes grey and gets a marker over it, so
+   * "come back with a better tool" is legible at a glance.
    */
-  drawVeins(battle, camX) {
+  drawNodes(battle, camX) {
     const { ctx, groundY } = this;
-    for (const vein of battle.veins) {
-      const x = Math.round(vein.x - camX);
-      if (x < -20 || x > this.width + 20) continue;
-
-      const nudge = vein.shake > 0 ? (Math.random() < 0.5 ? 1 : 0) : 0;
+    for (const node of battle.nodes) {
+      const x = Math.round(node.x - camX);
+      if (x < -24 || x > this.width + 24) continue;
+      const nudge = node.shake > 0 ? (Math.random() < 0.5 ? 1 : 0) : 0;
       const bx = x - 5 + nudge;
-      const by = groundY - 9;
 
-      if (vein.spent) {
-        // worked out: rubble left on the ground
+      if (node.spent) {
         ctx.fillStyle = '#00000055';
         ctx.fillRect(bx + 1, groundY - 2, 8, 2);
         continue;
       }
 
-      // rock body
-      ctx.fillStyle = vein.locked ? '#3b3a3e' : '#4a3f39';
-      ctx.fillRect(bx + 1, by + 2, 9, 7);
-      ctx.fillRect(bx + 2, by, 7, 3);
-      ctx.fillStyle = vein.locked ? '#57565c' : '#6a5a4e';
-      ctx.fillRect(bx + 2, by + 1, 6, 2);
+      if (node.kind === 'vein') this.drawVein(bx, groundY, node);
+      else if (node.kind === 'tree') this.drawTreeNode(bx, groundY, node);
+      else this.drawPool(bx, groundY, node);
 
-      // ore showing through
-      ctx.fillStyle = vein.locked ? '#2f2e33' : vein.ore.color;
-      ctx.globalAlpha = vein.locked ? 0.45 : 1;
-      ctx.fillRect(bx + 3, by + 3, 2, 2);
-      ctx.fillRect(bx + 6, by + 5, 2, 2);
-      ctx.fillRect(bx + 4, by + 7, 1, 1);
-      ctx.globalAlpha = 1;
-
-      if (vein.locked) {
+      if (node.locked) {
+        // padlock-ish marker floating above it
         ctx.fillStyle = '#e6dccb';
-        ctx.fillRect(bx + 4, by - 3, 4, 1);
-        ctx.fillRect(bx + 5, by - 5, 2, 2);
+        const top = groundY - (node.kind === 'tree' ? 22 : 12);
+        ctx.fillRect(bx + 4, top, 4, 1);
+        ctx.fillRect(bx + 5, top - 2, 2, 2);
         continue;
       }
 
-      // progress pips while the hero works it
-      if (battle.mining === vein) {
-        const done = Math.min(1, vein.progress / Math.max(0.01, battle.veinSwingTime));
+      if (battle.working === node) {
+        const done = Math.min(1, node.progress / Math.max(0.01, battle.nodeWorkTime));
+        const top = groundY - (node.kind === 'tree' ? 23 : 13);
         ctx.fillStyle = '#150f0d';
-        ctx.fillRect(bx, by - 4, 11, 3);
-        ctx.fillStyle = vein.ore.color;
-        ctx.fillRect(bx + 1, by - 3, Math.round(9 * done), 1);
+        ctx.fillRect(bx, top, 11, 3);
+        ctx.fillStyle = node.resource.color;
+        ctx.fillRect(bx + 1, top + 1, Math.round(9 * done), 1);
       }
     }
+  }
+
+  drawVein(bx, groundY, node) {
+    const { ctx } = this;
+    const by = groundY - 9;
+    ctx.fillStyle = node.locked ? '#3b3a3e' : '#4a3f39';
+    ctx.fillRect(bx + 1, by + 2, 9, 7);
+    ctx.fillRect(bx + 2, by, 7, 3);
+    ctx.fillStyle = node.locked ? '#57565c' : '#6a5a4e';
+    ctx.fillRect(bx + 2, by + 1, 6, 2);
+
+    ctx.fillStyle = node.locked ? '#2f2e33' : node.resource.color;
+    ctx.globalAlpha = node.locked ? 0.45 : 1;
+    ctx.fillRect(bx + 3, by + 3, 2, 2);
+    ctx.fillRect(bx + 6, by + 5, 2, 2);
+    ctx.fillRect(bx + 4, by + 7, 1, 1);
+    ctx.globalAlpha = 1;
+  }
+
+  /** Taller than the others on purpose: a tree has to read as a tree. */
+  drawTreeNode(bx, groundY, node) {
+    const { ctx } = this;
+    ctx.fillStyle = node.locked ? '#3b352f' : '#5a3f2a';
+    ctx.fillRect(bx + 4, groundY - 9, 3, 9);
+    ctx.fillStyle = node.locked ? '#4a4842' : node.resource.color;
+    ctx.globalAlpha = node.locked ? 0.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(bx - 1, groundY - 8);
+    ctx.lineTo(bx + 5.5, groundY - 20);
+    ctx.lineTo(bx + 12, groundY - 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillRect(bx + 1, groundY - 13, 9, 4);
+    ctx.globalAlpha = 1;
+  }
+
+  /** A pool sits IN the ground rather than on it, so it reads as water. */
+  drawPool(bx, groundY, node) {
+    const { ctx } = this;
+    ctx.fillStyle = node.locked ? '#2a2c30' : '#1d3a4a';
+    ctx.fillRect(bx, groundY + 1, 11, 4);
+    ctx.fillRect(bx + 1, groundY, 9, 1);
+    ctx.fillStyle = node.locked ? '#43464c' : node.resource.color;
+    ctx.globalAlpha = node.locked ? 0.5 : 0.9;
+    ctx.fillRect(bx + 2, groundY + 2, 3, 1);
+    ctx.fillRect(bx + 6, groundY + 3, 3, 1);
+    ctx.globalAlpha = 1;
   }
 
   // --- actors -------------------------------------------------------

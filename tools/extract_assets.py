@@ -108,6 +108,12 @@ ICONS = [
     ("ore",           5, 482),  # raw stone
     ("bar",           9, 486),  # stockpiled bars
     ("pick",          2, 337),  # pickaxe
+    # chopping and fishing
+    ("axe",           1, 339),  # axe
+    ("rod",          10, 342),  # fishing rod
+    ("log",          12, 484),  # stacked logs
+    ("plank",        13, 484),  # sawn planks
+    ("fish",          9, 455),  # fish
 ]
 ICON_SIZE = 32
 

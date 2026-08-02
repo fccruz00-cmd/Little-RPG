@@ -18,16 +18,16 @@ export const BONUS_KEYS = [
   'goldMul', 'xpMul', 'moveMul', 'damageTaken', 'respawnMul', 'killsLess',
   'startStage', 'extraPoints',
   // forge and automation
-  'dustChance', 'dustMul', 'bossTime', 'autoBuy', 'autoCraft',
+  'dustChance', 'dustMul', 'bossTime', 'autoBuy', 'autoCraft', 'autoSwitch',
   // combat skills
   'doubleHit', 'lifesteal', 'executeMul', 'ambush',
-  // mining
-  'oreMul', 'oreDouble', 'nodeMul', 'mineSpeed', 'mineXpMul', 'smeltLess',
-  'nodeGold', 'nodeDust',
 ];
 
 /** Seconds between automatic purchases at the first rank of Herald. */
 export const AUTO_BUY_BASE = 6;
+
+/** Seconds between tool swaps once Forager is bought. Mirrors GATHER.switchEvery. */
+export const AUTO_SWITCH_EVERY = 60;
 
 // --- skill tree (level points) --------------------------------------
 export const TALENT_TREE = [
@@ -98,6 +98,7 @@ export const RELIC_TREE = [
       { id: 'collector', name: 'Collector', icon: 'dust',  max: 10, cost: 2,  key: 'dustChance', mode: 'add', per: 0.04 },
       { id: 'grinder',   name: 'Grinder',   icon: 'bag',   max: 10, cost: 3,  key: 'dustMul',    mode: 'mul', per: 0.25 },
       { id: 'anvil',     name: 'Anvil',     icon: 'stage', max: 1,  cost: 15, key: 'autoCraft',  mode: 'add', per: 1 },
+      { id: 'forager',   name: 'Forager',   icon: 'pick',  max: 1,  cost: 12, key: 'autoSwitch', mode: 'add', per: 1 },
     ],
   },
   {
@@ -135,15 +136,11 @@ export function describeNode(node, ranks) {
     case 'bossTime':     return `+${total}s on the boss timer`;
     case 'autoBuy':      return `buys for you every ${(AUTO_BUY_BASE - n + 1).toFixed(0)}s`;
     case 'autoCraft':    return 'forges for you when dust piles up';
+    case 'autoSwitch':   return `swaps your tool every ${AUTO_SWITCH_EVERY}s so no skill stalls`;
     case 'doubleHit':    return `+${pct(total)} chance to strike twice`;
     case 'lifesteal':    return `heals ${pct(total)} of damage dealt`;
     case 'executeMul':   return `+${pct(total)} damage below 30% health`;
     case 'ambush':       return `+${pct(total)} on the first hit on each enemy`;
-    case 'oreDouble':    return `+${pct(total)} chance a vein pays twice`;
-    case 'mineSpeed':    return `${pct(total)} faster to work a vein`;
-    case 'smeltLess':    return `${pct(total)} less ore per bar`;
-    case 'nodeGold':     return `veins also pay ${total.toFixed(2)}x a mob's gold`;
-    case 'nodeDust':     return `+${pct(total)} chance a vein drops dust`;
     default:             return `${mult(1 + total)} ${LABEL[node.key] ?? ''}`.trim();
   }
 }
@@ -157,9 +154,6 @@ const LABEL = {
   goldMul: 'gold',
   xpMul: 'XP',
   moveMul: 'stride',
-  oreMul: 'ore per vein',
-  nodeMul: 'veins on the road',
-  mineXpMul: 'mining XP',
 };
 
 /** Relic cost to take a node from `ranks` to `ranks + 1`. */

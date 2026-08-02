@@ -31,6 +31,7 @@
     </div>
     <div class="hud__row hud__row--xp">
       <span class="hud__lvl">Lv.<b id="stat-level">1</b></span>
+      <span class="fed" id="fed" hidden><i class="ico ico--sm ico--regen"></i><b id="fed-time">0</b>s</span>
       <div class="xpbar" role="progressbar" aria-label="Experience">
         <div class="xpbar__fill" id="xp-fill"></div>
         <span class="xpbar__text" id="xp-text">0 / 20</span>
@@ -101,38 +102,46 @@
       <div class="tree-scroll" id="tree-relics" hidden></div>
     </div>
 
-    <!-- tab 3: gathering skills. Mining today, more on the same rails. -->
+    <!-- tab 3: gathering skills. One tool at a time, which is the tradeoff. -->
     <div class="pane" id="pane-skills">
       <div class="pane__head">
-        <span class="pane__points">
-          <i class="ico ico--sm ico--pick"></i> Mining <b id="mine-level">1</b>
-        </span>
-        <span class="pane__points" id="mine-points"></span>
-        <button class="link" id="btn-respec-mine" type="button">respec</button>
+        <div class="segmented" id="skill-switch">
+          <button class="is-on" data-skill="mining" type="button">Mining</button>
+          <button data-skill="chopping" type="button">Chopping</button>
+          <button data-skill="fishing" type="button">Fishing</button>
+        </div>
+        <span class="pane__points" id="skill-points"></span>
+        <button class="link" id="btn-respec-skill" type="button">respec</button>
       </div>
 
       <div class="skillbar">
-        <div class="xpbar" role="progressbar" aria-label="Mining experience">
-          <div class="xpbar__fill xpbar__fill--ore" id="mine-xp-fill"></div>
-          <span class="xpbar__text" id="mine-xp-text">0 / 30</span>
+        <button class="equip" id="skill-equip" type="button">
+          <i class="ico ico--lg" id="equip-icon"></i>
+          <span id="equip-label">Equip</span>
+        </button>
+        <div class="xpbar" role="progressbar" aria-label="Skill experience">
+          <div class="xpbar__fill xpbar__fill--ore" id="skill-xp-fill"></div>
+          <span class="xpbar__text" id="skill-xp-text">0 / 30</span>
         </div>
       </div>
 
       <div class="stock" id="stock"></div>
 
       <div class="mine-tools">
-        <button class="slot" id="pick-buy" type="button">
-          <i class="ico ico--lg ico--pick"></i>
+        <button class="slot" id="tool-buy" type="button">
+          <i class="ico ico--lg" id="tool-icon"></i>
           <span>
-            <span class="slot__name" id="pick-name">Worn Pick</span>
-            <span class="slot__effect" id="pick-effect"></span>
+            <span class="slot__name" id="tool-name">Worn Pick</span>
+            <span class="slot__effect" id="tool-effect"></span>
           </span>
-          <span class="slot__cost" id="pick-cost"></span>
+          <span class="slot__cost" id="tool-cost"></span>
         </button>
       </div>
 
-      <p class="pane__detail" id="mine-detail">Tap a node to invest.</p>
+      <p class="pane__detail" id="skill-detail">Tap a node to invest.</p>
       <div class="tree-scroll" id="tree-mining"></div>
+      <div class="tree-scroll" id="tree-chopping" hidden></div>
+      <div class="tree-scroll" id="tree-fishing" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->

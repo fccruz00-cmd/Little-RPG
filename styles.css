@@ -96,7 +96,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 32;
+  --n: 37;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -140,6 +140,11 @@ body { display: flex; justify-content: center; }
 .ico--ore           { --i: 29; }
 .ico--bar           { --i: 30; }
 .ico--pick          { --i: 31; }
+.ico--axe           { --i: 32; }
+.ico--rod           { --i: 33; }
+.ico--log           { --i: 34; }
+.ico--plank         { --i: 35; }
+.ico--fish          { --i: 36; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
@@ -528,7 +533,8 @@ body { display: flex; justify-content: center; }
 }
 .toggle input:checked { background-image: url(assets/ui/check_on.png); }
 
-.segmented { display: flex; gap: 3px; }
+.segmented { display: flex; gap: 3px; min-width: 0; }
+#skill-switch button { padding: 2px 5px 3px; font-size: 9px; }
 .segmented button {
   --px: 2;
   padding: 2px 9px 3px;
@@ -831,10 +837,59 @@ body { display: flex; justify-content: center; }
 /* --- tab 3: gathering skills --- */
 .skillbar {
   flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 8px;
   background: var(--slate-2);
   border-bottom: 2px solid #000;
 }
+.skillbar .xpbar { flex: 1 1 auto; height: 15px; }
+
+/* The equip button is the whole tradeoff of slice 2, so it gets to look like
+   a decision: gold and raised when it is a choice, sunken when it is already
+   in your hand. */
+.equip {
+  --px: 2;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 4px;
+  border: 0;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  text-shadow: 0 1px 0 #fff3;
+  cursor: pointer;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.equip:not(:disabled):active { transform: translateY(1px); border-image-source: url(assets/ui/button_pressed.png); }
+.equip.is-on {
+  cursor: default;
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+
+/* Well Fed, in the HUD next to the level. */
+.fed {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: #b8f0bd;
+  white-space: nowrap;
+}
+.fed[hidden] { display: none; }
+.fed b { font-size: 11px; font-weight: 700; }
 .xpbar__fill--ore { background-image: url(assets/ui/bar_gold.png); }
 
 /* One row per ore: what is in the sack, what it smelts to, and the button
@@ -890,6 +945,8 @@ body { display: flex; justify-content: center; }
 
 .mine-tools { flex: none; padding: 6px; }
 .mine-tools .slot { grid-template-columns: 26px 1fr auto; }
+.mine-tools .slot__cost .ico { margin-right: 2px; }
+.mine-tools .slot__cost { display: flex; align-items: center; gap: 6px; font-size: 10px; }
 
 /* --- tab 4: forge --- */
 .forge {

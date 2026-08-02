@@ -5,13 +5,13 @@ import {
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
-import { MINING, rollOre, oreYield, swingTime } from '../data/mining.js';
+import { SKILLS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
 const CORPSE_TIME = 1.1;   // how long a corpse stays on screen
 const LOOT_PAUSE = 0.35;   // breather between one enemy and the next
-const VEIN_REACH = 5;      // world px either side of a vein the hero can work
+const NODE_REACH = 5;      // world px either side of a node the hero can work
 
 let nextId = 1;
 
@@ -71,11 +71,14 @@ export class Battle {
     this.spawnTimer = 0;
     this.bossTimer = 0;
 
-    // Ore veins live on the same line as everything else. `nextVeinX` walks
-    // forward with the hero so a vein is placed once and never twice.
-    this.veins = [];
-    this.nextVeinX = this.hero.x + MINING.spacing;
-    this.mining = null;   // the vein being worked, with its progress
+    // Gathering nodes live on the same line as everything else. `nextNodeX`
+    // walks forward with the hero so a node is placed once and never twice.
+    // Only the equipped skill's nodes spawn, which is the tradeoff: time on
+    // ore is time not on wood.
+    this.nodes = [];
+    this.nextNodeX = this.hero.x + GATHER.spacing;
+    this.working = null;   // the node being worked, with its progress
+    this.switchTimer = 0;
 
     // Loading a save keeps the kills already made: closing the game mid
     // stage does not send you back to its start.
@@ -114,9 +117,9 @@ export class Battle {
     if (!keepKills) this.state.kills = 0;
     this.enemy = null;
     this.corpses.length = 0;
-    this.veins.length = 0;
-    this.mining = null;
-    this.nextVeinX = this.hero.x + MINING.spacing * 0.5;
+    this.nodes.length = 0;
+    this.working = null;
+    this.nextNodeX = this.hero.x + GATHER.spacing * 0.5;
     this.spawnTimer = 0.4;
     this.bossTimer = 0;
     this.emit('stage', this.state.stage);
@@ -195,101 +198,125 @@ export class Battle {
     this.emit('spawn', actor);
   }
 
-  // --- ore veins ----------------------------------------------------
+  // --- gathering nodes ----------------------------------------------
   /**
-   * Places veins ahead of the camera, one per `spacing` of ground. Spacing is
+   * Places nodes ahead of the camera, one per `spacing` of ground. Spacing is
    * distance, not time, and the hero covers roughly one enemy gap per kill,
-   * so veins per minute already tracks kills per minute. That is the whole
-   * coupling between mining and combat: no second rate curve to tune.
+   * so nodes per minute already tracks kills per minute. That is the whole
+   * coupling between gathering and combat: no second rate curve to tune.
    */
-  spawnVeins() {
+  spawnNodes() {
     const { state } = this;
+    const skillId = state.tool;
     const edge = this.camX + this.viewWidth + SPAWN_MARGIN;
-    const spacing = MINING.spacing / state.bonus.nodeMul;
-    while (this.nextVeinX < edge) {
-      const ore = rollOre(state.stage, state.pick);
-      this.veins.push({
+    const spacing = GATHER.spacing / state.gatherBonus(skillId).nodeMul;
+    while (this.nextNodeX < edge) {
+      const resource = rollResource(skillId, state.stage, state.tools[skillId]);
+      this.nodes.push({
         id: nextId++,
-        x: this.nextVeinX,
-        ore,
-        locked: ore.tier > state.pick,
+        x: this.nextNodeX,
+        skill: skillId,
+        kind: SKILLS[skillId].nodeKind,
+        resource,
+        locked: resource.tier > state.tools[skillId],
         progress: 0,
         spent: false,
         shake: 0,
       });
-      this.nextVeinX += spacing + (Math.random() - 0.5) * MINING.jitter;
+      this.nextNodeX += spacing + (Math.random() - 0.5) * GATHER.jitter;
     }
   }
 
   /** Seconds a swing takes right now, exposed so the renderer can draw it. */
-  get veinSwingTime() {
-    return swingTime(this.state.pick, this.state.bonus);
+  get nodeWorkTime() {
+    const skillId = this.state.tool;
+    return workTime(this.state.tools[skillId], this.state.gatherBonus(skillId));
   }
 
-  /** The vein the hero is standing on and able to work, if any. */
-  veinUnderHero() {
-    const { hero } = this;
-    for (const vein of this.veins) {
-      if (vein.spent || vein.locked) continue;
-      if (Math.abs(vein.x - hero.x) <= VEIN_REACH) return vein;
+  /** The node the hero is standing on and able to work, if any. */
+  nodeUnderHero() {
+    const { hero, state } = this;
+    for (const node of this.nodes) {
+      if (node.spent || node.locked || node.skill !== state.tool) continue;
+      if (Math.abs(node.x - hero.x) <= NODE_REACH) return node;
     }
     return null;
   }
 
   /**
-   * Working a vein holds the hero in place, and that is the only price
-   * mining charges. It stays cheap because the enemy is walking toward you
-   * the whole time, so a swing usually costs part of a trip rather than a
-   * whole one. Combat always wins the tie: a vein is only worked when
-   * nothing is in range.
+   * Working a node holds the hero in place. Measured in slice 1, that costs
+   * no stage progress at all, because enemies walk toward you and travel is
+   * never the bottleneck. The cost that does bite is the tool slot: this only
+   * ever finds nodes of the equipped skill. Combat still outranks it, so a
+   * node is only worked when nothing is in range.
    */
-  updateMining(dt) {
+  updateGathering(dt) {
     const { state, hero } = this;
-    const vein = this.veinUnderHero();
-    this.mining = vein;
-    if (!vein) return false;
+    const node = this.nodeUnderHero();
+    this.working = node;
+    if (!node) return false;
 
-    vein.progress += dt;
-    vein.shake = 0.12;
+    node.progress += dt;
+    node.shake = 0.12;
     hero.anim.playTimed('attack', 0.5, { force: hero.anim.name !== 'attack' });
-    if (vein.progress < swingTime(state.pick, state.bonus)) return true;
+    if (node.progress < this.nodeWorkTime) return true;
 
-    vein.spent = true;
-    this.mining = null;
-    this.harvest(vein);
+    node.spent = true;
+    this.working = null;
+    this.harvest(node);
     return true;
   }
 
-  harvest(vein) {
+  harvest(node) {
     const { state } = this;
-    const double = Math.random() < state.bonus.oreDouble ? 2 : 1;
-    const amount = oreYield(vein.ore, state.pick, state.bonus) * double;
-    state.addOre(vein.ore.id, amount);
-    this.pushFloater({ x: vein.x, sprite: null, scale: 1 }, amount, 'ore');
+    const skillId = node.skill;
+    const bonus = state.gatherBonus(skillId);
+    const double = Math.random() < bonus.yieldDouble ? 2 : 1;
+    const amount = nodeYield(node.resource, state.tools[skillId], bonus) * double;
+    state.addRaw(node.resource.id, amount);
+    this.pushFloater({ x: node.x, sprite: null, scale: 1 }, amount, 'ore');
 
-    // Coin Seam and Soul Seam: the two nodes that pay mining back into the
-    // combat economy. Both are flat per vein, so they scale with kill rate
-    // and nothing else.
-    if (state.bonus.nodeGold > 0) {
-      const gold = state.earn(enemyGold(state.stage, 1) * state.bonus.nodeGold);
-      this.pushFloater({ x: vein.x, sprite: null, scale: 1 }, gold, 'gold');
+    // The two nodes that pay a gathering skill back into the combat economy.
+    // Both are flat per node, so they scale with the kill rate and nothing
+    // else, which is what keeps them off the compounding curve.
+    if (bonus.nodeGold > 0) {
+      const gold = state.earn(enemyGold(state.stage, 1) * bonus.nodeGold);
+      this.pushFloater({ x: node.x, sprite: null, scale: 1 }, gold, 'gold');
     }
-    if (state.bonus.nodeDust > 0 && Math.random() < state.bonus.nodeDust) {
+    if (bonus.nodeDust > 0 && Math.random() < bonus.nodeDust) {
       state.dust += 1;
       this.emit('dust', 1);
     }
 
-    const levels = state.gainMineXp(vein.ore.xp * double);
-    if (levels) this.emit('toast', { text: `MINING ${state.mineLevel}!` });
-    this.emit('mine', { ore: vein.ore, amount, levels });
+    const levels = state.gainGatherXp(skillId, node.resource.xp * double);
+    if (levels) {
+      this.emit('toast', { text: `${SKILLS[skillId].name.toUpperCase()} ${state.skills[skillId].level}!` });
+    }
+    this.emit('gather', { skill: skillId, resource: node.resource, amount, levels });
   }
 
-  updateVeins(dt) {
-    this.spawnVeins();
-    for (let i = this.veins.length - 1; i >= 0; i--) {
-      const vein = this.veins[i];
-      if (vein.shake > 0) vein.shake -= dt;
-      if (vein.x < this.camX - 30) this.veins.splice(i, 1);
+  updateNodes(dt) {
+    this.spawnNodes();
+    for (let i = this.nodes.length - 1; i >= 0; i--) {
+      const node = this.nodes[i];
+      if (node.shake > 0) node.shake -= dt;
+      // A tool swap makes every node of the old skill dead weight, so they go.
+      if (node.x < this.camX - 30 || node.skill !== this.state.tool) this.nodes.splice(i, 1);
+    }
+  }
+
+  /** Forager, from the relic tree: rotates the tool so no line stalls. */
+  updateAutoSwitch(dt) {
+    const { state } = this;
+    if (!state.bonus.autoSwitch || state.autoSwitch === false) return;
+    this.switchTimer += dt;
+    if (this.switchTimer < GATHER.switchEvery) return;
+    this.switchTimer = 0;
+    const ids = Object.keys(SKILLS);
+    const next = ids[(ids.indexOf(state.tool) + 1) % ids.length];
+    if (state.equip(next)) {
+      this.working = null;
+      this.emit('toast', { text: `${SKILLS[next].toolName.toUpperCase()} OUT` });
     }
   }
 
@@ -304,7 +331,9 @@ export class Battle {
     if (hero.dead) this.updateDeadHero(dt);
     else this.updateHero(dt);
 
-    this.updateVeins(dt);
+    this.updateNodes(dt);
+    this.updateAutoSwitch(dt);
+    state.tickMeals(dt);
 
     this.updateEnemy(dt);
     this.updateCorpses(dt);
@@ -321,7 +350,7 @@ export class Battle {
   }
 
   updateDeadHero(dt) {
-    this.mining = null;   // no swinging from the floor
+    this.working = null;   // no swinging from the floor
     this.respawnTimer -= dt;
     if (this.respawnTimer > 0) return;
     this.hero.dead = false;
@@ -344,7 +373,7 @@ export class Battle {
     if (!inRange) {
       // A vein under foot stops the walk. Combat outranks it, so this only
       // runs while nothing is close enough to swing at.
-      if (!this.updateMining(dt)) {
+      if (!this.updateGathering(dt)) {
         hero.x += state.moveSpeed * dt;
         hero.anim.play('walk', { fps: 11 });
       }
@@ -355,7 +384,7 @@ export class Battle {
       }
       return;
     }
-    this.mining = null;
+    this.working = null;
 
     // In range: swing at the pace of the attack speed stat.
     const period = 1 / state.attackRate;

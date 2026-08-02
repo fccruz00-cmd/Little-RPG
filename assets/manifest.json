@@ -241,6 +241,11 @@
     "bolt",
     "ore",
     "bar",
-    "pick"
+    "pick",
+    "axe",
+    "rod",
+    "log",
+    "plank",
+    "fish"
   ]
 }

@@ -7,18 +7,18 @@ import { relicsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 import {
-  ORES, ORE_BY_ID, PICKS, MINING, MINING_TREE, mineXpToNext, smeltCost,
-} from '../data/mining.js';
+  SKILLS, SKILL_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS, MEAL,
+  TOOL_TIERS, toolCost, gatherXpToNext, refineCost,
+} from '../data/gathering.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
   'dmgMul', 'atkSpeedMul', 'hpMul', 'regenMul', 'goldMul', 'xpMul', 'moveMul',
   'damageTaken', 'respawnMul', 'dustMul',
-  'oreMul', 'nodeMul', 'mineSpeed', 'mineXpMul', 'smeltLess',
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -48,13 +48,16 @@ function defaults() {
     gear: {},        // slotId -> index of the equipped rarity
     autoCraftOn: true,
 
-    // mining
-    mineLevel: 1,
-    mineXp: 0,
-    miningTalents: {},
-    ore: {},          // oreId -> count
-    bars: {},         // oreId -> count
-    pick: 0,          // pickaxe tier
+    // gathering: three skills on one set of rails
+    skills: {},       // skillId -> { level, xp }
+    skillTalents: {}, // skillId -> { nodeId -> ranks }
+    tools: {},        // skillId -> tool tier
+    raw: {},          // resourceId -> count
+    refined: {},      // resourceId -> count
+    tool: 'mining',   // the one equipped; only its nodes spawn
+    autoSwitch: false,
+    fedTier: -1,      // tier of the meal being eaten, -1 when not fed
+    fedTimer: 0,
 
     buyMax: false,
     goldPerSec: 0,
@@ -93,10 +96,11 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 4) {
+  if (data.version >= 1 && data.version <= 5) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
-    return {
+    // v5: mining stood alone, before chopping and fishing joined it.
+    const out = {
       ...defaults(),
       ...data,
       version: SAVE_VERSION,
@@ -105,6 +109,17 @@ function migrate(data) {
       relicTalents: renameKeys(data.relicTalents),
       gear: renameKeys(data.gear),
     };
+    // Every v5 mining node id survived the generalisation, so the ranks move
+    // across untouched; only the shape around them changed.
+    if (data.version === 5) {
+      out.skills = { mining: { level: data.mineLevel ?? 1, xp: data.mineXp ?? 0 } };
+      out.skillTalents = { mining: { ...(data.miningTalents ?? {}) } };
+      out.tools = { mining: data.pick ?? 0 };
+      out.raw = { ...(data.ore ?? {}) };
+      out.refined = { ...(data.bars ?? {}) };
+    }
+    for (const k of ['mineLevel', 'mineXp', 'miningTalents', 'ore', 'bars', 'pick']) delete out[k];
+    return out;
   }
   return null;
 }
@@ -116,9 +131,17 @@ export class GameState {
     this.talents = { ...(data.talents ?? {}) };
     this.relicTalents = { ...(data.relicTalents ?? {}) };
     this.gear = { ...(data.gear ?? {}) };
-    this.miningTalents = { ...(data.miningTalents ?? {}) };
-    this.ore = { ...(data.ore ?? {}) };
-    this.bars = { ...(data.bars ?? {}) };
+    this.skills = Object.fromEntries(SKILL_IDS.map((id) => [id, {
+      level: data.skills?.[id]?.level ?? 1,
+      xp: data.skills?.[id]?.xp ?? 0,
+    }]));
+    this.skillTalents = Object.fromEntries(SKILL_IDS.map((id) =>
+      [id, { ...(data.skillTalents?.[id] ?? {}) }]));
+    this.tools = Object.fromEntries(SKILL_IDS.map((id) => [id, data.tools?.[id] ?? 0]));
+    this.raw = { ...(data.raw ?? {}) };
+    this.refined = { ...(data.refined ?? {}) };
+    if (!SKILLS[this.tool]) this.tool = 'mining';
+    this._gatherBonus = {};
     this._bonus = null;
     this.hp = this.maxHp;
     this._saveTimer = 0;
@@ -151,7 +174,6 @@ export class GameState {
     };
     for (const branch of TALENT_TREE) for (const n of branch.nodes) apply(n, this.talents[n.id] ?? 0);
     for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
-    for (const branch of MINING_TREE) for (const n of branch.nodes) apply(n, this.miningTalents[n.id] ?? 0);
 
     // Gear comes in through the same path: a slot is just one more bonus
     // source, with the value pinned by rarity.
@@ -170,6 +192,32 @@ export class GameState {
 
   invalidateBonus() {
     this._bonus = null;
+    this._gatherBonus = {};
+  }
+
+  /**
+   * One bonus object per gathering skill. The three trees reuse the same key
+   * names because they mean the same thing, so they cannot share one object:
+   * Swift Hands in the mining tree has to speed up mining and nothing else.
+   */
+  gatherBonus(skillId) {
+    const cached = this._gatherBonus[skillId];
+    if (cached) return cached;
+    const b = Object.fromEntries(GATHER_KEYS.map((k) => [k, 0]));
+    for (const k of GATHER_MULS) b[k] = 1;
+    const ranksOf = this.skillTalents[skillId] ?? {};
+    for (const branch of SKILL_TREES[skillId]) {
+      for (const node of branch.nodes) {
+        const ranks = ranksOf[node.id] ?? 0;
+        if (!ranks) continue;
+        const amount = node.per * ranks;
+        if (node.mode === 'mul') b[node.key] *= 1 + amount;
+        else if (node.mode === 'less') b[node.key] *= Math.max(0.1, 1 - amount);
+        else b[node.key] += amount;
+      }
+    }
+    this._gatherBonus[skillId] = b;
+    return b;
   }
 
   // --- derived stats ------------------------------------------------
@@ -178,11 +226,11 @@ export class GameState {
   get critChance() { return Math.min(0.95, statValue('critChance', this.levels.critChance) + this.bonus.critAdd); }
   get critPower()  { return statValue('critPower', this.levels.critPower) + this.bonus.critPowerAdd; }
   get maxHp()      { return statValue('maxHp', this.levels.maxHp) * this.bonus.hpMul; }
-  get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul; }
+  get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul * this.fedRegenMul; }
   get goldGain()   { return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul; }
   get moveSpeed()  { return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul; }
   get xpGain()     { return this.bonus.xpMul; }
-  get damageTaken(){ return this.bonus.damageTaken; }
+  get damageTaken(){ return this.bonus.damageTaken * this.fedArmor; }
   get respawnMul() { return this.bonus.respawnMul; }
 
   /** Regular mobs before the final encounter, Scout included. */
@@ -281,104 +329,157 @@ export class GameState {
     this.invalidateBonus();
   }
 
-  // --- mining -------------------------------------------------------
-  // Mining survives rebirth on purpose. It pays in access and conversion,
+  // --- gathering ----------------------------------------------------
+  // All of it survives rebirth. The tool chain pays in access and conversion,
   // never in damage, so it cannot compound with the combat curve; and wiping
-  // it every prestige would make a long chain of picks pointless when
-  // rebirths come every few hours.
-  get mineXpNeeded() {
-    return mineXpToNext(this.mineLevel);
+  // three tool lines every few hours would make them pointless.
+  skill(id) {
+    return this.skills[id];
   }
 
-  get minePoints() {
-    return (this.mineLevel - 1) * MINING.pointsPerLevel;
+  gatherXpNeeded(id) {
+    return gatherXpToNext(this.skills[id].level);
   }
 
-  get mineSpentPoints() {
-    return Object.values(this.miningTalents).reduce((sum, r) => sum + r, 0);
+  skillPoints(id) {
+    return (this.skills[id].level - 1) * GATHER.pointsPerLevel;
   }
 
-  get mineFreePoints() {
-    return Math.max(0, this.minePoints - this.mineSpentPoints);
+  skillSpent(id) {
+    return Object.values(this.skillTalents[id]).reduce((sum, r) => sum + r, 0);
   }
 
-  /** Adds mining XP. Returns how many levels it crossed. */
-  gainMineXp(amount) {
-    this.mineXp += amount * this.bonus.mineXpMul;
+  skillFree(id) {
+    return Math.max(0, this.skillPoints(id) - this.skillSpent(id));
+  }
+
+  /** Adds XP to one skill. Returns how many levels it crossed. */
+  gainGatherXp(id, amount) {
+    const skill = this.skills[id];
+    skill.xp += amount * this.gatherBonus(id).gatherXpMul;
     let gained = 0;
-    while (this.mineXp >= this.mineXpNeeded) {
-      this.mineXp -= this.mineXpNeeded;
-      this.mineLevel += 1;
+    while (skill.xp >= this.gatherXpNeeded(id)) {
+      skill.xp -= this.gatherXpNeeded(id);
+      skill.level += 1;
       gained += 1;
     }
     return gained;
   }
 
-  canBuyMineTalent(branch, index) {
+  canBuySkillTalent(id, branch, index) {
     const node = branch.nodes[index];
-    const ranks = this.miningTalents[node.id] ?? 0;
+    const ranks = this.skillTalents[id][node.id] ?? 0;
     return ranks < node.max
-      && this.mineFreePoints > 0
-      && this.isUnlocked(branch, index, this.miningTalents);
+      && this.skillFree(id) > 0
+      && this.isUnlocked(branch, index, this.skillTalents[id]);
   }
 
-  buyMineTalent(branch, index) {
-    if (!this.canBuyMineTalent(branch, index)) return false;
+  buySkillTalent(id, branch, index) {
+    if (!this.canBuySkillTalent(id, branch, index)) return false;
     const node = branch.nodes[index];
-    this.miningTalents[node.id] = (this.miningTalents[node.id] ?? 0) + 1;
+    this.skillTalents[id][node.id] = (this.skillTalents[id][node.id] ?? 0) + 1;
     this.invalidateBonus();
     return true;
   }
 
-  respecMining() {
-    this.miningTalents = {};
+  respecSkill(id) {
+    this.skillTalents[id] = {};
     this.invalidateBonus();
   }
 
-  addOre(oreId, amount) {
-    this.ore[oreId] = (this.ore[oreId] ?? 0) + amount;
+  addRaw(resourceId, amount) {
+    this.raw[resourceId] = (this.raw[resourceId] ?? 0) + amount;
   }
 
-  smeltCostFor(oreId) {
-    return smeltCost(ORE_BY_ID[oreId], this.bonus);
+  refineCostFor(skillId, resource) {
+    return refineCost(resource, this.gatherBonus(skillId));
   }
 
-  /** How many bars the ore on hand is worth right now. */
-  smeltableBars(oreId) {
-    return Math.floor((this.ore[oreId] ?? 0) / this.smeltCostFor(oreId));
+  /** How many refined units the raw on hand is worth right now. */
+  refinable(skillId, resource) {
+    return Math.floor((this.raw[resource.id] ?? 0) / this.refineCostFor(skillId, resource));
   }
 
-  /** Smelts everything it can of one ore. Returns the bars produced. */
-  smelt(oreId) {
-    const bars = this.smeltableBars(oreId);
-    if (bars <= 0) return 0;
-    this.ore[oreId] -= bars * this.smeltCostFor(oreId);
-    this.bars[oreId] = (this.bars[oreId] ?? 0) + bars;
-    return bars;
+  /** Refines everything it can of one resource. Returns the units produced. */
+  refine(skillId, resource) {
+    const made = this.refinable(skillId, resource);
+    if (made <= 0) return 0;
+    this.raw[resource.id] -= made * this.refineCostFor(skillId, resource);
+    this.refined[resource.id] = (this.refined[resource.id] ?? 0) + made;
+    return made;
   }
 
-  /** The pick one tier above the one in hand, or null at the top. */
-  get nextPick() {
-    return PICKS[this.pick + 1] ?? null;
+  /** The tool one tier above the one in hand, or null at the top. */
+  nextTool(skillId) {
+    const tier = this.tools[skillId] + 1;
+    return TOOL_TIERS[tier] ? { tier, cost: toolCost(tier) } : null;
   }
 
-  canBuyPick() {
-    const next = this.nextPick;
-    return !!next && (this.bars[next.cost.ore] ?? 0) >= next.cost.bars;
+  canBuyTool(skillId) {
+    const next = this.nextTool(skillId);
+    if (!next) return false;
+    return (this.refined[next.cost.ore] ?? 0) >= next.cost.bars
+      && (this.refined[next.cost.log] ?? 0) >= next.cost.planks;
   }
 
-  buyPick() {
-    if (!this.canBuyPick()) return false;
-    const next = this.nextPick;
-    this.bars[next.cost.ore] -= next.cost.bars;
-    this.pick += 1;
+  buyTool(skillId) {
+    if (!this.canBuyTool(skillId)) return false;
+    const { cost } = this.nextTool(skillId);
+    this.refined[cost.ore] -= cost.bars;
+    this.refined[cost.log] -= cost.planks;
+    this.tools[skillId] += 1;
     return true;
   }
 
-  /** Ores the player has ever been able to see, for the UI. */
-  knownOres() {
-    return ORES.filter((o) => this.bestStage >= o.minStage
-      || (this.ore[o.id] ?? 0) > 0 || (this.bars[o.id] ?? 0) > 0);
+  /** Only the equipped skill's nodes spawn, which is the whole tradeoff. */
+  equip(skillId) {
+    if (!SKILLS[skillId] || this.tool === skillId) return false;
+    this.tool = skillId;
+    return true;
+  }
+
+  /** Resources this skill has been deep enough to see, for the UI. */
+  knownResources(skillId) {
+    return SKILLS[skillId].resources.filter((r) => this.bestStage >= r.minStage
+      || (this.raw[r.id] ?? 0) > 0 || (this.refined[r.id] ?? 0) > 0);
+  }
+
+  // --- Well Fed -----------------------------------------------------
+  // Fishing's payout. Meals are eaten on their own; the buff is regen and a
+  // damage cut, never attack, so the sustain track cannot feed the DPS curve.
+  get fed() {
+    return this.fedTier >= 0 && this.fedTimer > 0;
+  }
+
+  get fedRegenMul() {
+    if (!this.fed) return 1;
+    const b = this.gatherBonus('fishing');
+    return 1 + MEAL.regenPerTier * (this.fedTier + 1) * b.fedRegen;
+  }
+
+  get fedArmor() {
+    if (!this.fed) return 1;
+    const b = this.gatherBonus('fishing');
+    return Math.max(0.5, 1 - (MEAL.armorPerTier * (this.fedTier + 1) + b.fedArmor));
+  }
+
+  /** Eats the best meal on hand when the last one runs out. */
+  tickMeals(dt) {
+    if (this.fedTimer > 0) {
+      this.fedTimer -= dt;
+      if (this.fedTimer > 0) return false;
+    }
+    this.fedTier = -1;
+    for (let i = SKILLS.fishing.resources.length - 1; i >= 0; i--) {
+      const fish = SKILLS.fishing.resources[i];
+      if ((this.refined[fish.id] ?? 0) < 1) continue;
+      this.refined[fish.id] -= 1;
+      this.fedTier = fish.tier;
+      this.fedTimer = MEAL.time * this.gatherBonus('fishing').mealTime;
+      return true;
+    }
+    this.fedTimer = 0;
+    return false;
   }
 
   // --- forge --------------------------------------------------------
@@ -528,14 +629,16 @@ export class GameState {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
-      mineLevel, mineXp, miningTalents, ore, bars, pick,
+      skills, skillTalents, tools, raw, refined, tool, autoSwitch,
+      fedTier, fedTimer,
       buyMax, goldPerSec,
     } = this;
     return {
       version: SAVE_VERSION,
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
-      mineLevel, mineXp, miningTalents, ore, bars, pick,
+      skills, skillTalents, tools, raw, refined, tool, autoSwitch,
+      fedTier, fedTimer,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }

@@ -104,7 +104,7 @@ it.
      and you can respec at any time.
    - *Relics*, the prestige tree, paid with **relics**. Permanent.
    - In both, a node only opens once the previous one in its branch has a point.
-3. **Skills**: gathering. **Mining** today, see below.
+3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
 5. **Prestige**: rebirth. Wipes stage, gold, upgrades, level and skill points,
    and turns the depth of the run into relics. The first one lands at stage 25;
@@ -112,41 +112,66 @@ it.
    the same depth does not pay twice.
 
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
-**Automation**, **Skills** and **Time**, 1,498 relics to fill completely.
+**Automation**, **Skills** and **Time**.
 
-### Mining
+### Gathering: Mining, Chopping and Fishing
 
-Ore veins spawn on the same line the hero already walks. It stops, swings,
-and picks up ore, with no input from you. Five ores gated by depth (copper,
-iron at stage 8, silver at 20, gold at 36, mithril at 55), each smelted into
-**bars** at a fixed ore-per-bar rate, and bars buy the next **pickaxe**.
+Nodes spawn on the same line the hero already walks. It stops, works them,
+and moves on, with no input from you. All three skills run on identical
+rails, each with its own level, its own 84 point tree and its own five
+resources gated by depth (stages 1, 8, 20, 36 and 55).
 
-Each pick is paid for in the bars of the ore the previous one unlocked, so
-the chain bootstraps: copper buys the pick that reaches iron, iron buys the
-pick that reaches silver. A vein your pick cannot handle still shows up about
-a quarter of the time, greyed with a marker over it, because a vein you walk
-past teaches "upgrade your pick" better than one that never spawns.
+| skill | raw | refined | pays in |
+|---|---|---|---|
+| Mining   | ore  | bars   | tool heads, and later dungeon keys |
+| Chopping | logs | planks | tool handles |
+| Fishing  | fish | meals  | **Well Fed**: regen and armour |
 
-Mining has its **own level and its own tree** (84 points across Prospect,
-Delve and Refine), fed only by mining XP. All of it, level, tree, ore, bars
-and pick, **survives rebirth**.
+**The tool slot is the tradeoff.** You carry one tool, and only the equipped
+skill's nodes spawn. Slice 1 measured that stopping to swing costs zero stage
+progress, because enemies walk toward you and travel is never the bottleneck,
+so gathering needed a real cost and this is it: time on ore is time not on
+wood. Equipping is one tap on the Skills tab, and browsing a skill's tree
+does not change what you are carrying.
 
-Two numbers are worth knowing:
+**Tools lock the skills together.** Every tool is a head and a handle, so
+tier N costs bars *and* planks of tier N-1. No line can be pushed alone, and
+you have three tool lines to feed while only ever gathering with one. All
+three tool lines cost the same:
 
-- **Mining costs no stage progress.** Measured over ten simulated minutes at
-  stages 3, 10, 25, 40 and 60, stopping to swing cost zero stages and within
-  3% of the same gold. Travel is never the bottleneck: enemies walk toward
-  you, so a swing only changes where you meet them, not when. The real
-  tradeoff arrives with the second skill, when one tool slot has to choose
-  between a pickaxe, an axe and a rod.
-- **Mining never pays into damage.** Kills produce ore, so ore producing
-  damage would rebuild exactly the compounding loop the stat caps exist to
-  prevent. It pays in access (picks now, dungeon keys later), in conversion
-  (bars), and in two flat per-vein trickles, *Coin Seam* and *Soul Seam*,
-  which are bounded by the kill rate because vein rate is kill rate.
+| tier | bars | planks | reaches |
+|---|---:|---:|---|
+| 1 |  30 |  20 | tier 1 resources (stage 8) |
+| 2 |  50 |  34 | tier 2 (stage 20) |
+| 3 |  75 |  50 | tier 3 (stage 36) |
+| 4 | 110 |  74 | tier 4 (stage 55) |
+| 5 | 160 | 110 | speed and yield only |
 
-Bars pile up past what the picks need, on purpose. They are what dungeon keys
-will want; until then picks are the only sink.
+A node your tool cannot work still shows up about a quarter of the time,
+greyed with a marker over it, because a node you walk past teaches "upgrade
+your tool" better than one that never spawns.
+
+**Well Fed** is Fishing's payout and the one thing that is not a resource.
+Meals are eaten on their own, one at a time, and while fed you get more regen
+and take less damage, scaled by the tier of the fish. It shows in the HUD
+next to your level. It is deliberately never attack: see the balance rule
+below.
+
+Everything here, levels, trees, resources and tools, **survives rebirth**.
+
+Two rules hold the whole thing up:
+
+- **Gathering never pays into damage.** Kills produce nodes, so nodes
+  producing damage would rebuild exactly the compounding loop the stat caps
+  exist to prevent. It pays in access, in conversion, in sustain, and in two
+  flat per-node trickles (*Coin Seam*, *Soul Seam*) which are bounded by the
+  kill rate because node rate **is** kill rate.
+- **Yield per node is flat within a tier.** Scaling it with stage the way
+  gold scales would multiply income sixfold every ten stages and leave every
+  sink downstream stale.
+
+*Forager*, on the relic tree, rotates your tool every 60 s so no line stalls
+while you are away.
 
 ### Forge and soul dust
 
@@ -194,7 +219,7 @@ src/
   format.js         1.2K, 340M, 5.07aa...
   data/
     balance.js      EVERY progression number, the file to rebalance
-    mining.js       ores, picks, smelting and the mining tree
+    gathering.js    the three gathering skills: resources, tools, trees
     enemies.js      roster, when each mob unlocks, bosses
     upgrades.js     what shows up in the shop
     levels.js       XP curve and gain per kill
