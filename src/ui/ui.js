@@ -2,7 +2,22 @@ import { UPGRADES } from '../data/upgrades.js';
 import { GameState } from '../game/state.js';
 import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talents.js';
 import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
-import { fmt, duration } from '../format.js';
+import { fmt, pct, mult, duration } from '../format.js';
+
+/**
+ * Como medir o ganho de um upgrade, pra apontar o de melhor custo-benefício.
+ * Sobreviver e andar valem menos que matar, daí os pesos.
+ */
+const SCORE = {
+  damage:     [(s) => s.dps, 1],
+  attackRate: [(s) => s.dps, 1],
+  critChance: [(s) => s.dps, 1],
+  critPower:  [(s) => s.dps, 1],
+  maxHp:      [(s) => s.maxHp * (1 + s.regen / 8), 0.45],
+  regen:      [(s) => s.maxHp * (1 + s.regen / 8), 0.45],
+  goldGain:   [(s) => s.goldGain, 1],
+  moveSpeed:  [(s) => s.moveSpeed, 0.35],
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,7 +43,9 @@ export class UI {
       stageName: $('stage-name'), stageSub: $('stage-sub'),
       stagePrev: $('stage-prev'), stageNext: $('stage-next'),
       progress: $('stage-progress'),
-      gold: $('stat-gold'), dps: $('stat-dps'), best: $('stat-best'),
+      gold: $('stat-gold'), gps: $('stat-gps'), best: $('stat-best'),
+      stageFoot: $('stat-stage-foot'), shopHint: $('shop-hint'),
+      sbDps: $('sb-dps'), sbHp: $('sb-hp'), sbCrit: $('sb-crit'), sbGold: $('sb-gold'),
       level: $('stat-level'), xpFill: $('xp-fill'), xpText: $('xp-text'),
       bossTimer: $('boss-timer'), bossValue: $('boss-timer-value'),
       toast: $('toast'),
@@ -40,6 +57,8 @@ export class UI {
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
       presGain: $('pres-gain'), presHave: $('pres-have'), presCount: $('pres-count'),
       presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
+      presGainBox: document.querySelector('.prestige__gain'),
+      perks: $('perks'), perksList: $('perks-list'),
       reset: $('btn-reset'),
     };
 
@@ -63,6 +82,7 @@ export class UI {
       const li = document.createElement('li');
       li.innerHTML = `
         <button class="up" type="button" data-key="${up.key}">
+          <span class="up__meter"></span>
           <span class="up__icon"><i class="ico ico--lg ico--${up.icon}"></i></span>
           <span class="up__body">
             <span class="up__name"></span>
@@ -80,6 +100,7 @@ export class UI {
         effect: button.querySelector('.up__effect'),
         lvl: button.querySelector('.up__lvl'),
         cost: button.querySelector('.up__cost'),
+        meter: button.querySelector('.up__meter'),
         affordable: null,
       });
       frag.append(li);
@@ -144,10 +165,12 @@ export class UI {
     el.shop.addEventListener('click', (e) => {
       const button = e.target.closest('.up');
       if (!button) return;
-      if (state.buy(button.dataset.key)) {
-        state.save();
-        this.refreshShop(true);
-      }
+      if (!state.buy(button.dataset.key)) return;
+      state.save();
+      this.refreshShop(true);
+      button.classList.remove('is-bought');
+      void button.offsetWidth;
+      button.classList.add('is-bought');
     });
 
     // Comprar e mostrar o detalhe do nó vivem no mesmo toque: o clique
@@ -266,7 +289,7 @@ export class UI {
     const { state, battle, el } = this;
 
     setText(el.gold, fmt(state.gold));
-    setText(el.dps, fmt(state.dps));
+    setText(el.gps, fmt(state.goldPerSec));
     setText(el.level, String(state.level));
 
     const need = state.xpNeeded;
@@ -282,6 +305,7 @@ export class UI {
       mob: `${state.kills} / ${state.killsPerStage}`,
     }[encounter]);
     setText(el.best, String(state.bestStage));
+    setText(el.stageFoot, String(state.stage));
 
     el.progress.style.width = `${(battle.stageProgress * 100).toFixed(1)}%`;
     el.progress.classList.toggle('is-boss', encounter !== 'mob');
@@ -307,28 +331,88 @@ export class UI {
     else this.refreshPrestige();
   }
 
-  refreshShop(force = false) {
+  /**
+   * Qual upgrade dá mais poder por moeda agora. Mede o ganho relativo
+   * subindo o nível por um instante e desfazendo — `statValue` é puro, então
+   * isso não deixa rastro no estado.
+   */
+  bestBuy() {
     const { state } = this;
+    let best = null;
+    let bestScore = 0;
+    for (const up of UPGRADES) {
+      const key = up.key;
+      if (state.isMaxed(key)) continue;
+      const price = state.costOf(key);
+      if (price > state.gold) continue;
+
+      const [measure, weight] = SCORE[key];
+      const before = measure(state);
+      state.levels[key] += 1;
+      const after = measure(state);
+      state.levels[key] -= 1;
+
+      const score = ((after / before) - 1) * weight / price;
+      if (score > bestScore) {
+        bestScore = score;
+        best = key;
+      }
+    }
+    return best;
+  }
+
+  refreshShop(force = false) {
+    const { state, el } = this;
+    const best = this.bestBuy();
+    let affordable = 0;
+    let cheapest = Infinity;
+
     for (const row of this.rows.values()) {
       const key = row.up.key;
       const lvl = state.levels[key];
       const maxed = state.isMaxed(key);
       const n = state.bulkFor(key);
       const can = n > 0;
+      const price = maxed ? 0 : state.priceFor(key, Math.max(1, n));
+
+      if (can) affordable += 1;
+      if (!maxed && !can) cheapest = Math.min(cheapest, state.costOf(key));
 
       if (force || row.affordable !== can) {
         row.affordable = can;
         row.button.disabled = !can;
       }
       row.button.classList.toggle('up--max', maxed);
+      row.button.classList.toggle('up--best', key === best);
+
       setText(row.effect, row.up.describe(lvl));
       setText(row.lvl, n > 1 ? `Nv. ${lvl} → ${lvl + n}` : `Nv. ${lvl}`);
-
-      const cost = maxed
+      setHtml(row.cost, maxed
         ? 'MÁX'
-        : `<i class="ico ico--gold"></i> ${fmt(state.priceFor(key, Math.max(1, n)))}`;
-      setHtml(row.cost, cost);
+        : `<i class="ico ico--gold"></i> ${fmt(price)}`);
+
+      // barra de "quanto falta" nas linhas que ainda não dá pra comprar
+      row.meter.style.width = can || maxed
+        ? '0%'
+        : `${Math.min(100, (state.gold / state.costOf(key)) * 100).toFixed(1)}%`;
     }
+
+    this.refreshStatbar();
+    if (affordable > 0) {
+      setText(el.shopHint, affordable === 1 ? '1 upgrade disponível' : `${affordable} upgrades disponíveis`);
+    } else if (isFinite(cheapest) && state.goldPerSec > 0) {
+      setText(el.shopHint, `Próximo em ~${duration((cheapest - state.gold) / state.goldPerSec)}`);
+    } else {
+      setText(el.shopHint, 'Junte mais ouro');
+    }
+  }
+
+  refreshStatbar() {
+    const { state, el } = this;
+    setText(el.sbDps, fmt(state.dps));
+    setText(el.sbHp, fmt(state.maxHp));
+    setText(el.sbCrit, pct(state.critChance, 0));
+    setText(el.sbGold, mult(state.goldGain));
   }
 
   refreshTrees() {
@@ -376,10 +460,30 @@ export class UI {
     const next = nextRelicStage(relicsEarnedAt(state.maxStage));
     setText(el.presNext, isFinite(next) ? `fase ${next}` : '—');
 
+    el.presGainBox.classList.toggle('is-empty', gain <= 0);
+    this.refreshPerks();
+
     el.presGo.disabled = gain <= 0;
     setText(el.presGo, gain > 0
       ? `Renascer por ${gain} relíquia(s)`
       : `Avance até a fase ${isFinite(next) ? next : PRESTIGE.minStage}`);
+  }
+
+  /** Lista o que a árvore de relíquias já garante — some se ainda não há nada. */
+  refreshPerks() {
+    const { state, el } = this;
+    const active = RELIC_TREE
+      .flatMap((b) => b.nodes)
+      .map((node) => [node, state.relicTalents[node.id] ?? 0])
+      .filter(([, ranks]) => ranks > 0);
+
+    el.perks.hidden = active.length === 0;
+    if (!active.length) return;
+
+    const html = active.map(([node, ranks]) =>
+      `<li><i class="ico ico--sm ico--${node.icon}"></i>${node.name} <b>${describeNode(node, ranks)}</b></li>`
+    ).join('');
+    setHtml(el.perksList, html);
   }
 
   /** Aviso de ganho enquanto o jogo estava fechado. */

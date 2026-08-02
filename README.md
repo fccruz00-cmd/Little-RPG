@@ -24,7 +24,7 @@ o painel embaixo, agora com três abas: **Upgrades**, **Talentos** e
 ## Rodando
 
 **Do jeito mais rápido:** baixe `little-rpg.html` e abra com dois cliques. É o
-jogo inteiro num arquivo só (373 KB) — CSS, código e sprites embutidos, sem
+jogo inteiro num arquivo só (384 KB) — CSS, código e sprites embutidos, sem
 servidor e sem pasta ao lado. Até o progresso salvo funciona.
 
 **Pra mexer no código:** sirva a pasta, porque o jogo usa módulos ES e o
@@ -55,6 +55,15 @@ python3 tools/build_single_file.py
   seu ouro/segundo, até 8 h.
 - **◀ ▶** — dá pra voltar pra uma fase já vencida e farmar ouro nela.
 - O progresso salva sozinho no `localStorage` a cada 5 s.
+
+### Lendo a tela
+
+- O **ouro** é o número grande do topo, com o ganho por segundo embaixo.
+- A **faixa de atributos** no topo da loja mostra dano/s, vida, crítico e o
+  multiplicador de ouro sem precisar abrir nada.
+- Upgrade que ainda não dá pra comprar mostra uma **barra de quanto falta** —
+  cinza só dizendo "não dá" não conta se falta um segundo ou dois minutos.
+- A **★** marca o upgrade com melhor poder por moeda entre os disponíveis.
 
 ### As três abas
 

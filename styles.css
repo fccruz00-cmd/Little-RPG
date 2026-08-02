@@ -145,26 +145,40 @@ body { display: flex; justify-content: center; }
 .stepper:disabled { opacity: .2; cursor: default; }
 .stepper:not(:disabled):active { transform: translateY(1px); }
 
-.hud__stats {
+/* Ouro é o número que manda no jogo: ganha tamanho e a taxa por segundo
+   embaixo, que é o que diz se vale esperar ou comprar agora. */
+.purse {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 1px;
-  font-size: 12px;
+  line-height: 1.05;
 }
-.stat { display: flex; align-items: center; gap: 4px; }
-.stat--gold b { color: var(--gold-lit); font-weight: 700; }
-.stat--dps   { color: var(--ink-dim); font-size: 11px; }
-.stat--dps b { color: var(--ink); font-weight: 700; }
+.purse__now {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold-lit);
+  text-shadow: 0 1px 0 #000, 0 0 12px #f0a63c33;
+}
+.purse__rate {
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+.purse__rate b { color: var(--green); font-weight: 700; }
 
 /* barra de experiência */
 .hud__row--xp { gap: 6px; }
 .hud__lvl {
-  font-size: 10px;
-  color: var(--ink-dim);
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 9px;
+  color: #7b6f8c;
   white-space: nowrap;
 }
-.hud__lvl b { color: var(--violet); font-size: 12px; }
+.hud__lvl b { color: var(--violet); font-size: 13px; font-weight: 700; }
 
 .xpbar {
   position: relative;
@@ -358,7 +372,6 @@ body { display: flex; justify-content: center; }
   color: var(--ink-dim);
   background: #16121f;
   border-bottom: 1px solid #000;
-  min-height: 34px;
 }
 .pane__detail b { color: var(--ink); }
 
@@ -390,6 +403,40 @@ body { display: flex; justify-content: center; }
 }
 .segmented button.is-on { background: var(--gold); color: #3a2410; font-weight: 700; }
 
+/* faixa de atributos, no topo da loja */
+.statbar {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #000;
+  border-bottom: 1px solid #000;
+}
+.statbar > div {
+  padding: 5px 6px 6px;
+  background: #221c2e;
+  text-align: center;
+  min-width: 0;
+}
+.statbar dt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 8px;
+  letter-spacing: .5px;
+  color: #6f6480;
+  white-space: nowrap;
+}
+.statbar dd {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── aba 1: loja de upgrades ────────────────────────────────── */
 .shop {
   flex: 1 1 auto;
@@ -404,18 +451,22 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
-/* botão de upgrade — 9-slice do Mini Medieval UI */
+/* botão de upgrade — 9-slice do Mini Medieval UI, na moldura fina (--px:2)
+   pra caber mais linha na tela sem perder o visual do pacote */
 .up {
+  --px: 2;
+  position: relative;
   display: grid;
-  grid-template-columns: 28px 1fr auto;
+  grid-template-columns: 24px 1fr auto;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 10px;
+  padding: 4px 9px 5px;
   text-align: left;
   font: inherit;
   color: #3a2410;
   cursor: pointer;
+  overflow: hidden;
   border-style: solid;
   border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
   border-image-source: url(assets/ui/button.png);
@@ -426,21 +477,37 @@ body { display: flex; justify-content: center; }
 .up:active:not(:disabled) { transform: translateY(1px); filter: brightness(1.08); }
 .up:disabled {
   cursor: default;
-  color: #efe6d6;
-  text-shadow: 0 1px 0 #00000066;
+  color: #e6dccb;
+  text-shadow: 0 1px 0 #00000088;
   border-image-source: url(assets/ui/button_disabled.png);
 }
-.up:disabled .up__effect { opacity: .68; }
+.up:disabled .up__effect { opacity: .7; }
 .up:focus-visible { outline: 2px solid var(--gold-lit); outline-offset: 2px; }
 
+/* Quanto falta pra bancar o próximo nível. Sem isso a linha cinza só diz
+   "não dá", e você fica sem saber se falta um segundo ou dois minutos. */
+.up__meter {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: linear-gradient(90deg, #f0a63c22, #f0a63c40);
+  border-right: 1px solid #f0a63c55;
+  transition: width .25s ease-out;
+  pointer-events: none;
+}
+.up:not(:disabled) .up__meter { display: none; }
+
+.up__icon, .up__body, .up__buy { position: relative; }
+
 .up__icon { width: 24px; height: 24px; display: grid; place-items: center; }
-.up:disabled .up__icon { filter: grayscale(1) opacity(.55); }
+.up:disabled .up__icon { filter: grayscale(.85) opacity(.7); }
 
 .up__body { min-width: 0; }
 .up__name {
   display: block;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -448,16 +515,35 @@ body { display: flex; justify-content: center; }
 .up__effect {
   display: block;
   font-size: 10px;
-  opacity: .78;
+  line-height: 1.2;
+  opacity: .8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.up__buy { text-align: right; line-height: 1.2; flex: none; }
-.up__lvl { display: block; font-size: 10px; opacity: .7; }
+.up__buy { text-align: right; line-height: 1.25; flex: none; }
+.up__lvl { display: block; font-size: 9px; opacity: .72; }
 .up__cost { display: block; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .up--max .up__cost { color: #4b3a12; }
+
+/* melhor poder por moeda entre os que dá pra comprar agora — a estrela vai
+   colada no nome pra não brigar com o nível, que fica no canto oposto */
+.up--best .up__name::before {
+  content: '★ ';
+  color: #7a4f05;
+  text-shadow: 0 0 6px #fff6;
+}
+.up--best {
+  box-shadow: 0 0 0 1px #fff5, 0 0 10px -2px var(--gold-lit);
+}
+
+/* pulinho ao comprar */
+.up.is-bought { animation: bought .32s ease-out; }
+@keyframes bought {
+  0%   { filter: brightness(1.6) saturate(1.3); transform: scale(1.015); }
+  100% { filter: none; transform: none; }
+}
 
 /* ── aba 2: árvores ─────────────────────────────────────────── */
 .tree-scroll {
@@ -587,6 +673,7 @@ body { display: flex; justify-content: center; }
   font-size: 22px;
   color: var(--gold-lit);
 }
+.prestige__gain.is-empty strong { color: #6f6480; }
 .prestige__gain small {
   display: block;
   font-size: 10px;
@@ -640,6 +727,33 @@ body { display: flex; justify-content: center; }
   border-image-source: url(assets/ui/button_disabled.png);
 }
 
+/* o que as relíquias já compraram — some quando não há nenhuma */
+.perks[hidden] { display: none; }
+.perks h3 {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #6f6480;
+  margin-bottom: 6px;
+}
+.perks ul {
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+.perks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px;
+  font-size: 10px;
+  color: var(--ink-dim);
+  background: #221c2e;
+  border-left: 2px solid var(--gold);
+  border-radius: 0 3px 3px 0;
+}
+.perks li b { color: var(--gold-lit); margin-left: auto; }
+
 /* ── rodapé ─────────────────────────────────────────────────── */
 .foot {
   flex: none;
@@ -653,7 +767,7 @@ body { display: flex; justify-content: center; }
   border-top: 1px solid #000;
   background: #191424;
 }
-.foot__best b { color: var(--gold); }
+.foot b { color: var(--gold); }
 .link {
   border: 0;
   background: none;
@@ -663,7 +777,23 @@ body { display: flex; justify-content: center; }
   text-decoration: underline;
   cursor: pointer;
 }
-.link:hover { color: var(--red); }
+.link:hover { color: var(--gold); }
+
+/* Apagar tudo mora junto do prestígio: é destrutivo, não é atalho. */
+.link--danger {
+  align-self: center;
+  margin-top: 4px;
+  color: #6b4550;
+}
+.link--danger:hover { color: var(--red); }
+
+/* ── rolagem discreta ───────────────────────────────────────── */
+.shop, .tree-scroll, .prestige { scrollbar-width: thin; scrollbar-color: #3a3048 transparent; }
+.shop::-webkit-scrollbar, .tree-scroll::-webkit-scrollbar, .prestige::-webkit-scrollbar { width: 6px; }
+.shop::-webkit-scrollbar-thumb, .tree-scroll::-webkit-scrollbar-thumb, .prestige::-webkit-scrollbar-thumb {
+  background: #3a3048;
+  border-radius: 3px;
+}
 
 /* ── carregando ─────────────────────────────────────────────── */
 .loading {

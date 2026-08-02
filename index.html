@@ -24,13 +24,13 @@
         </div>
         <button class="stepper" id="stage-next" type="button" aria-label="Próxima fase">▶</button>
       </div>
-      <div class="hud__stats">
-        <span class="stat stat--gold"><i class="ico ico--gold"></i><b id="stat-gold">0</b></span>
-        <span class="stat stat--dps"><i class="ico ico--damage"></i><b id="stat-dps">0</b>/s</span>
+      <div class="purse">
+        <span class="purse__now"><i class="ico ico--lg ico--gold"></i><b id="stat-gold">0</b></span>
+        <span class="purse__rate"><b id="stat-gps">0</b>/s</span>
       </div>
     </div>
     <div class="hud__row hud__row--xp">
-      <span class="hud__lvl">Nv. <b id="stat-level">1</b></span>
+      <span class="hud__lvl">Nv.<b id="stat-level">1</b></span>
       <div class="xpbar" role="progressbar" aria-label="Experiência">
         <div class="xpbar__fill" id="xp-fill"></div>
         <span class="xpbar__text" id="xp-text">0 / 20</span>
@@ -64,8 +64,14 @@
 
     <!-- aba 1: upgrades de ouro -->
     <div class="pane is-on" id="pane-upgrades">
+      <dl class="statbar">
+        <div><dt><i class="ico ico--sm ico--damage"></i>dano/s</dt><dd id="sb-dps">0</dd></div>
+        <div><dt><i class="ico ico--sm ico--health"></i>vida</dt><dd id="sb-hp">0</dd></div>
+        <div><dt><i class="ico ico--sm ico--crit"></i>crítico</dt><dd id="sb-crit">0%</dd></div>
+        <div><dt><i class="ico ico--sm ico--gold"></i>ouro</dt><dd id="sb-gold">×1</dd></div>
+      </dl>
       <div class="pane__head">
-        <span class="pane__hint">Comprados com ouro</span>
+        <span class="pane__hint" id="shop-hint">—</span>
         <label class="toggle">
           <input type="checkbox" id="buy-max">
           <span>Comprar máx.</span>
@@ -114,11 +120,18 @@
         </p>
 
         <button class="big-btn" id="pres-go" type="button" disabled>Renascer</button>
+
+        <section class="perks" id="perks" hidden>
+          <h3>Bônus permanentes</h3>
+          <ul id="perks-list"></ul>
+        </section>
+
+        <button class="link link--danger" id="btn-reset" type="button">Apagar tudo e começar do zero</button>
       </div>
     </div>
 
     <footer class="foot">
-      <button class="link" id="btn-reset" type="button">Apagar tudo</button>
+      <span>Fase atual <b id="stat-stage-foot">1</b></span>
       <span class="foot__best">Recorde: fase <b id="stat-best">1</b></span>
     </footer>
   </section>
