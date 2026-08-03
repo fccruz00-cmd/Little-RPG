@@ -138,7 +138,28 @@ export const SKILLS = {
   },
 };
 
+// Smithing is a skill without a line. It has no nodes and no tool: it levels
+// from refining and from forging, which means it starts paying from stage 1
+// even though the forge itself only opens after the first rebirth. It is what
+// gives the forge the progression it never had, and it is the one skill whose
+// tree reaches across the other three.
+SKILLS.smithing = {
+  id: 'smithing', name: 'Smithing', accent: '#e67146',
+  gathers: false, toolIcon: 'bar',
+};
+for (const id of ['mining', 'chopping', 'fishing']) SKILLS[id].gathers = true;
+
+/** Every skill, including the one that does not gather. */
 export const SKILL_IDS = Object.keys(SKILLS);
+
+/** Only the three that put nodes on the line and take a tool slot. */
+export const GATHER_IDS = SKILL_IDS.filter((id) => SKILLS[id].gathers);
+
+// XP Smithing earns from the two things it does.
+export const SMITH = {
+  refineXp: 0.4,   // times the resource's own XP, per unit refined
+  forgeXp: 0.8,    // times the dust a forge cost
+};
 
 /** XP needed to leave `level` of any gathering skill. */
 export function gatherXpToNext(level) {
@@ -250,16 +271,39 @@ export const SKILL_TREES = {
   ],
 };
 
+SKILL_TREES.smithing = [
+  branch('furnace', 'Furnace', '#e67146', [
+    { id: 'efficientFire', name: 'Hot Fire',   icon: 'torch',  max: 10, key: 'refineAll',  mode: 'less', per: 0.02 },
+    { id: 'apprentice',    name: 'Apprentice', icon: 'book',   max: 8,  key: 'gatherXpMul', mode: 'mul', per: 0.08 },
+    { id: 'bellows',       name: 'Bellows',    icon: 'gear',   max: 5,  key: 'refineAll',  mode: 'less', per: 0.03 },
+    { id: 'crucible',      name: 'Crucible',   icon: 'dust',   max: 5,  key: 'scrapBack',  mode: 'add',  per: 0.06 },
+  ]),
+  branch('anvilwork', 'Anvil', '#dacea4', [
+    { id: 'thrift',    name: 'Thrift',      icon: 'bag',    max: 10, key: 'forgeCostLess', mode: 'less', per: 0.03 },
+    { id: 'steady',    name: 'Steady Hand', icon: 'shield', max: 5,  key: 'forgeCostLess', mode: 'less', per: 0.04 },
+    { id: 'salvage',   name: 'Salvage',     icon: 'dust',   max: 8,  key: 'scrapBack',     mode: 'add',  per: 0.04 },
+    { id: 'hardening', name: 'Hardening',   icon: 'bar',    max: 5,  key: 'forgeLuck',     mode: 'add',  per: 0.06 },
+  ]),
+  branch('mastery', 'Mastery', '#b072c9', [
+    { id: 'keenEye',   name: 'Keen Eye',  icon: 'crit',   max: 10, key: 'forgeLuck',  mode: 'add', per: 0.05 },
+    { id: 'temper',    name: 'Temper',    icon: 'damage', max: 8,  key: 'forgeLuck',  mode: 'add', per: 0.08 },
+    { id: 'alloy',     name: 'Alloy',     icon: 'orb',    max: 5,  key: 'gatherXpMul', mode: 'mul', per: 0.10 },
+    { id: 'standards', name: 'Standards', icon: 'crown',  max: 3,  key: 'forgeFloor', mode: 'add', per: 1 },
+  ]),
+];
+
 /** Keys a per-skill bonus object carries. Shared names, separate namespaces. */
 export const GATHER_KEYS = [
   'yieldMul', 'yieldDouble', 'nodeMul', 'gatherSpeed', 'gatherXpMul',
   'refineLess', 'nodeGold', 'nodeDust', 'fedRegen', 'mealTime', 'fedArmor',
+  // smithing
+  'forgeLuck', 'forgeFloor', 'forgeCostLess', 'refineAll', 'scrapBack',
 ];
 
 /** Of those, the ones that multiply rather than add. */
 export const GATHER_MULS = [
   'yieldMul', 'nodeMul', 'gatherSpeed', 'gatherXpMul', 'refineLess',
-  'fedRegen', 'mealTime',
+  'fedRegen', 'mealTime', 'forgeCostLess', 'refineAll',
 ];
 
 /** What a gathering node does at a given number of points. */
@@ -279,6 +323,11 @@ export function describeGatherNode(node, ranks) {
     case 'yieldMul':    return `x${(1 + total).toFixed(2)} per node`;
     case 'nodeMul':     return `x${(1 + total).toFixed(2)} nodes on the road`;
     case 'gatherXpMul': return `x${(1 + total).toFixed(2)} skill XP`;
+    case 'forgeLuck':   return `+${total.toFixed(2)} forge quality, odds move up the ladder`;
+    case 'forgeFloor':  return `the forge never rolls below ${['Uncommon', 'Rare', 'Epic'][Math.min(n, 3) - 1]}`;
+    case 'forgeCostLess': return `${pct(total)} cheaper to forge`;
+    case 'refineAll':   return `${pct(total)} less raw per unit, in EVERY skill`;
+    case 'scrapBack':   return `+${pct(total)} dust back on a worse roll`;
     default:            return `x${(1 + total).toFixed(2)}`;
   }
 }

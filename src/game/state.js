@@ -7,8 +7,8 @@ import { relicsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 import {
-  SKILLS, SKILL_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS, MEAL,
-  TOOL_TIERS, toolCost, gatherXpToNext, refineCost,
+  SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
+  MEAL, SMITH, TOOL_TIERS, toolCost, gatherXpToNext, refineCost,
 } from '../data/gathering.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
@@ -18,7 +18,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 6;
+const SAVE_VERSION = 7;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -96,10 +96,12 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 5) {
+  if (data.version >= 1 && data.version <= 6) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
+    // v6: before smithing. Its level and tree simply start empty, and the
+    // constructor fills the new skill in, so nothing needs remapping.
     const out = {
       ...defaults(),
       ...data,
@@ -140,7 +142,7 @@ export class GameState {
     this.tools = Object.fromEntries(SKILL_IDS.map((id) => [id, data.tools?.[id] ?? 0]));
     this.raw = { ...(data.raw ?? {}) };
     this.refined = { ...(data.refined ?? {}) };
-    if (!SKILLS[this.tool]) this.tool = 'mining';
+    if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
     this._bonus = null;
     this.hp = this.maxHp;
@@ -391,8 +393,14 @@ export class GameState {
     this.raw[resourceId] = (this.raw[resourceId] ?? 0) + amount;
   }
 
+  /**
+   * Smithing's Hot Fire and Bellows cut raw-per-unit in EVERY skill, which is
+   * why the multiplier is applied on top of the skill's own rather than
+   * living in its tree. It is the one bonus that reaches sideways.
+   */
   refineCostFor(skillId, resource) {
-    return refineCost(resource, this.gatherBonus(skillId));
+    const own = refineCost(resource, this.gatherBonus(skillId));
+    return Math.max(2, Math.round(own * this.gatherBonus('smithing').refineAll));
   }
 
   /** How many refined units the raw on hand is worth right now. */
@@ -406,7 +414,25 @@ export class GameState {
     if (made <= 0) return 0;
     this.raw[resource.id] -= made * this.refineCostFor(skillId, resource);
     this.refined[resource.id] = (this.refined[resource.id] ?? 0) + made;
+    // Refining is half of what Smithing does, and the half that works from
+    // stage 1: the forge itself does not open until the first rebirth.
+    this.gainGatherXp('smithing', made * resource.xp * SMITH.refineXp);
     return made;
+  }
+
+  // --- smithing -----------------------------------------------------
+  /** How far the forge odds have been pushed up the ladder. */
+  get forgeQuality() {
+    return this.gatherBonus('smithing').forgeLuck;
+  }
+
+  /** Lowest rarity the forge will produce (Standards). */
+  get forgeFloor() {
+    return Math.round(this.gatherBonus('smithing').forgeFloor);
+  }
+
+  get forgeDiscount() {
+    return this.gatherBonus('smithing').forgeCostLess;
   }
 
   /** The tool one tier above the one in hand, or null at the top. */
@@ -433,14 +459,14 @@ export class GameState {
 
   /** Only the equipped skill's nodes spawn, which is the whole tradeoff. */
   equip(skillId) {
-    if (!SKILLS[skillId] || this.tool === skillId) return false;
+    if (!SKILLS[skillId]?.gathers || this.tool === skillId) return false;
     this.tool = skillId;
     return true;
   }
 
   /** Resources this skill has been deep enough to see, for the UI. */
   knownResources(skillId) {
-    return SKILLS[skillId].resources.filter((r) => this.bestStage >= r.minStage
+    return (SKILLS[skillId].resources ?? []).filter((r) => this.bestStage >= r.minStage
       || (this.raw[r.id] ?? 0) > 0 || (this.refined[r.id] ?? 0) > 0);
   }
 
@@ -499,7 +525,7 @@ export class GameState {
   }
 
   costToForge(slotId) {
-    return craftCost(this.gear[slotId]);
+    return craftCost(this.gear[slotId], this.forgeDiscount);
   }
 
   canForge(slotId) {
@@ -513,9 +539,13 @@ export class GameState {
    */
   forge(slotId) {
     if (!this.canForge(slotId)) return null;
-    this.dust -= this.costToForge(slotId);
+    const cost = this.costToForge(slotId);
+    this.dust -= cost;
+    // The other half of Smithing. Deep forges pay more, so the skill keeps
+    // levelling once refining has flattened out.
+    this.gainGatherXp('smithing', cost * SMITH.forgeXp);
 
-    const rolled = rollRarity();
+    const rolled = rollRarity(this.forgeQuality, this.forgeFloor);
     const current = this.gear[slotId];
     const better = current == null || rolled > current;
 
@@ -525,7 +555,8 @@ export class GameState {
       return { rolled, equipped: true, refund: 0 };
     }
 
-    const refund = Math.max(1, Math.round(craftCost(current) * DUST.scrapRefund));
+    const back = DUST.scrapRefund + this.gatherBonus('smithing').scrapBack;
+    const refund = Math.max(1, Math.round(craftCost(current, this.forgeDiscount) * Math.min(0.95, back)));
     this.dust += refund;
     return { rolled, equipped: false, refund };
   }

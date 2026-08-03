@@ -534,7 +534,8 @@ body { display: flex; justify-content: center; }
 .toggle input:checked { background-image: url(assets/ui/check_on.png); }
 
 .segmented { display: flex; gap: 3px; min-width: 0; }
-#skill-switch button { padding: 2px 5px 3px; font-size: 9px; }
+#skill-switch { flex: 1 1 auto; }
+#skill-switch button { flex: 1 1 0; min-width: 0; padding: 2px 2px 3px; font-size: 9px; }
 .segmented button {
   --px: 2;
   padding: 2px 9px 3px;
@@ -845,6 +846,21 @@ body { display: flex; justify-content: center; }
   border-bottom: 2px solid #000;
 }
 .skillbar .xpbar { flex: 1 1 auto; height: 15px; }
+.skillbar .pane__points { margin: 0; font-size: 10px; }
+.equip[hidden] { display: none; }
+.stock[hidden], .mine-tools[hidden] { display: none; }
+
+/* Smithing has no line and no tool, so the panel shows what it does to the
+   forge instead of a sack of resources. */
+.workshop {
+  flex: none;
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+}
+.workshop[hidden] { display: none; }
+.workshop .odds { border-top: 0; border-radius: 0; }
+.workshop .facts { --px: 1; }
 
 /* The equip button is the whole tradeoff of slice 2, so it gets to look like
    a decision: gold and raised when it is a choice, sunken when it is already

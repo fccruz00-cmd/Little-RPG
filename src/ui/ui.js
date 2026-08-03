@@ -3,9 +3,9 @@ import { GameState } from '../game/state.js';
 import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talents.js';
 import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
-import { SLOTS, RARITIES, RARITY_ODDS, describeGear } from '../data/gear.js';
+import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
 import {
-  SKILLS, SKILL_IDS, SKILL_TREES, TOOL_TIERS, toolName, toolCost, workTime,
+  SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
   describeGatherNode,
 } from '../data/gathering.js';
 import { fmt, pct, mult, duration } from '../format.js';
@@ -71,6 +71,9 @@ export class UI {
       toolName: $('tool-name'), toolEffect: $('tool-effect'), toolCost: $('tool-cost'),
       trees: Object.fromEntries(SKILL_IDS.map((id) => [id, $(`tree-${id}`)])),
       pipSkills: $('pip-skills'), fed: $('fed'), fedTime: $('fed-time'),
+      workshop: $('workshop'), smithOdds: $('smith-odds'), toolWrap: $('tool-wrap'),
+      smithCost: $('smith-cost'), smithRefine: $('smith-refine'),
+      smithScrap: $('smith-scrap'), smithFloor: $('smith-floor'),
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
       presGain: $('pres-gain'), presHave: $('pres-have'), presCount: $('pres-count'),
       presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
@@ -164,10 +167,7 @@ export class UI {
     }
     this.el.forgeList.append(frag);
 
-    this.el.odds.innerHTML = RARITIES.map((r, i) =>
-      `<div style="--rar:${r.color}"><dt style="color:${r.color}">${r.name}</dt>` +
-      `<dd style="color:${r.color}">${(RARITY_ODDS[i] * 100).toFixed(1)}%</dd></div>`
-    ).join('');
+    this.refreshOdds();
   }
 
   /** Builds a tree: one branch per column, nodes joined by a wire. */
@@ -449,7 +449,8 @@ export class UI {
 
     // "there is something to spend here" markers
     el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
-    el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0 || state.canBuyTool(id));
+    el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0)
+      && !GATHER_IDS.some((id) => state.canBuyTool(id));
     el.pipSkills.classList.add('pip--gold');
 
     // Well Fed is a live combat state, so it lives in the HUD, not the tab.
@@ -575,7 +576,16 @@ export class UI {
     return result;
   }
 
+  /** The forge odds are no longer fixed: Smithing moves them. */
+  refreshOdds() {
+    const odds = rarityOdds(this.state.forgeQuality);
+    setHtml(this.el.odds, RARITIES.map((r, i) =>
+      `<div style="--rar:${r.color}"><dt style="color:${r.color}">${r.name}</dt>`
+      + `<dd style="color:${r.color}">${(odds[i] * 100).toFixed(1)}%</dd></div>`).join(''));
+  }
+
   refreshForge() {
+    this.refreshOdds();
     const { state, el } = this;
     setText(el.dustHave, fmt(state.dust));
 
@@ -659,7 +669,7 @@ export class UI {
   /** One row per resource, across all three skills: raw, refined, and refine. */
   buildStock() {
     this.stockRows = new Map();
-    for (const id of SKILL_IDS) {
+    for (const id of GATHER_IDS) {
       const skill = SKILLS[id];
       for (const resource of skill.resources) {
         const row = document.createElement('button');
@@ -708,6 +718,13 @@ export class UI {
 
     // The equip button IS the tradeoff, so it says which state it is in
     // rather than only what it would do.
+    const gathers = skill.gathers === true;
+    el.stock.hidden = !gathers;
+    el.toolWrap.hidden = !gathers;
+    el.workshop.hidden = gathers;
+    el.skillEquip.hidden = !gathers;
+    if (!gathers) { this.refreshWorkshop(); return this.refreshSkillTree(id); }
+
     const equipped = state.tool === id;
     el.equipIcon.className = `ico ico--lg ico--${skill.toolIcon}`;
     setText(el.equipLabel, equipped ? `${skill.toolName} in hand` : `Take the ${skill.toolName}`);
@@ -751,6 +768,26 @@ export class UI {
     el.toolBuy.disabled = !state.canBuyTool(id);
     el.toolBuy.style.setProperty('--rar', skill.accent);
 
+    this.refreshSkillTree(id);
+  }
+
+  /** Live readout of everything Smithing is doing to the forge. */
+  refreshWorkshop() {
+    const { state, el } = this;
+    const odds = rarityOdds(state.forgeQuality);
+    const floor = Math.min(state.forgeFloor, RARITIES.length - 1);
+    setHtml(el.smithOdds, RARITIES.map((r, i) =>
+      `<div><dt style="color:${r.color}">${r.name}</dt>`
+      + `<dd style="color:${r.color}">${(odds[i] * 100).toFixed(1)}%</dd></div>`).join(''));
+    setText(el.smithCost, mult(state.forgeDiscount));
+    setText(el.smithRefine, mult(state.gatherBonus('smithing').refineAll));
+    const back = Math.min(0.95, 0.3 + state.gatherBonus('smithing').scrapBack);
+    setText(el.smithScrap, pct(back, 0));
+    setText(el.smithFloor, RARITIES[floor].name);
+  }
+
+  refreshSkillTree(id) {
+    const { state } = this;
     for (const entry of this.nodes) {
       if (entry.kind !== id) continue;
       const ranksOf = state.skillTalents[id];

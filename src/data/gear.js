@@ -46,18 +46,40 @@ export const DUST = {
 const COST_BY_RARITY = [20, 34, 55, 90, 150];
 export const EMPTY_COST = 10;
 
-export function craftCost(rarityIndex) {
-  return rarityIndex == null ? EMPTY_COST : COST_BY_RARITY[rarityIndex];
+export function craftCost(rarityIndex, discount = 1) {
+  const base = rarityIndex == null ? EMPTY_COST : COST_BY_RARITY[rarityIndex];
+  return Math.max(5, Math.round(base * discount));
 }
 
-/** Rolls a rarity using the `RARITY_ODDS` weights. */
-export function rollRarity(random = Math.random) {
+/**
+ * Odds shifted by Smithing.
+ *
+ * Each tier's weight is multiplied by `(1 + quality)` once per step up the
+ * ladder, then the whole thing is normalised. Quality 0 gives RARITY_ODDS
+ * back exactly, and any quality above that moves mass up the ladder
+ * geometrically without any tier ever running past 100%, which a flat "+x%
+ * legendary chance" would eventually do.
+ */
+export function rarityOdds(quality = 0) {
+  if (quality <= 0) return RARITY_ODDS.slice();
+  const weights = RARITY_ODDS.map((w, i) => w * Math.pow(1 + quality, i));
+  const total = weights.reduce((a, c) => a + c, 0);
+  return weights.map((w) => w / total);
+}
+
+/**
+ * Rolls a rarity. `floor` is Smithing's Standards node: at three ranks the
+ * forge simply stops producing anything below Epic.
+ */
+export function rollRarity(quality = 0, floor = 0, random = Math.random) {
+  const odds = rarityOdds(quality);
   let r = random();
-  for (let i = 0; i < RARITY_ODDS.length; i++) {
-    r -= RARITY_ODDS[i];
-    if (r < 0) return i;
+  let rolled = 0;
+  for (let i = 0; i < odds.length; i++) {
+    r -= odds[i];
+    if (r < 0) { rolled = i; break; }
   }
-  return 0;
+  return Math.max(rolled, Math.min(floor, RARITIES.length - 1));
 }
 
 /** Stat value of an item. */

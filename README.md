@@ -114,18 +114,20 @@ it.
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**.
 
-### Gathering: Mining, Chopping and Fishing
+### Skills: Mining, Chopping, Fishing and Smithing
 
 Nodes spawn on the same line the hero already walks. It stops, works them,
-and moves on, with no input from you. All three skills run on identical
-rails, each with its own level, its own 84 point tree and its own five
-resources gated by depth (stages 1, 8, 20, 36 and 55).
+and moves on, with no input from you. The three gathering skills run on
+identical rails, each with its own level, its own 84 point tree and its own
+five resources gated by depth (stages 1, 8, 20, 36 and 55). **Smithing** is
+the fourth, and it has no line at all: see below.
 
 | skill | raw | refined | pays in |
 |---|---|---|---|
 | Mining   | ore  | bars   | tool heads, and later dungeon keys |
 | Chopping | logs | planks | tool handles |
 | Fishing  | fish | meals  | **Well Fed**: regen and armour |
+| Smithing | none | none   | the forge: odds, cost and refining |
 
 **The tool slot is the tradeoff.** You carry one tool, and only the equipped
 skill's nodes spawn. Slice 1 measured that stopping to swing costs zero stage
@@ -173,6 +175,37 @@ Two rules hold the whole thing up:
 *Forager*, on the relic tree, rotates your tool every 60 s so no line stalls
 while you are away.
 
+### Smithing, and a forge that finally progresses
+
+The forge used to be pure RNG on fixed odds with nothing to improve. Smithing
+is what it was missing. It has no nodes and no tool; it levels from the two
+things it does: **refining** (which works from stage 1) and **forging**
+(which only opens after the first rebirth), so it never sits idle.
+
+Its tree does three things:
+
+- **Mastery** moves the rarity odds. Each tier's weight is multiplied by
+  `(1 + quality)` once per step up the ladder, then normalised. Quality 0
+  gives the base odds back exactly, and pushing it moves mass upward without
+  any tier ever running past 100%, which a flat "+x% legendary" eventually
+  would. Maxed, quality reaches 1.44:
+
+  | | Common | Uncommon | Rare | Epic | Legendary |
+  |---|---:|---:|---:|---:|---:|
+  | base       | 50.0% | 27.0% | 15.5% |  6.0% |  1.5% |
+  | quality 1.44 | 14.3% | 18.9% | 26.5% | 25.0% | 15.3% |
+
+  *Standards*, at the end of that branch, raises the **floor**: at three
+  ranks the forge simply stops rolling anything below Epic.
+- **Anvil** cuts the dust a forge costs and raises what a bad roll refunds.
+- **Furnace** cuts raw-per-unit in **every** skill, not just its own. That is
+  the one bonus in the game that reaches sideways, and it is why the
+  multiplier is applied on top of each skill's own rather than living in
+  their trees.
+
+The odds table on the Forge tab is live: it shows what your Smithing is
+actually giving you, not the base numbers.
+
 ### Forge and soul dust
 
 After the first rebirth mobs start dropping **soul dust** (20% per regular mob,
@@ -219,7 +252,7 @@ src/
   format.js         1.2K, 340M, 5.07aa...
   data/
     balance.js      EVERY progression number, the file to rebalance
-    gathering.js    the three gathering skills: resources, tools, trees
+    gathering.js    the four skills: resources, tools, trees, Well Fed
     enemies.js      roster, when each mob unlocks, bosses
     upgrades.js     what shows up in the shop
     levels.js       XP curve and gain per kill

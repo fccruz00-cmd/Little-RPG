@@ -5,7 +5,7 @@ import {
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
-import { SKILLS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
+import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
@@ -312,8 +312,7 @@ export class Battle {
     this.switchTimer += dt;
     if (this.switchTimer < GATHER.switchEvery) return;
     this.switchTimer = 0;
-    const ids = Object.keys(SKILLS);
-    const next = ids[(ids.indexOf(state.tool) + 1) % ids.length];
+    const next = GATHER_IDS[(GATHER_IDS.indexOf(state.tool) + 1) % GATHER_IDS.length];
     if (state.equip(next)) {
       this.working = null;
       this.emit('toast', { text: `${SKILLS[next].toolName.toUpperCase()} OUT` });
