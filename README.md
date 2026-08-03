@@ -452,6 +452,13 @@ The two character packs share the 100x100 frame and the same ground line, so
 they stand on one line without anyone floating: pack 02's grounded sprites sit
 at rows 56-59, inside the 57-61 spread pack 01 already had.
 
+## Privacy
+
+The game has no servers and makes no network requests. Progress lives in one
+`localStorage` entry on your own device and is never transmitted. See
+[PRIVACY.md](PRIVACY.md) for the full policy, including what the store
+handles when someone buys the game.
+
 ## Asset credits
 
 The game uses crops from four third-party packs:
