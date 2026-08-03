@@ -25,13 +25,81 @@ export const SPRITES = {
     top: 36, bottom: 53, left: 37, right: 62,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
   },
+  black_knight_a: {
+    top: 27, bottom: 57, left: 44, right: 60,
+    anims: { attack: 16, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  black_knight_b: {
+    top: 36, bottom: 56, left: 41, right: 60,
+    anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  black_knight_c: {
+    top: 29, bottom: 56, left: 36, right: 75,
+    anims: { attack: 8, death: 10, hurt: 4, idle: 6, walk: 8 },
+  },
+  blood_monster_a: {
+    top: 42, bottom: 57, left: 42, right: 62,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  blood_monster_b: {
+    top: 39, bottom: 54, left: 46, right: 60,
+    anims: { attack: 8, death: 6, hurt: 4, idle: 6, walk: 6 },
+  },
+  demon_a: {
+    top: 38, bottom: 58, left: 43, right: 63,
+    anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  demon_b: {
+    top: 39, bottom: 57, left: 43, right: 61,
+    anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  demon_c: {
+    top: 32, bottom: 55, left: 39, right: 70,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
+  demon_d: {
+    top: 33, bottom: 57, left: 43, right: 68,
+    anims: { attack: 11, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  demon_e: {
+    top: 35, bottom: 58, left: 32, right: 78,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  demoness_a: {
+    top: 31, bottom: 57, left: 38, right: 72,
+    anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  demoness_b: {
+    top: 34, bottom: 58, left: 37, right: 61,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
   elite_orc: {
     top: 33, bottom: 56, left: 42, right: 70,
     anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
+  eyeball_monster: {
+    top: 44, bottom: 57, left: 43, right: 58,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
+  flame_golem: {
+    top: 29, bottom: 56, left: 36, right: 68,
+    anims: { attack: 9, death: 6, hurt: 4, idle: 6, walk: 12 },
+  },
+  ghostfire: {
+    top: 26, bottom: 52, left: 46, right: 59,
+    anims: { attack: 6, death: 6, hurt: 4, idle: 6, walk: 6 },
+  },
   greatsword_skeleton: {
     top: 37, bottom: 56, left: 28, right: 59,
     anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 9 },
+  },
+  hellbat: {
+    top: 32, bottom: 54, left: 36, right: 62,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
+  hellhound: {
+    top: 41, bottom: 56, left: 36, right: 65,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   knight: {
     top: 38, bottom: 56, left: 41, right: 67,
@@ -40,6 +108,14 @@ export const SPRITES = {
   knight_templar: {
     top: 39, bottom: 56, left: 43, right: 70,
     anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
+  },
+  lava_slime: {
+    top: 42, bottom: 56, left: 36, right: 60,
+    anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
+  },
+  minotaur: {
+    top: 38, bottom: 58, left: 41, right: 71,
+    anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   necromancer: {
     top: 29, bottom: 60, left: 31, right: 62,
@@ -64,6 +140,10 @@ export const SPRITES = {
   swordsman: {
     top: 38, bottom: 59, left: 42, right: 66,
     anims: { attack: 7, death: 4, hurt: 5, idle: 6, walk: 8 },
+  },
+  warlock: {
+    top: 33, bottom: 57, left: 40, right: 61,
+    anims: { attack: 7, death: 11, hurt: 4, idle: 6, walk: 8 },
   },
   werebear: {
     top: 39, bottom: 56, left: 42, right: 61,

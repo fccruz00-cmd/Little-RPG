@@ -7,3 +7,7 @@ node_modules/
 # assets/characters/
 # assets/ui/
 # assets/icons/
+
+# Python bytecode from tools/
+__pycache__/
+*.pyc

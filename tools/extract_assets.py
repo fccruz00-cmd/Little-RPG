@@ -2,12 +2,17 @@
 """Extract only the sprites the game actually uses from the source packs.
 
 Usage:
-    python3 tools/extract_assets.py <character-pack-folder> \
+    python3 tools/extract_assets.py <character-pack-01-folder> \
+                                    <character-pack-02-folder> \
                                     <Mini-Medieval-UI-folder> \
                                     <Raven-Fantasy-32x32.png>
 
 Writes assets/characters/**, assets/ui/** and assets/icons/icons.png, and
 prints the manifest (frames + body box) used by src/data/sprites.js.
+
+Both character packs use the same 100x100 frame and the same ground line, so
+they mix on one line without anyone floating: pack 02's grounded sprites sit
+at rows 56-59, inside the 57-61 spread pack 01 already had.
 """
 import json
 import os
@@ -19,24 +24,52 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "assets")
 FRAME = 100
 
-# character -> {in-game anim name: original file name}
+# character -> (source pack, folder name, {in-game anim name: original file})
+#
+# A flyer has no Idle or Walk of its own: the pack ships one Flying loop that
+# stands in for both, and the game keeps it off the floor with `hover` in
+# enemies.js rather than by moving its sprite box.
+FLYING = {"idle": "Flying", "walk": "Flying"}
 ROSTER = {
-    "knight":              ("Knight",              {}),
-    "slime":               ("Slime",               {}),
-    "orc":                 ("Orc",                 {}),
-    "bat":                 ("Bat",                 {"idle": "Flying", "walk": "Flying"}),
-    "skeleton":            ("Skeleton",            {}),
-    "armored_skeleton":    ("Armored Skeleton",    {}),
-    "armored_orc":         ("Armored Orc",         {}),
-    "werewolf":            ("Werewolf",            {}),
-    "greatsword_skeleton": ("Greatsword Skeleton", {}),
-    "elite_orc":           ("Elite Orc",           {}),
-    "werebear":            ("Werebear",            {}),
-    "orc_rider":           ("Orc rider",           {}),
-    "knight_templar":      ("Knight Templar",      {"walk": "Walk01"}),
-    "swordsman":           ("Swordsman",           {}),
-    "necromancer":         ("Necromancer",         {"death": "DEATH"}),
-    "wizard":              ("Wizard",              {}),
+    # --- pack 01: the overworld roster ---
+    "knight":              (1, "Knight",              {}),
+    "slime":               (1, "Slime",               {}),
+    "orc":                 (1, "Orc",                 {}),
+    "bat":                 (1, "Bat",                 FLYING),
+    "skeleton":            (1, "Skeleton",            {}),
+    "armored_skeleton":    (1, "Armored Skeleton",    {}),
+    "armored_orc":         (1, "Armored Orc",         {}),
+    "werewolf":            (1, "Werewolf",            {}),
+    "greatsword_skeleton": (1, "Greatsword Skeleton", {}),
+    "elite_orc":           (1, "Elite Orc",           {}),
+    "werebear":            (1, "Werebear",            {}),
+    "orc_rider":           (1, "Orc rider",           {}),
+    "knight_templar":      (1, "Knight Templar",      {"walk": "Walk01"}),
+    "swordsman":           (1, "Swordsman",           {}),
+    "necromancer":         (1, "Necromancer",         {"death": "DEATH"}),
+    "wizard":              (1, "Wizard",              {}),
+    # --- pack 02: the hell roster, everything past stage 64 ---
+    "lava_slime":       (2, "Lava Slime",      {}),
+    "hellbat":          (2, "Hellbat",         FLYING),
+    "hellhound":        (2, "Hellhound",       {}),
+    "blood_monster_a":  (2, "Blood Monster_A", {}),
+    "demon_a":          (2, "Demon_A",         {}),
+    "eyeball_monster":  (2, "Eyeball Monster", {}),
+    "demon_b":          (2, "Demon_B",         {}),
+    "ghostfire":        (2, "Ghostfire",       FLYING),
+    "flame_golem":      (2, "Flame Golem",     {}),
+    "demon_c":          (2, "Demon_C",         {}),
+    "blood_monster_b":  (2, "Blood Monster_B", FLYING),
+    "minotaur":         (2, "Minotaur",        {}),
+    # hell bosses
+    "black_knight_a":   (2, "Black Knight_A",  {}),
+    "black_knight_b":   (2, "Black Knight_B",  {}),
+    "black_knight_c":   (2, "Black Knight_C",  {}),
+    "demoness_a":       (2, "Demoness_A",      {}),
+    "demoness_b":       (2, "Demoness_B",      {}),
+    "demon_d":          (2, "Demon_D",         {}),
+    "demon_e":          (2, "Demon_E",         {}),
+    "warlock":          (2, "Warlock",         {}),
 }
 ANIMS = {"idle": "Idle", "walk": "Walk", "attack": "Attack01", "hurt": "Hurt", "death": "Death"}
 
@@ -137,10 +170,10 @@ def content_box(im):
     return (x0 % FRAME, y0, x1, y1)
 
 
-def extract_characters(pack):
+def extract_characters(packs):
     manifest = {}
-    for slug, (folder, overrides) in ROSTER.items():
-        src = char_dir(pack, folder)
+    for slug, (pack_no, folder, overrides) in ROSTER.items():
+        src = char_dir(packs[pack_no], folder)
         dst = os.path.join(OUT, "characters", slug)
         os.makedirs(dst, exist_ok=True)
         entry = {"anims": {}}
@@ -254,12 +287,12 @@ def patch_icon_css(icons):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         print(__doc__)
         raise SystemExit(1)
-    pack, ui_dir, icon_sheet = sys.argv[1:4]
+    pack1, pack2, ui_dir, icon_sheet = sys.argv[1:5]
     print("characters:")
-    chars = extract_characters(pack)
+    chars = extract_characters({1: pack1, 2: pack2})
     print("ui:")
     extract_ui(ui_dir)
     print("icons:")

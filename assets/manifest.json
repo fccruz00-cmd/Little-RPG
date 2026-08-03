@@ -39,6 +39,162 @@
       "right": 62,
       "top": 36
     },
+    "black_knight_a": {
+      "anims": {
+        "attack": 16,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 44,
+      "right": 60,
+      "top": 27
+    },
+    "black_knight_b": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 56,
+      "left": 41,
+      "right": 60,
+      "top": 36
+    },
+    "black_knight_c": {
+      "anims": {
+        "attack": 8,
+        "death": 10,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 56,
+      "left": 36,
+      "right": 75,
+      "top": 29
+    },
+    "blood_monster_a": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 42,
+      "right": 62,
+      "top": 42
+    },
+    "blood_monster_b": {
+      "anims": {
+        "attack": 8,
+        "death": 6,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 54,
+      "left": 46,
+      "right": 60,
+      "top": 39
+    },
+    "demon_a": {
+      "anims": {
+        "attack": 7,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 58,
+      "left": 43,
+      "right": 63,
+      "top": 38
+    },
+    "demon_b": {
+      "anims": {
+        "attack": 9,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 43,
+      "right": 61,
+      "top": 39
+    },
+    "demon_c": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 55,
+      "left": 39,
+      "right": 70,
+      "top": 32
+    },
+    "demon_d": {
+      "anims": {
+        "attack": 11,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 43,
+      "right": 68,
+      "top": 33
+    },
+    "demon_e": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 58,
+      "left": 32,
+      "right": 78,
+      "top": 35
+    },
+    "demoness_a": {
+      "anims": {
+        "attack": 9,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 38,
+      "right": 72,
+      "top": 31
+    },
+    "demoness_b": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 58,
+      "left": 37,
+      "right": 61,
+      "top": 34
+    },
     "elite_orc": {
       "anims": {
         "attack": 7,
@@ -52,6 +208,45 @@
       "right": 70,
       "top": 33
     },
+    "eyeball_monster": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 57,
+      "left": 43,
+      "right": 58,
+      "top": 44
+    },
+    "flame_golem": {
+      "anims": {
+        "attack": 9,
+        "death": 6,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 12
+      },
+      "bottom": 56,
+      "left": 36,
+      "right": 68,
+      "top": 29
+    },
+    "ghostfire": {
+      "anims": {
+        "attack": 6,
+        "death": 6,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 52,
+      "left": 46,
+      "right": 59,
+      "top": 26
+    },
     "greatsword_skeleton": {
       "anims": {
         "attack": 9,
@@ -64,6 +259,32 @@
       "left": 28,
       "right": 59,
       "top": 37
+    },
+    "hellbat": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 54,
+      "left": 36,
+      "right": 62,
+      "top": 32
+    },
+    "hellhound": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 56,
+      "left": 36,
+      "right": 65,
+      "top": 41
     },
     "knight": {
       "anims": {
@@ -90,6 +311,32 @@
       "left": 43,
       "right": 70,
       "top": 39
+    },
+    "lava_slime": {
+      "anims": {
+        "attack": 6,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 6
+      },
+      "bottom": 56,
+      "left": 36,
+      "right": 60,
+      "top": 42
+    },
+    "minotaur": {
+      "anims": {
+        "attack": 8,
+        "death": 4,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 58,
+      "left": 41,
+      "right": 71,
+      "top": 38
     },
     "necromancer": {
       "anims": {
@@ -168,6 +415,19 @@
       "left": 42,
       "right": 66,
       "top": 38
+    },
+    "warlock": {
+      "anims": {
+        "attack": 7,
+        "death": 11,
+        "hurt": 4,
+        "idle": 6,
+        "walk": 8
+      },
+      "bottom": 57,
+      "left": 40,
+      "right": 61,
+      "top": 33
     },
     "werebear": {
       "anims": {

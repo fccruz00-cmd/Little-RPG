@@ -59,6 +59,25 @@ python3 tools/build_single_file.py
 - **&lt; &gt;** step back to a cleared stage to farm it.
 - Progress autosaves to `localStorage` every 5 s.
 
+### The roster
+
+Twenty-two mobs and thirteen bosses, in two tiers. The overworld runs to
+stage 52; from **stage 64 the line descends into hell** and the second
+character pack takes over, ending on the Minotaur at 190.
+
+The two tiers never share a screen. `mobsForStage` only ever shows the **four
+most recent unlocks**, so the roster rolls forward instead of accumulating,
+and the same rule now governs bosses: `bossesForStage` keeps the five most
+recent in rotation and retires the rest. The five overworld bosses all carry
+`from: 1`, so the cycle below stage 70 is exactly what it always was.
+
+A boss's `hp` multiplier stays in a narrow band across both tiers, on
+purpose. The stage curve already multiplies health by 1.208 a stage and
+`BOSS_TIME` is a hard gate, so health that *also* climbed with the tier would
+count the same growth twice and dump the second count straight onto the
+timer. The hell bosses ramp `dmg` instead, which is threat the player can
+answer with health and regen.
+
 ### Reading the screen
 
 - **Gold** is the big number up top, with gold per second under it.
@@ -421,24 +440,29 @@ half pixels.
 
 ```sh
 python3 tools/extract_assets.py \
-  "<character pack>/Characters(100x100 split)" \
+  "<character pack 01>/Characters(100x100 split)" \
+  "<character pack 02>/Characters(100x100 split)" \
   "<Mini-Medieval-User-Interface-8x8>" \
   "<Raven Fantasy Icons>/Full Spritesheet/32x32.png"
 ```
 
 The roster lives in the `ROSTER` dict and the icons in the `ICONS` list, both
-at the top of that script.
+at the top of that script. Each roster entry says which pack it comes from.
+The two character packs share the 100x100 frame and the same ground line, so
+they stand on one line without anyone floating: pack 02's grounded sprites sit
+at rows 56-59, inside the 57-61 spread pack 01 already had.
 
 ## Asset credits
 
-The game uses crops from three third-party packs:
+The game uses crops from four third-party packs:
 
-- **Tiny RPG Character Asset Pack 01**, characters and animations
+- **Tiny RPG Character Asset Pack 01**, the overworld roster
+- **Tiny RPG Character Asset Pack 02** (20 characters), the hell roster
 - **Mini Medieval User Interface v1.1** by [VEXED](https://v3x3d.itch.io/),
   buttons and frames
 - **Premium - Raven Fantasy Icons**, upgrade and item icons
 
-None of the three ships a licence file. The icon pack in particular is sold as
+None of the four ships a licence file. The icon pack in particular is sold as
 a paid product, and licences like that usually allow use in a game but
 **forbid redistributing the raw art**, which is exactly what versioning
 `assets/` in a public repository does. If you publish this, check the terms of
