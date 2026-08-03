@@ -2,75 +2,79 @@
 
 export const FRAME = 100;
 
-// Ground line shared by every frame in the pack (feet sit around y=57
-// and the original baked shadow ran to y=60). Drawing everyone from
+// Ground line shared by every frame in the pack. Drawing everyone from
 // the same origin is what keeps the bat flying and the rest on the
 // floor: snapping each sprite down by its own box would land the bat.
-export const GROUND_LINE = 58;
+//
+// 57, NOT 58. `bottom` in the manifest comes from getbbox(), whose
+// bottom edge is EXCLUSIVE, so bottom=57 means the last row holding
+// any pixels is 56. Reading it as inclusive is what parked every
+// sprite two world pixels above the floor.
+export const GROUND_LINE = 57;
 
 export const SPRITES = {
   armored_orc: {
-    top: 37, bottom: 57, left: 42, right: 67,
+    top: 37, bottom: 56, left: 42, right: 67,
     anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   armored_skeleton: {
-    top: 34, bottom: 58, left: 46, right: 64,
+    top: 34, bottom: 57, left: 46, right: 64,
     anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   bat: {
-    top: 36, bottom: 54, left: 37, right: 62,
+    top: 36, bottom: 53, left: 37, right: 62,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
   },
   elite_orc: {
-    top: 33, bottom: 57, left: 42, right: 70,
+    top: 33, bottom: 56, left: 42, right: 70,
     anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   greatsword_skeleton: {
-    top: 37, bottom: 57, left: 28, right: 59,
+    top: 37, bottom: 56, left: 28, right: 59,
     anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 9 },
   },
   knight: {
-    top: 38, bottom: 57, left: 41, right: 67,
+    top: 38, bottom: 56, left: 41, right: 67,
     anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   knight_templar: {
-    top: 39, bottom: 57, left: 43, right: 70,
+    top: 39, bottom: 56, left: 43, right: 70,
     anims: { attack: 7, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   necromancer: {
-    top: 29, bottom: 61, left: 31, right: 62,
+    top: 29, bottom: 60, left: 31, right: 62,
     anims: { attack: 9, death: 9, hurt: 4, idle: 6, walk: 6 },
   },
   orc: {
-    top: 41, bottom: 57, left: 44, right: 66,
+    top: 41, bottom: 56, left: 44, right: 66,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   orc_rider: {
-    top: 28, bottom: 57, left: 37, right: 69,
+    top: 28, bottom: 56, left: 37, right: 69,
     anims: { attack: 8, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   skeleton: {
-    top: 41, bottom: 57, left: 43, right: 69,
+    top: 41, bottom: 56, left: 43, right: 69,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   slime: {
-    top: 40, bottom: 57, left: 36, right: 61,
+    top: 40, bottom: 56, left: 36, right: 61,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 6 },
   },
   swordsman: {
-    top: 38, bottom: 60, left: 42, right: 66,
+    top: 38, bottom: 59, left: 42, right: 66,
     anims: { attack: 7, death: 4, hurt: 5, idle: 6, walk: 8 },
   },
   werebear: {
-    top: 39, bottom: 57, left: 42, right: 61,
+    top: 39, bottom: 56, left: 42, right: 61,
     anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   werewolf: {
-    top: 40, bottom: 57, left: 42, right: 69,
+    top: 40, bottom: 56, left: 42, right: 69,
     anims: { attack: 9, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
   wizard: {
-    top: 38, bottom: 58, left: 43, right: 60,
+    top: 38, bottom: 57, left: 43, right: 60,
     anims: { attack: 6, death: 4, hurt: 4, idle: 6, walk: 8 },
   },
 };

@@ -307,7 +307,13 @@ By simulation that costs about 30 deaths up to stage 20, nearly all of them to
 the mini boss, and then you start holding.
 
 The hero is the **Knight**, set by `HERO.id` in `enemies.js`, one line to swap
-for any character in the `ROSTER`. Worth knowing: the **Soldier** is the only
+for any character in the `ROSTER`.
+
+`GROUND_LINE` in `sprites.js` is **57**, and that number is easy to get wrong.
+`bottom` in the manifest comes from Pillow's `getbbox()`, whose bottom edge is
+**exclusive**, so `bottom: 57` means the last row holding any pixels is 56.
+Reading it as inclusive parks every sprite two world pixels above the floor,
+and the scale transform multiplies that, so a boss at 1.45x floated by three. Worth knowing: the **Soldier** is the only
 model in the pack shipping with a shadow painted into the sprite, even in the
 "no shadows" folder, and it clashes with the shadow the game draws.
 

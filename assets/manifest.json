@@ -8,7 +8,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 42,
       "right": 67,
       "top": 37
@@ -21,7 +21,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 58,
+      "bottom": 57,
       "left": 46,
       "right": 64,
       "top": 34
@@ -34,7 +34,7 @@
         "idle": 6,
         "walk": 6
       },
-      "bottom": 54,
+      "bottom": 53,
       "left": 37,
       "right": 62,
       "top": 36
@@ -47,7 +47,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 42,
       "right": 70,
       "top": 33
@@ -60,7 +60,7 @@
         "idle": 6,
         "walk": 9
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 28,
       "right": 59,
       "top": 37
@@ -73,7 +73,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 41,
       "right": 67,
       "top": 38
@@ -86,7 +86,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 43,
       "right": 70,
       "top": 39
@@ -99,7 +99,7 @@
         "idle": 6,
         "walk": 6
       },
-      "bottom": 61,
+      "bottom": 60,
       "left": 31,
       "right": 62,
       "top": 29
@@ -112,7 +112,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 44,
       "right": 66,
       "top": 41
@@ -125,7 +125,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 37,
       "right": 69,
       "top": 28
@@ -138,7 +138,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 43,
       "right": 69,
       "top": 41
@@ -151,7 +151,7 @@
         "idle": 6,
         "walk": 6
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 36,
       "right": 61,
       "top": 40
@@ -164,7 +164,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 60,
+      "bottom": 59,
       "left": 42,
       "right": 66,
       "top": 38
@@ -177,7 +177,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 42,
       "right": 61,
       "top": 39
@@ -190,7 +190,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 57,
+      "bottom": 56,
       "left": 42,
       "right": 69,
       "top": 40
@@ -203,7 +203,7 @@
         "idle": 6,
         "walk": 8
       },
-      "bottom": 58,
+      "bottom": 57,
       "left": 43,
       "right": 60,
       "top": 38
