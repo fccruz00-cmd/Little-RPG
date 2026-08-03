@@ -732,11 +732,15 @@ body { display: flex; justify-content: center; }
 /* --- tab 2: trees --- */
 .tree-scroll {
   flex: 1 1 auto;
-  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   padding: 4px 5px 10px;
+  /* NOT min-height: 0. A tree shares its pane with panels that pin their own
+     height, and as the only flexible child it swallows every shortfall. This
+     floor is what guarantees the branch headers plus a whole first node stay
+     reachable; whatever sits above it has to yield instead. */
+  min-height: 132px;
 }
 .tree-scroll[hidden] { display: none; }
 
@@ -868,11 +872,22 @@ body { display: flex; justify-content: center; }
 
 /* Smithing has no line and no tool, so the panel shows what it does to the
    forge instead of a sack of resources. */
+/* The Skills pane stacks a panel and a tree in one flex column, and the tree
+   used to be the only flexible child, so it absorbed every shortfall: on
+   Smithing the workshop pinned 209px of keys and odds and squeezed the tree
+   to 44px, three branch headers with no reachable node and points sitting
+   unspent. The rule now is the other way round. Panels above the tree yield
+   first and scroll themselves; the tree keeps a floor nothing can squeeze it
+   under. */
 .workshop {
-  flex: none;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 5px;
   padding: 5px;
+  align-content: start;
 }
 .workshop[hidden] { display: none; }
 .workshop .odds { border-top: 0; border-radius: 0; }
@@ -998,11 +1013,16 @@ body { display: flex; justify-content: center; }
 /* One row per ore: what is in the sack, what it smelts to, and the button
    that does it. The left rail carries the ore's own colour, the same way a
    forge slot carries its rarity. */
+/* Yields before the tree does, same rule as .workshop above it. */
 .stock {
-  flex: none;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   gap: 3px;
   padding: 4px 5px 0;
+  align-content: start;
 }
 .ore {
   --ore: var(--stone);
@@ -1349,6 +1369,13 @@ body { display: flex; justify-content: center; }
 }
 @media (max-height: 600px) {
   .arena { height: 31%; min-height: 128px; }
-  .pane__detail { min-height: 0; }
+  /* Its top margin is 4px the pane does not have to give down here. */
+  .pane__detail { min-height: 0; margin-top: 0; }
   .node__name { font-size: 8px; }
+  /* On a pane this short the full floor no longer fits alongside the panels
+     that cannot shrink. Enough for a branch header and its first node is the
+     honest minimum here. */
+  .tree-scroll { min-height: 88px; }
+  .skillbar { padding: 3px 8px; }
+  .mine-tools { padding: 3px 5px; }
 }
