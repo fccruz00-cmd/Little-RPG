@@ -34,7 +34,6 @@ export const AWAKEN = {
   minRelics: 50,   // relics earned before the first soul pays out
   divisor: 50,
   power: 1.25,
-  perSoul: 0.30,   // +30% damage and gold per soul, forever
 };
 
 /**

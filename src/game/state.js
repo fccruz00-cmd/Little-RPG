@@ -2,8 +2,8 @@ import {
   STATS, statValue, statCost, statCostBulk, statMaxLevel, affordableLevels, OFFLINE,
 } from '../data/balance.js';
 import { LEVELS, xpToNext } from '../data/levels.js';
-import { TALENT_TREE, RELIC_TREE, BONUS_KEYS, relicCost } from '../data/talents.js';
-import { relicsEarnedAt, soulsEarnedAt, AWAKEN } from '../data/prestige.js';
+import { TALENT_TREE, RELIC_TREE, SOUL_TREE, BONUS_KEYS, relicCost, soulCost } from '../data/talents.js';
+import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 import {
@@ -47,6 +47,7 @@ function defaults() {
 
     souls: 0,
     awakens: 0,
+    soulTalents: {},  // survives awakening, like the souls that bought it
     // Relics this ascension earned OFF the stage curve, which today means
     // dungeon clears. It cannot live in relicsEarned, because that doubles as
     // the offset `pendingRelics` subtracts from the curve: adding to it there
@@ -149,6 +150,7 @@ export class GameState {
     this.levels = { ...emptyLevels(), ...(data.levels ?? {}) };
     this.talents = { ...(data.talents ?? {}) };
     this.relicTalents = { ...(data.relicTalents ?? {}) };
+    this.soulTalents = { ...(data.soulTalents ?? {}) };
     this.gear = { ...(data.gear ?? {}) };
     this.skills = Object.fromEntries(SKILL_IDS.map((id) => [id, {
       level: data.skills?.[id]?.level ?? 1,
@@ -194,6 +196,7 @@ export class GameState {
     };
     for (const branch of TALENT_TREE) for (const n of branch.nodes) apply(n, this.talents[n.id] ?? 0);
     for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
+    for (const branch of SOUL_TREE) for (const n of branch.nodes) apply(n, this.soulTalents[n.id] ?? 0);
 
     // Gear comes in through the same path: a slot is just one more bonus
     // source, with the value pinned by rarity.
@@ -204,13 +207,6 @@ export class GameState {
       if (slot.mode === 'mul') b[slot.key] *= 1 + amount;
       else if (slot.mode === 'less') b[slot.key] *= Math.max(0.1, 1 - amount);
       else b[slot.key] += amount;
-    }
-
-    // Souls sit above both trees and the gear: awakening's pay is the one
-    // multiplier nothing in the game ever wipes.
-    if (this.souls > 0) {
-      b.dmgMul *= this.soulMul;
-      b.goldMul *= this.soulMul;
     }
 
     this._bonus = b;
@@ -679,8 +675,27 @@ export class GameState {
   }
 
   // --- awakening ------------------------------------------------------
-  get soulMul() {
-    return 1 + AWAKEN.perSoul * this.souls;
+  /** Souls already committed to the tree. */
+  get soulsSpent() {
+    return Object.values(this.soulTalents).reduce((sum, r) => sum + r, 0);
+  }
+
+  canBuySoul(branch, index) {
+    const node = branch.nodes[index];
+    const ranks = this.soulTalents[node.id] ?? 0;
+    return ranks < node.max
+      && this.souls >= soulCost(node, ranks)
+      && this.isUnlocked(branch, index, this.soulTalents);
+  }
+
+  buySoul(branch, index) {
+    if (!this.canBuySoul(branch, index)) return false;
+    const node = branch.nodes[index];
+    const ranks = this.soulTalents[node.id] ?? 0;
+    this.souls -= soulCost(node, ranks);
+    this.soulTalents[node.id] = ranks + 1;
+    this.invalidateBonus();
+    return true;
   }
 
   /**
@@ -781,7 +796,8 @@ export class GameState {
   toJSON() {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
-      relics, relicsEarned, relicTalents, prestiges, souls, awakens, extraRelics,
+      relics, relicsEarned, relicTalents, prestiges,
+      souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld,
@@ -790,7 +806,8 @@ export class GameState {
     return {
       version: SAVE_VERSION,
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
-      relics, relicsEarned, relicTalents, prestiges, souls, awakens, extraRelics,
+      relics, relicsEarned, relicTalents, prestiges,
+      souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld,

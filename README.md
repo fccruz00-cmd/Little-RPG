@@ -102,11 +102,15 @@ it.
 ### The five tabs
 
 1. **Upgrades**: stats bought with **gold**, wiped on rebirth.
-2. **Talents**: two trees behind one switch at the top.
+2. **Talents**: three trees behind one switch at the top.
    - *Talents*, paid with **level points** (one per level). Wiped on rebirth,
      and you can respec at any time.
-   - *Relics*, the prestige tree, paid with **relics**. Permanent.
-   - In both, a node only opens once the previous one in its branch has a point.
+   - *Relics*, the prestige tree, paid with **relics**. Survives rebirth, and
+     an awakening takes it.
+   - *Souls*, the awakening tree, paid with **souls**. Survives everything.
+     The switch only appears once an awakening has paid for it.
+   - In all three, a node only opens once the previous one in its branch has
+     a point.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
 5. **Ascend**: the two reset layers behind one switch.
@@ -118,12 +122,28 @@ it.
      relics, the relic tree, rebirths, dust and gear**, and pays **souls**.
      Souls are measured against every relic the ascension earned, from all
      three sources: banked by past rebirths, still pending in the current
-     run, and paid by dungeon clears. The first soul lands at 50 relics, and
-     each one is a permanent +30% to damage and gold that nothing, not even
-     the next awakening, ever takes back. The Skills tab survives, as always.
+     run, and paid by dungeon clears. The first soul lands at 50 relics.
+     Souls and the soul tree survive every later awakening, as does the
+     Skills tab.
 
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**.
+
+### The soul tree
+
+Souls are roughly an order of magnitude scarcer than relics: one at 50 relics
+earned, seven at 260, seventeen at 500. So the tree is short, expensive and
+made only of things the relic tree cannot reach. Three branches:
+
+| branch | what it buys |
+|---|---|
+| **Ascendant** | Soulfire (+40% damage a rank), Rend, Annihilate, Cataclysm |
+| **Eternity**  | Memory (start +3 stages), Bloodline, Aegis, Eternal Hour |
+| **Dominion**  | Avarice (+45% gold a rank), Epiphany, Hoard, Conquest |
+
+A point costs `node cost + ranks already in it`, the same ramp as relics; the
+nodes are shallower instead, because souls arrive in ones and twos. The whole
+tree is about 226 souls, which is many awakenings deep on purpose.
 
 ### Skills: Mining, Chopping, Fishing and Smithing
 
@@ -302,7 +322,7 @@ src/
     enemies.js      roster, when each mob unlocks, bosses
     upgrades.js     what shows up in the shop
     levels.js       XP curve and gain per kill
-    talents.js      both trees (nodes, effects, costs)
+    talents.js      all three trees (nodes, effects, costs)
     gear.js         forge: slots, rarities, odds and costs
     prestige.js     what a run is worth in relics, and a cycle in souls
     sprites.js      GENERATED, frame counts and body box per sprite

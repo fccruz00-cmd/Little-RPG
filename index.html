@@ -100,6 +100,9 @@
         <div class="segmented" id="tree-switch">
           <button class="is-on" data-tree="talents" type="button">Talents</button>
           <button data-tree="relics" type="button">Relics</button>
+          <button data-tree="souls" type="button" id="tree-tab-souls" hidden>
+            Souls<i class="pip" id="pip-souls" hidden></i>
+          </button>
         </div>
         <span class="pane__points" id="tree-points"></span>
         <button class="link" id="btn-respec" type="button">respec</button>
@@ -107,6 +110,7 @@
       <p class="pane__detail" id="tree-detail">Tap a node to invest.</p>
       <div class="tree-scroll" id="tree-talents"></div>
       <div class="tree-scroll" id="tree-relics" hidden></div>
+      <div class="tree-scroll" id="tree-souls" hidden></div>
     </div>
 
     <!-- tab 3: gathering skills. One tool at a time, which is the tradeoff. -->
@@ -241,18 +245,18 @@
         </div>
 
         <dl class="facts">
-          <div><dt>Souls held</dt><dd id="awk-have">0</dd></div>
+          <div><dt>Souls to spend</dt><dd id="awk-have">0</dd></div>
           <div><dt>Awakenings</dt><dd id="awk-count">0</dd></div>
-          <div><dt>Damage and gold</dt><dd id="awk-mul">x1</dd></div>
+          <div><dt>Souls spent</dt><dd id="awk-spent">0</dd></div>
           <div><dt>Next soul</dt><dd id="awk-next">50 relics</dd></div>
         </dl>
 
         <p class="prestige__note">
           Awakening wipes everything Rebirth wipes <b>plus relics, the relic
-          tree, rebirths, dust and gear</b>. You keep your <b>souls</b> and
-          everything on the <b>Skills</b> tab. Souls come from every relic
-          this ascension has earned (<b id="awk-progress">0</b> so far), and
-          each one multiplies <b>damage and gold, forever</b>.
+          tree, rebirths, dust and gear</b>. You keep your <b>souls</b>, the
+          <b>soul tree</b> they buy on the Talents tab, and everything on the
+          <b>Skills</b> tab. Souls come from every relic this ascension has
+          earned (<b id="awk-progress">0</b> so far).
         </p>
 
         <button class="big-btn" id="awk-go" type="button" disabled>Awaken</button>

@@ -460,10 +460,10 @@ body { display: flex; justify-content: center; }
 .pip--gold { background: var(--gold); box-shadow: 0 0 0 1px #000, 0 0 5px var(--gold); }
 @keyframes pulse { 50% { opacity: .3; } }
 
-/* In the tab row the pip rides the corner instead of the text. Inline it
-   costs 9px of label, which is the difference between five tabs holding one
-   line and the whole row growing to two on a 360px phone. */
-.tab .pip {
+/* On a tab or a segment the pip rides the corner instead of the text. Inline
+   it costs 9px of label, which is the difference between a five-button row
+   holding one line and growing to two on a 360px phone. */
+.tab .pip, .segmented button .pip {
   position: absolute;
   top: 1px;
   right: 1px;
@@ -547,10 +547,13 @@ body { display: flex; justify-content: center; }
 .toggle input:checked { background-image: url(assets/ui/check_on.png); }
 
 .segmented { display: flex; gap: 3px; min-width: 0; }
-#skill-switch { flex: 1 1 auto; }
-#skill-switch button { flex: 1 1 0; min-width: 0; padding: 2px 2px 3px; font-size: 9px; }
+/* The switches that carry three or four segments share the header with a
+   points readout and a link, so they share the tighter button too. */
+#skill-switch, #tree-switch { flex: 1 1 auto; }
+#skill-switch button, #tree-switch button { flex: 1 1 0; min-width: 0; padding: 2px 2px 3px; font-size: 9px; }
 .segmented button {
   --px: 2;
+  position: relative;
   padding: 2px 9px 3px;
   border: 0;
   font: inherit;

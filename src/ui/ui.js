@@ -1,6 +1,8 @@
 import { UPGRADES } from '../data/upgrades.js';
 import { GameState } from '../game/state.js';
-import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talents.js';
+import {
+  TALENT_TREE, RELIC_TREE, SOUL_TREE, describeNode, relicCost, soulCost,
+} from '../data/talents.js';
 import {
   nextRelicStage, relicsEarnedAt, PRESTIGE,
   nextSoulRelics, soulsEarnedAt, AWAKEN,
@@ -67,6 +69,7 @@ export class UI {
       treeSwitch: $('tree-switch'), treePoints: $('tree-points'), treeDetail: $('tree-detail'),
       respec: $('btn-respec'),
       treeTalents: $('tree-talents'), treeRelics: $('tree-relics'),
+      treeSouls: $('tree-souls'), treeTabSouls: $('tree-tab-souls'), pipSouls: $('pip-souls'),
       skillSwitch: $('skill-switch'), skillPoints: $('skill-points'),
       skillDetail: $('skill-detail'), respecSkill: $('btn-respec-skill'),
       skillXpFill: $('skill-xp-fill'), skillXpText: $('skill-xp-text'),
@@ -87,7 +90,7 @@ export class UI {
       ascSwitch: $('asc-switch'), ascSouls: $('asc-souls'), soulsHave: $('souls-have'),
       ascRebirth: $('asc-rebirth'), ascAwaken: $('asc-awaken'), pipAwaken: $('pip-awaken'),
       awkGain: $('awk-gain'), awkHave: $('awk-have'), awkCount: $('awk-count'),
-      awkMul: $('awk-mul'), awkNext: $('awk-next'), awkGo: $('awk-go'),
+      awkSpent: $('awk-spent'), awkNext: $('awk-next'), awkGo: $('awk-go'),
       awkProgress: $('awk-progress'),
       awkGainBox: document.querySelector('#asc-awaken .prestige__gain'),
       perks: $('perks'), perksList: $('perks-list'),
@@ -114,6 +117,7 @@ export class UI {
     this.buildShop();
     this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
+    this.buildTree(this.el.treeSouls, SOUL_TREE, 'soul');
     for (const id of SKILL_IDS) this.buildTree(this.el.trees[id], SKILL_TREES[id], id);
     this.buildStock();
     this.buildKeys();
@@ -209,7 +213,7 @@ export class UI {
           <i class="ico ico--lg ico--${node.icon}"></i>
           <span class="node__name">${node.name}</span>
           <span class="node__rank">0/${node.max}</span>
-          ${kind === 'relic' ? '<span class="node__cost"></span>' : ''}`;
+          ${kind === 'relic' || kind === 'soul' ? '<span class="node__cost"></span>' : ''}`;
         col.append(button);
 
         this.nodes.push({
@@ -255,6 +259,7 @@ export class UI {
       entry.button.addEventListener('click', () => {
         const bought = entry.kind === 'talent' ? state.buyTalent(entry.branch, entry.index)
           : entry.kind === 'relic' ? state.buyRelic(entry.branch, entry.index)
+          : entry.kind === 'soul' ? state.buySoul(entry.branch, entry.index)
           : state.buySkillTalent(entry.kind, entry.branch, entry.index);
         if (bought) state.save();
         this.describe(entry);
@@ -385,9 +390,11 @@ export class UI {
       state.awaken();
       battle.enterStage(state.startStage, { silent: true });
       this.refreshShop(true);
-      this.refreshTrees(true);
       this.refreshForge();
-      this.showTab('upgrades');
+      // Straight to the tree the souls just bought: it is the whole payout,
+      // and it is one tab over from where the button was.
+      this.showTab('talents');
+      this.showTree('souls');
       this.toast({ text: `AWAKENED: +${gain} SOUL(S)` });
     });
 
@@ -419,7 +426,8 @@ export class UI {
     }
     this.el.treeTalents.hidden = name !== 'talents';
     this.el.treeRelics.hidden = name !== 'relics';
-    this.el.treePoints.classList.toggle('is-relic', name === 'relics');
+    this.el.treeSouls.hidden = name !== 'souls';
+    this.el.treePoints.classList.toggle('is-relic', name !== 'talents');
     this.el.respec.hidden = name !== 'talents';
     setText(this.el.treeDetail, 'Tap a node to invest.');
     this.refreshTrees(true);
@@ -439,6 +447,7 @@ export class UI {
   /** Where a tree keeps its ranks. One map per kind, same shape. */
   ranksFor(kind) {
     if (kind === 'relic') return this.state.relicTalents;
+    if (kind === 'soul') return this.state.soulTalents;
     if (SKILLS[kind]) return this.state.skillTalents[kind];
     return this.state.talents;
   }
@@ -459,7 +468,9 @@ export class UI {
     } else if (ranks >= node.max) {
       line = `<b>${node.name}</b> is maxed. ${say(node, ranks)}.`;
     } else {
-      const price = kind === 'relic' ? `${relicCost(node, ranks)} relic(s)` : '1 point';
+      const price = kind === 'relic' ? `${relicCost(node, ranks)} relic(s)`
+        : kind === 'soul' ? `${soulCost(node, ranks)} soul(s)`
+        : '1 point';
       line = `<b>${node.name}</b> (${ranks}/${node.max}), ${now}. Next point: <b>${say(node, ranks + 1)}</b> for ${price}.`;
     }
     setHtml(SKILLS[kind] ? this.el.skillDetail : this.el.treeDetail, line);
@@ -519,7 +530,11 @@ export class UI {
     el.stageNext.disabled = state.stage >= state.maxStage;
 
     // "there is something to spend here" markers
-    el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
+    el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0 && state.souls <= 0;
+    // The soul tree only exists once an awakening has paid for it.
+    el.treeTabSouls.hidden = state.souls <= 0 && state.soulsSpent <= 0;
+    el.pipSouls.hidden = state.souls <= 0;
+    el.pipSouls.classList.add('pip--gold');
     el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0)
       && !GATHER_IDS.some((id) => state.canBuyTool(id))
       && !KEYS.some((k) => state.canForgeKey(k.tier));
@@ -936,23 +951,26 @@ export class UI {
 
   refreshTrees() {
     const { state, el } = this;
-    const relicMode = this.tree === 'relics';
-
-    setHtml(el.treePoints, relicMode
-      ? `<i class="ico ico--sm ico--relic"></i> <b>${fmt(state.relics)}</b> relics`
-      : `<b>${state.freePoints}</b> free point(s)`);
+    // The three trees on this tab differ only in where the ranks live, what
+    // pays for a point and how that price reads on the node.
+    const KIND = { talents: 'talent', relics: 'relic', souls: 'soul' }[this.tree];
+    const purse = {
+      talent: `<b>${state.freePoints}</b> free point(s)`,
+      relic: `<i class="ico ico--sm ico--relic"></i> <b>${fmt(state.relics)}</b> relics`,
+      soul: `<i class="ico ico--sm ico--orb"></i> <b>${fmt(state.souls)}</b> souls`,
+    }[KIND];
+    setHtml(el.treePoints, purse);
 
     for (const entry of this.nodes) {
-      if (SKILLS[entry.kind]) continue; // its own tab, its own refresh
-      const isRelic = entry.kind === 'relic';
-      if (isRelic !== relicMode) continue; // the other tree is hidden
+      if (SKILLS[entry.kind]) continue;  // its own tab, its own refresh
+      if (entry.kind !== KIND) continue; // the other trees are hidden
 
-      const ranksOf = isRelic ? state.relicTalents : state.talents;
+      const ranksOf = this.ranksFor(entry.kind);
       const ranks = ranksOf[entry.node.id] ?? 0;
       const unlocked = state.isUnlocked(entry.branch, entry.index, ranksOf);
       const full = ranks >= entry.node.max;
-      const canBuy = isRelic
-        ? state.canBuyRelic(entry.branch, entry.index)
+      const canBuy = entry.kind === 'relic' ? state.canBuyRelic(entry.branch, entry.index)
+        : entry.kind === 'soul' ? state.canBuySoul(entry.branch, entry.index)
         : state.canBuyTalent(entry.branch, entry.index);
 
       entry.button.disabled = !canBuy;
@@ -961,7 +979,12 @@ export class UI {
       entry.button.classList.toggle('is-locked', !unlocked);
       entry.button.classList.toggle('can-buy', canBuy);
       setText(entry.rank, `${ranks}/${entry.node.max}`);
-      if (entry.cost) setText(entry.cost, full ? 'max' : `${relicCost(entry.node, ranks)}r`);
+      if (entry.cost) {
+        const price = entry.kind === 'soul'
+          ? `${soulCost(entry.node, ranks)}s`
+          : `${relicCost(entry.node, ranks)}r`;
+        setText(entry.cost, full ? 'max' : price);
+      }
       if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
     }
   }
@@ -1003,7 +1026,7 @@ export class UI {
     setText(el.awkGain, String(gain));
     setText(el.awkHave, fmt(state.souls));
     setText(el.awkCount, String(state.awakens));
-    setText(el.awkMul, `x${state.soulMul.toFixed(2)}`);
+    setText(el.awkSpent, fmt(state.soulsSpent));
     setText(el.awkProgress, fmt(earned));
 
     // Measured from what the cycle is already worth, like the relic readout.

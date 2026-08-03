@@ -120,6 +120,41 @@ export const RELIC_TREE = [
   },
 ];
 
+// --- soul tree (awakening) ------------------------------------------
+// The top layer. Souls are roughly an order of magnitude scarcer than relics,
+// so the nodes are few, deep and expensive, and every one of them is a
+// multiplier the relic tree cannot reach. This tree is the only thing besides
+// the Skills tab that an awakening does not touch.
+export const SOUL_TREE = [
+  {
+    id: 'ascendant', name: 'Ascendant', accent: '#c79ae8',
+    nodes: [
+      { id: 'soulfire',   name: 'Soulfire',   icon: 'torch',        max: 6, cost: 1, key: 'dmgMul',       mode: 'mul', per: 0.40 },
+      { id: 'rend',       name: 'Rend',       icon: 'dagger',       max: 5, cost: 2, key: 'critAdd',      mode: 'add', per: 0.05 },
+      { id: 'annihilate', name: 'Annihilate', icon: 'crit_power',   max: 5, cost: 2, key: 'critPowerAdd', mode: 'add', per: 0.70 },
+      { id: 'cataclysm',  name: 'Cataclysm',  icon: 'attack_speed', max: 4, cost: 3, key: 'atkSpeedMul',  mode: 'mul', per: 0.15 },
+    ],
+  },
+  {
+    id: 'eternity', name: 'Eternity', accent: '#6dba79',
+    nodes: [
+      { id: 'memory',      name: 'Memory',       icon: 'crown',  max: 5, cost: 2, key: 'startStage',  mode: 'add',  per: 3 },
+      { id: 'bloodline',   name: 'Bloodline',    icon: 'book',   max: 5, cost: 2, key: 'extraPoints', mode: 'add',  per: 2 },
+      { id: 'aegis',       name: 'Aegis',        icon: 'shield', max: 5, cost: 3, key: 'damageTaken', mode: 'less', per: 0.05 },
+      { id: 'eternalHour', name: 'Eternal Hour', icon: 'boss',   max: 4, cost: 2, key: 'bossTime',    mode: 'add',  per: 8 },
+    ],
+  },
+  {
+    id: 'dominion', name: 'Dominion', accent: '#ebb85b',
+    nodes: [
+      { id: 'avarice',  name: 'Avarice',  icon: 'gold',  max: 6, cost: 1, key: 'goldMul',   mode: 'mul', per: 0.45 },
+      { id: 'epiphany', name: 'Epiphany', icon: 'orb',   max: 5, cost: 1, key: 'xpMul',     mode: 'mul', per: 0.40 },
+      { id: 'hoard',    name: 'Hoard',    icon: 'dust',  max: 5, cost: 2, key: 'dustMul',   mode: 'mul', per: 0.40 },
+      { id: 'conquest', name: 'Conquest', icon: 'scout', max: 3, cost: 3, key: 'killsLess', mode: 'add', per: 1 },
+    ],
+  },
+];
+
 /** What a node does at a given number of points. */
 export function describeNode(node, ranks) {
   const n = Math.max(1, ranks); // with no points yet, show what the first buys
@@ -158,5 +193,11 @@ const LABEL = {
 
 /** Relic cost to take a node from `ranks` to `ranks + 1`. */
 export function relicCost(node, ranks) {
+  return node.cost + ranks;
+}
+
+/** Soul cost to take a node from `ranks` to `ranks + 1`. Same ramp as relics;
+ *  the nodes are shallower instead, because souls come in ones and twos. */
+export function soulCost(node, ranks) {
   return node.cost + ranks;
 }
