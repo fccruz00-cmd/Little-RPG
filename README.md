@@ -45,9 +45,12 @@ python3 tools/build_single_file.py
 
 - **Stages** hold 10 mobs plus a **final encounter**: a mini boss on regular
   stages, a **boss** every 5. Both walk in larger than the mobs; the boss also
-  runs a 30 s timer, and letting it expire or dying to it hands the boss its
-  health back. Against mobs and mini bosses, dying only costs the time to
-  stand up.
+  runs a 30 s timer. Against mobs and mini bosses, dying only costs the time
+  to stand up.
+- **Losing a boss holds the stage.** The boss used to respawn on a 1.2 s
+  timer, which turned a wall into an unwatchable loop of dying to the same
+  boss forever. Now mobs keep coming so the run still earns, and the boss
+  waits behind a **Try boss** button in the arena until you say go.
 - **Combat** has the hero walk into range, stop, and swing at the pace of the
   Attack Speed stat. Enemies do the same. When the hero falls it gets up in 2 s.
 - **Gold** drops from every kill and scales with the stage. Mini bosses pay 5x,
@@ -175,6 +178,40 @@ Two rules hold the whole thing up:
 *Forager*, on the relic tree, rotates your tool every 60 s so no line stalls
 while you are away.
 
+### Dungeons
+
+**Keys** are what the refined pile was for. One per resource tier, forged in
+the Smithing panel from bars **and** planks, and each opens a fixed run of
+eight rooms. Every room is a mini boss and the last is the boss, at a
+difficulty set by the **key**, not by your stage, so a key is a challenge you
+choose rather than one the line hands you.
+
+| key | rooms at stage | costs | pays |
+|---|---:|---|---|
+| Copper  |  26 | 40 bars + 30 planks   | 1 relic, 120 dust |
+| Iron    |  44 | 95 + 70               | 2 relics, 320 dust |
+| Silver  |  64 | 230 + 170             | 4 relics, 850 dust |
+| Gold    |  86 | 550 + 410             | 7 relics, 2.2K dust |
+| Mithril | 112 | 1300 + 980            | 12 relics, 5.6K dust |
+
+Enter from the button in the arena. **Dying ends the run and the key is
+spent** — that is the stake, and without it a key would just be a slow
+guarantee. A partial run still pays its share of dust and gold, because
+wiping the whole reward on an idle game you were not watching is a bad
+trade; relics are the exception and only pay on a full clear.
+
+Measured from stage 25 against the Copper Key: damage level 30 and 45 die,
+60 and up clear, in fifteen to twenty seconds. Short, but a run is pass or
+fail rather than a grind.
+
+**This is the one place rewards may touch damage.** Everywhere else gathering
+pays only in access and conversion, because kills produce nodes and nodes
+producing damage rebuilds the compounding loop the stat caps prevent. Here
+the loop is broken by the key cost: killing faster fills a key faster, but a
+key pays a fixed amount once and the next tier costs about 2.4x the last.
+Gold is priced off **your** stage rather than the key's level, since gold is
+the one thing here you can already farm.
+
 ### Smithing, and a forge that finally progresses
 
 The forge used to be pure RNG on fixed odds with nothing to improve. Smithing
@@ -253,6 +290,7 @@ src/
   data/
     balance.js      EVERY progression number, the file to rebalance
     gathering.js    the four skills: resources, tools, trees, Well Fed
+    dungeon.js      keys, rooms and what a run pays
     enemies.js      roster, when each mob unlocks, bosses
     upgrades.js     what shows up in the shop
     levels.js       XP curve and gain per kill

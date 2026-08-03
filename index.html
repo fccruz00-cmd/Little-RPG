@@ -49,6 +49,13 @@
       <i class="ico ico--boss"></i><span id="boss-timer-value">0.0</span>s
     </div>
     <div class="arena__toast" id="toast" hidden></div>
+    <!-- Contextual action, bottom of the arena: retry a held boss, enter a
+         dungeon, or walk out of one. Only ever one at a time. -->
+    <div class="arena__act" id="arena-act" hidden>
+      <button class="act-btn" id="act-boss" type="button" hidden>Try boss</button>
+      <button class="act-btn" id="act-enter" type="button" hidden></button>
+      <button class="act-btn act-btn--out" id="act-leave" type="button" hidden>Leave</button>
+    </div>
   </section>
 
   <!-- ===== TABBED PANEL ===== -->
@@ -131,6 +138,7 @@
       <!-- smithing has no line and no tool: it shows what it does instead -->
       <div class="workshop" id="workshop" hidden>
         <dl class="odds" id="smith-odds"></dl>
+        <div class="keys" id="keys"></div>
         <dl class="facts">
           <div><dt>Forge cost</dt><dd id="smith-cost">x1</dd></div>
           <div><dt>Refining, all skills</dt><dd id="smith-refine">x1</dd></div>

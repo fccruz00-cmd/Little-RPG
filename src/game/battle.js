@@ -6,6 +6,7 @@ import {
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
+import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
@@ -80,6 +81,12 @@ export class Battle {
     this.working = null;   // the node being worked, with its progress
     this.switchTimer = 0;
 
+    // The arena runs one of two things: the main line, or a dungeon. `run`
+    // is that context. Everything that used to read state.stage for scaling
+    // reads `this.level` instead, which is the only change the dungeon needs
+    // to make in the fight itself.
+    this.run = null;
+
     // Loading a save keeps the kills already made: closing the game mid
     // stage does not send you back to its start.
     this.enterStage(state.stage, { silent: true, keepKills: true });
@@ -96,8 +103,17 @@ export class Battle {
   }
 
   // --- stages -------------------------------------------------------
+  /** Stage everything scales off: the line's stage, or the key's level. */
+  get level() {
+    return this.run ? this.run.key.level : this.state.stage;
+  }
+
+  get inDungeon() {
+    return this.run !== null;
+  }
+
   get isBoss() {
-    return isBossStage(this.state.stage);
+    return this.run ? this.run.room >= DUNGEON.rooms : isBossStage(this.state.stage);
   }
 
   get camX() {
@@ -109,12 +125,15 @@ export class Battle {
    * a real boss (with a timer) every 5.
    */
   get atFinalEncounter() {
+    if (this.run) return this.run.room >= DUNGEON.rooms;
     return this.state.kills >= this.state.killsPerStage;
   }
 
   enterStage(stage, { silent = false, keepKills = false } = {}) {
     this.state.stage = Math.max(1, stage);
     if (!keepKills) this.state.kills = 0;
+    // A reload keeps the hold; walking into a different stage clears it.
+    if (!keepKills) this.state.bossHeld = false;
     this.enemy = null;
     this.corpses.length = 0;
     this.nodes.length = 0;
@@ -143,23 +162,110 @@ export class Battle {
     this.enterStage(clamped);
   }
 
+  /**
+   * The boss got away, or took you down.
+   *
+   * It used to respawn on a 1.2s timer, which turned a wall into an
+   * unwatchable loop of dying to the same boss forever. Now the stage HOLDS:
+   * mobs keep coming so the run still earns, and the boss waits behind a
+   * button until you say go. Failing costs you the attempt, not the session.
+   */
   failBoss(reason) {
     this.enemy = null;
     this.bossTimer = 0;
     this.state.hp = this.hero.hp = this.hero.maxHp;
     this.spawnTimer = 1.2;
+    this.state.bossHeld = true;
     this.emit('toast', { text: reason, bad: true });
+    this.emit('bossHeld', true);
+  }
+
+  /** The button. Sends the boss back in. */
+  tryBoss() {
+    if (!this.state.bossHeld) return false;
+    this.state.bossHeld = false;
+    this.enemy = null;
+    this.spawnTimer = 0.3;
+    this.state.hp = this.hero.hp = this.hero.maxHp;
+    this.emit('toast', { text: 'AGAIN' });
+    this.emit('bossHeld', false);
+    return true;
+  }
+
+  // --- dungeons -----------------------------------------------------
+  /** Spends the key and drops the hero into its rooms. */
+  enterDungeon(tier) {
+    if (this.run) return false;
+    const key = this.state.spendKey(tier);
+    if (!key) return false;
+    this.run = { key, room: 1, cleared: 0 };
+    this.enemy = null;
+    this.corpses.length = 0;
+    this.nodes.length = 0;
+    this.working = null;
+    this.nextNodeX = this.hero.x + GATHER.spacing * 0.5;
+    this.spawnTimer = 0.5;
+    this.bossTimer = 0;
+    this.hero.dead = false;
+    this.respawnTimer = 0;
+    this.state.hp = this.hero.hp = this.hero.maxHp;
+    this.emit('toast', { text: `${key.name.toUpperCase()}: ${DUNGEON.rooms} ROOMS` });
+    this.emit('dungeon', this.run);
+    return true;
+  }
+
+  /**
+   * Ends the run and pays out. A run that dies in room six is most of a win
+   * rather than nothing: the key is spent either way, and wiping the whole
+   * reward on an idle game you were not watching is a bad trade. Relics are
+   * the exception and only pay on a full clear.
+   */
+  finishDungeon(won) {
+    if (!this.run) return null;
+    const { key, cleared } = this.run;
+    const reward = dungeonReward(key, cleared, won);
+    this.state.relics += reward.relics;
+    this.state.dust += reward.dust;
+    // Priced off YOUR stage, not the key's level. A key twenty stages above
+    // you would otherwise hand over twenty stages of gold inflation in one
+    // run, and gold is the one thing here you can already farm. The reason
+    // to run a deeper key is relics and dust.
+    const gold = this.state.earn(enemyGold(Math.min(key.level, this.state.stage), 1) * reward.goldMul);
+    this.state.deepestKey = won ? Math.max(this.state.deepestKey ?? -1, key.tier) : (this.state.deepestKey ?? -1);
+
+    this.run = null;
+    this.hero.dead = false;
+    this.respawnTimer = 0;
+    this.state.hp = this.hero.hp = this.hero.maxHp;
+    this.enterStage(this.state.stage, { silent: true, keepKills: true });
+    this.emit('toast', won
+      ? { text: `${key.name.toUpperCase()} CLEARED` }
+      : { text: `RUN ENDED, ROOM ${cleared + 1}`, bad: true });
+    this.emit('dungeon', null);
+    return { ...reward, gold, won, cleared };
+  }
+
+  /** Walk out early, keeping what the cleared rooms are worth. */
+  leaveDungeon() {
+    return this.run ? this.finishDungeon(false) : null;
   }
 
   // --- spawning -----------------------------------------------------
   /** Which enemy comes next: `'mob'`, `'elite'` or `'boss'`. */
   nextEncounter() {
+    // Every dungeon room is a mini boss, and the last is the boss. Filling
+    // them with plain mobs made an eight room run last fifteen seconds and
+    // fall over to any build that could reach the key, which is not what a
+    // thing you spend a key on should feel like.
+    if (this.run) return this.run.room >= DUNGEON.rooms ? 'boss' : 'elite';
     if (!this.atFinalEncounter) return 'mob';
+    // Held: the stage stays farmable and the boss waits for the button.
+    if (this.isBoss && this.state.bossHeld) return 'mob';
     return this.isBoss ? 'boss' : 'elite';
   }
 
   spawnEnemy() {
-    const { stage } = this.state;
+    const stage = this.level;
     const kind = this.nextEncounter();
     const pool = mobsForStage(stage);
     const def = kind === 'boss' ? bossForStage(stage)
@@ -183,17 +289,17 @@ export class Battle {
     actor.isBoss = kind === 'boss';
     actor.isElite = kind === 'elite';
     actor.scale = kind === 'mob' ? 1 : kind === 'elite' ? 1.3 : 1.45;
-    actor.maxHp = enemyHp(stage, stats.hp);
+    actor.maxHp = enemyHp(stage, stats.hp) * (this.run ? DUNGEON.roomHp : 1);
     actor.hp = actor.maxHp;
-    actor.damage = enemyDamage(stage, stats.dmg);
+    actor.damage = enemyDamage(stage, stats.dmg) * (this.run ? DUNGEON.roomDmg : 1);
     actor.gold = enemyGold(stage, stats.gold);
     actor.period = stats.period;
     actor.attackTimer = actor.period * 0.6;
 
     this.enemy = actor;
     // The boss timer only starts running once it walks on screen.
-    if (actor.isBoss) this.bossTimer = BOSS_TIME + this.state.bonus.bossTime;
-    if (actor.isElite) this.emit('toast', { text: `MINI BOSS: ${def.name}` });
+    if (actor.isBoss) this.bossTimer = (this.run ? DUNGEON.bossTime : BOSS_TIME) + this.state.bonus.bossTime;
+    if (actor.isElite && !this.run) this.emit('toast', { text: `MINI BOSS: ${def.name}` });
     if (actor.isBoss) this.emit('toast', { text: `BOSS: ${def.name}`, bad: true });
     this.emit('spawn', actor);
   }
@@ -211,7 +317,7 @@ export class Battle {
     const edge = this.camX + this.viewWidth + SPAWN_MARGIN;
     const spacing = GATHER.spacing / state.gatherBonus(skillId).nodeMul;
     while (this.nextNodeX < edge) {
-      const resource = rollResource(skillId, state.stage, state.tools[skillId]);
+      const resource = rollResource(skillId, this.level, state.tools[skillId]);
       this.nodes.push({
         id: nextId++,
         x: this.nextNodeX,
@@ -280,7 +386,7 @@ export class Battle {
     // Both are flat per node, so they scale with the kill rate and nothing
     // else, which is what keeps them off the compounding curve.
     if (bonus.nodeGold > 0) {
-      const gold = state.earn(enemyGold(state.stage, 1) * bonus.nodeGold);
+      const gold = state.earn(enemyGold(this.level, 1) * bonus.nodeGold);
       this.pushFloater({ x: node.x, sprite: null, scale: 1 }, gold, 'gold');
     }
     if (bonus.nodeDust > 0 && Math.random() < bonus.nodeDust) {
@@ -352,6 +458,9 @@ export class Battle {
     this.working = null;   // no swinging from the floor
     this.respawnTimer -= dt;
     if (this.respawnTimer > 0) return;
+    // A dungeon is the one place dying costs the attempt: the key is what
+    // you wagered, and without that a key would just be a slow guarantee.
+    if (this.run) { this.finishDungeon(false); return; }
     this.hero.dead = false;
     this.hero.hp = this.hero.maxHp;
     this.hero.anim.play('idle', { fps: 8 });
@@ -455,9 +564,16 @@ export class Battle {
     }
 
     const xpMul = target.isBoss ? LEVELS.bossXp : target.isElite ? LEVELS.eliteXp : 1;
-    const levelsUp = state.gainXp(killXp(state.stage, xpMul));
+    const levelsUp = state.gainXp(killXp(this.level, xpMul));
     if (levelsUp) this.emit('toast', { text: `LEVEL ${state.level}!` });
     this.emit('kill', { target, gold, levelsUp });
+
+    if (this.run) {
+      this.run.cleared += 1;
+      this.run.room += 1;
+      if (target.isBoss) this.finishDungeon(true);
+      return;
+    }
 
     if (target.isBoss || target.isElite) {
       this.emit('toast', { text: target.isBoss ? 'BOSS DOWN!' : 'MINI BOSS DOWN!' });
@@ -562,6 +678,11 @@ export class Battle {
    * is worth the remaining 20%, by the health it has already lost.
    */
   get stageProgress() {
+    if (this.run) {
+      const rooms = (this.run.cleared / DUNGEON.rooms) * 0.85;
+      const boss = this.enemy?.isBoss ? (1 - this.enemy.hp / this.enemy.maxHp) * 0.15 : 0;
+      return Math.min(1, rooms + boss);
+    }
     const mobs = Math.min(1, this.state.kills / this.state.killsPerStage) * 0.8;
     const final = this.enemy && (this.enemy.isBoss || this.enemy.isElite)
       ? (1 - this.enemy.hp / this.enemy.maxHp) * 0.2

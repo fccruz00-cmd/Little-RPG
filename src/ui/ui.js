@@ -4,6 +4,7 @@ import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talent
 import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
+import { KEYS, DUNGEON } from '../data/dungeon.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
   describeGatherNode,
@@ -72,6 +73,8 @@ export class UI {
       trees: Object.fromEntries(SKILL_IDS.map((id) => [id, $(`tree-${id}`)])),
       pipSkills: $('pip-skills'), fed: $('fed'), fedTime: $('fed-time'),
       workshop: $('workshop'), smithOdds: $('smith-odds'), toolWrap: $('tool-wrap'),
+      keys: $('keys'), arenaAct: $('arena-act'), actBoss: $('act-boss'),
+      actEnter: $('act-enter'), actLeave: $('act-leave'),
       smithCost: $('smith-cost'), smithRefine: $('smith-refine'),
       smithScrap: $('smith-scrap'), smithFloor: $('smith-floor'),
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
@@ -103,6 +106,7 @@ export class UI {
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
     for (const id of SKILL_IDS) this.buildTree(this.el.trees[id], SKILL_TREES[id], id);
     this.buildStock();
+    this.buildKeys();
     this.buildForge();
     this.bind();
 
@@ -275,6 +279,26 @@ export class UI {
       this.refreshSkills();
     });
 
+    el.keys.addEventListener('click', (e) => {
+      const row = e.target.closest('.key');
+      if (!row) return;
+      const tier = Number(row.dataset.key);
+      if (!state.forgeKey(tier)) return;
+      state.save();
+      this.toast({ text: `${KEYS[tier].name.toUpperCase()} FORGED` });
+      this.refreshSkills();
+    });
+
+    el.actBoss.addEventListener('click', () => { battle.tryBoss(); state.save(); });
+    el.actEnter.addEventListener('click', () => {
+      if (this._enterTier == null) return;
+      if (battle.enterDungeon(this._enterTier)) state.save();
+    });
+    el.actLeave.addEventListener('click', () => {
+      const out = battle.leaveDungeon();
+      if (out) { state.save(); this.showReward(out); }
+    });
+
     el.toolBuy.addEventListener('click', () => {
       const id = this.skill;
       const next = state.nextTool(id);
@@ -427,13 +451,19 @@ export class UI {
     setText(el.xpText, `${fmt(state.xp)} / ${fmt(need)}`);
 
     const encounter = battle.nextEncounter();
-    setText(el.stageName, `Stage ${state.stage}`);
-    el.stageName.classList.toggle('is-boss', encounter === 'boss');
-    setText(el.stageSub, {
-      boss: 'boss',
-      elite: 'mini boss',
-      mob: `${state.kills} / ${state.killsPerStage}`,
-    }[encounter]);
+    if (battle.inDungeon) {
+      setText(el.stageName, battle.run.key.name);
+      el.stageName.classList.toggle('is-boss', encounter === 'boss');
+      setText(el.stageSub, `room ${Math.min(battle.run.room, DUNGEON.rooms)} / ${DUNGEON.rooms}`);
+    } else {
+      setText(el.stageName, `Stage ${state.stage}`);
+      el.stageName.classList.toggle('is-boss', encounter === 'boss');
+      setText(el.stageSub, state.bossHeld ? 'boss waiting' : {
+        boss: 'boss',
+        elite: 'mini boss',
+        mob: `${state.kills} / ${state.killsPerStage}`,
+      }[encounter]);
+    }
     setText(el.best, String(state.bestStage));
     setText(el.stageFoot, String(state.stage));
 
@@ -452,6 +482,18 @@ export class UI {
     el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0)
       && !GATHER_IDS.some((id) => state.canBuyTool(id));
     el.pipSkills.classList.add('pip--gold');
+
+    // Contextual action in the arena. A held boss outranks a key, because a
+    // hold is a thing that just happened to you and a key is a plan.
+    const inDungeon = battle.inDungeon;
+    const bestKey = inDungeon ? null
+      : [...KEYS].reverse().find((k) => (state.keys[k.tier] ?? 0) > 0) ?? null;
+    el.actBoss.hidden = inDungeon || !state.bossHeld;
+    el.actLeave.hidden = !inDungeon;
+    el.actEnter.hidden = inDungeon || state.bossHeld || !bestKey;
+    if (!el.actEnter.hidden) setText(el.actEnter, `Open the ${bestKey.name}`);
+    this._enterTier = bestKey ? bestKey.tier : null;
+    el.arenaAct.hidden = el.actBoss.hidden && el.actLeave.hidden && el.actEnter.hidden;
 
     // Well Fed is a live combat state, so it lives in the HUD, not the tab.
     el.fed.hidden = !state.fed;
@@ -694,6 +736,29 @@ export class UI {
     }
   }
 
+  /** One row per key: what it costs, what it opens, how many you hold. */
+  buildKeys() {
+    this.keyRows = new Map();
+    for (const key of KEYS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key';
+      row.dataset.key = String(key.tier);
+      row.innerHTML = `
+        <span class="ore__name">${key.name}</span>
+        <span class="key__what">stage ${key.level}, ${DUNGEON.rooms} rooms</span>
+        <span class="ore__have"><b>0</b></span>
+        <span class="ore__smelt">forge</span>`;
+      this.el.keys.append(row);
+      this.keyRows.set(key.tier, {
+        key, row,
+        have: row.querySelector('b'),
+        what: row.querySelector('.key__what'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+  }
+
   showSkill(id) {
     this.skill = id;
     for (const button of this.el.skillSwitch.querySelectorAll('button')) {
@@ -784,6 +849,21 @@ export class UI {
     const back = Math.min(0.95, 0.3 + state.gatherBonus('smithing').scrapBack);
     setText(el.smithScrap, pct(back, 0));
     setText(el.smithFloor, RARITIES[floor].name);
+
+    const known = new Set(state.knownKeys().map((k) => k.tier));
+    for (const [tier, entry] of this.keyRows) {
+      entry.row.hidden = !known.has(tier);
+      if (entry.row.hidden) continue;
+      const cost = state.keyCost(tier);
+      const can = state.canForgeKey(tier);
+      setText(entry.have, String(state.keys[tier] ?? 0));
+      setHtml(entry.what, `stage ${entry.key.level} &middot; `
+        + `<i class="ico ico--sm ico--bar"></i>${fmt(state.refined[cost.ore] ?? 0)}/${cost.bars} `
+        + `<i class="ico ico--sm ico--plank"></i>${fmt(state.refined[cost.log] ?? 0)}/${cost.planks}`);
+      setText(entry.action, can ? 'forge' : 'need');
+      entry.row.disabled = !can;
+      entry.row.classList.toggle('can-smelt', can);
+    }
   }
 
   refreshSkillTree(id) {
@@ -885,6 +965,16 @@ export class UI {
   }
 
   /** Notice for gold banked while the game was closed. */
+  /** What a dungeon run paid. Shown on the way out, win or lose. */
+  showReward({ relics, dust, gold, won, cleared }) {
+    const parts = [];
+    if (relics > 0) parts.push(`+${relics} relic(s)`);
+    if (dust > 0) parts.push(`+${fmt(dust)} dust`);
+    if (gold > 0) parts.push(`+${fmt(gold)} gold`);
+    if (!parts.length) return;
+    this.toast({ text: `${won ? 'CLEARED' : `${cleared} rooms`}: ${parts.join(', ')}`, bad: !won });
+  }
+
   showOffline({ seconds, gold }) {
     this.toast({ text: `+${fmt(gold)} gold over ${duration(seconds)}` });
   }

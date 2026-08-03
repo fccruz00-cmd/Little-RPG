@@ -8,8 +8,9 @@ import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
-  MEAL, SMITH, TOOL_TIERS, toolCost, gatherXpToNext, refineCost,
+  MEAL, SMITH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
 } from '../data/gathering.js';
+import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -18,7 +19,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 7;
+const SAVE_VERSION = 8;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -59,6 +60,11 @@ function defaults() {
     fedTier: -1,      // tier of the meal being eaten, -1 when not fed
     fedTimer: 0,
 
+    // dungeons
+    keys: {},         // key tier -> how many are held
+    deepestKey: -1,   // deepest key tier fully cleared
+    bossHeld: false,  // the boss beat you; it waits for the button
+
     buyMax: false,
     goldPerSec: 0,
     lastSeen: Date.now(),
@@ -96,12 +102,13 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 6) {
+  if (data.version >= 1 && data.version <= 7) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
     // v6: before smithing. Its level and tree simply start empty, and the
     // constructor fills the new skill in, so nothing needs remapping.
+    // v7: before dungeon keys and the boss hold. Both start empty too.
     const out = {
       ...defaults(),
       ...data,
@@ -142,6 +149,7 @@ export class GameState {
     this.tools = Object.fromEntries(SKILL_IDS.map((id) => [id, data.tools?.[id] ?? 0]));
     this.raw = { ...(data.raw ?? {}) };
     this.refined = { ...(data.refined ?? {}) };
+    this.keys = { ...(data.keys ?? {}) };
     if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
     this._bonus = null;
@@ -435,6 +443,50 @@ export class GameState {
     return this.gatherBonus('smithing').forgeCostLess;
   }
 
+  // --- dungeon keys -------------------------------------------------
+  // Keys are what the refined pile was for. Cost is bars AND planks of the
+  // matching tier, so a key needs both gathering lines the same way a tool
+  // does, and the cost curve is what stops a cleared dungeon from paying for
+  // the next one outright.
+  keyCost(tier) {
+    const key = KEY_BY_TIER[tier];
+    if (!key) return null;
+    return {
+      ore: ORES[tier].id, bars: key.cost.bars,
+      log: LOGS[tier].id, planks: key.cost.planks,
+    };
+  }
+
+  canForgeKey(tier) {
+    const cost = this.keyCost(tier);
+    if (!cost) return false;
+    return (this.refined[cost.ore] ?? 0) >= cost.bars
+      && (this.refined[cost.log] ?? 0) >= cost.planks;
+  }
+
+  forgeKey(tier) {
+    if (!this.canForgeKey(tier)) return false;
+    const cost = this.keyCost(tier);
+    this.refined[cost.ore] -= cost.bars;
+    this.refined[cost.log] -= cost.planks;
+    this.keys[tier] = (this.keys[tier] ?? 0) + 1;
+    // A key is smithing work like any other, and the biggest single piece.
+    this.gainGatherXp('smithing', KEY_BY_TIER[tier].dust * SMITH.forgeXp);
+    return true;
+  }
+
+  /** Takes one key off the ring. Returns the key it spent, or null. */
+  spendKey(tier) {
+    if ((this.keys[tier] ?? 0) < 1) return null;
+    this.keys[tier] -= 1;
+    return KEY_BY_TIER[tier];
+  }
+
+  /** Keys worth showing: the ones you can see the material for. */
+  knownKeys() {
+    return KEYS.filter((k) => this.bestStage >= ORES[k.tier].minStage || (this.keys[k.tier] ?? 0) > 0);
+  }
+
   /** The tool one tier above the one in hand, or null at the top. */
   nextTool(skillId) {
     const tier = this.tools[skillId] + 1;
@@ -598,6 +650,7 @@ export class GameState {
 
     this.stage = this.startStage;
     this.maxStage = this.startStage;
+    this.bossHeld = false;
     this.hp = this.maxHp;
     this.save();
     return gain;
@@ -661,7 +714,7 @@ export class GameState {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer,
+      fedTier, fedTimer, keys, deepestKey, bossHeld,
       buyMax, goldPerSec,
     } = this;
     return {
@@ -669,7 +722,7 @@ export class GameState {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer,
+      fedTier, fedTimer, keys, deepestKey, bossHeld,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }
