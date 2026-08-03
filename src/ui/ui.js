@@ -480,7 +480,8 @@ export class UI {
     // "there is something to spend here" markers
     el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0;
     el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0)
-      && !GATHER_IDS.some((id) => state.canBuyTool(id));
+      && !GATHER_IDS.some((id) => state.canBuyTool(id))
+      && !KEYS.some((k) => state.canForgeKey(k.tier));
     el.pipSkills.classList.add('pip--gold');
 
     // Contextual action in the arena. A held boss outranks a key, because a

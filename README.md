@@ -180,9 +180,9 @@ while you are away.
 
 ### Dungeons
 
-**Keys** are what the refined pile was for. One per resource tier, forged in
-the Smithing panel from bars **and** planks, and each opens a fixed run of
-eight rooms. Every room is a mini boss and the last is the boss, at a
+**Keys** are what the refined pile was for. One per resource tier, forged at
+the top of the **Smithing** panel (Skills tab) from bars **and** planks, and
+each opens a fixed run of eight rooms. Every room is a mini boss and the last is the boss, at a
 difficulty set by the **key**, not by your stage, so a key is a challenge you
 choose rather than one the line hands you.
 
