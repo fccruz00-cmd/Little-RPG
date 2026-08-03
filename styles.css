@@ -155,11 +155,11 @@ body { display: flex; justify-content: center; }
 .hud {
   flex: none;
   position: relative;
-  padding: 5px 8px 6px;
-  padding-top: calc(5px + env(safe-area-inset-top));
+  padding: 3px 8px 4px;
+  padding-top: calc(3px + env(safe-area-inset-top));
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   background-color: var(--wood);
   background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
   background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
@@ -183,21 +183,23 @@ body { display: flex; justify-content: center; }
   gap: 3px;
 }
 
+/* One line, not a stack: "Stage 27 · 3/10". The stack was a whole HUD row. */
 .hud__stage-label {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 92px;
-  line-height: 1.15;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  line-height: 1.1;
 }
 .hud__stage-name {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--cream);
   white-space: nowrap;
 }
 .hud__stage-name.is-boss { color: #ffc7b0; }
-.hud__stage-sub { font-size: 10px; color: #e2c9a5; opacity: .85; }
+.hud__stage-sub { font-size: 9px; color: #e2c9a5; opacity: .85; white-space: nowrap; }
+.hud__stage-sub::before { content: '· '; opacity: .6; }
 
 /* The steppers are real pack buttons, not glyphs floating on the wood. The
    arrow is drawn with borders rather than typed: U+25B6 renders as a tofu
@@ -207,8 +209,8 @@ body { display: flex; justify-content: center; }
   --px: 2;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 26px;
+  width: 26px;
+  height: 21px;
   padding: 0;
   border: 0;
   cursor: pointer;
@@ -223,11 +225,11 @@ body { display: flex; justify-content: center; }
   content: '';
   width: 0;
   height: 0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
 }
-.stepper--prev::before { border-right: 6px solid var(--ink-dark); }
-.stepper--next::before { border-left: 6px solid var(--ink-dark); }
+.stepper--prev::before { border-right: 5px solid var(--ink-dark); }
+.stepper--next::before { border-left: 5px solid var(--ink-dark); }
 .stepper:disabled { border-image-source: url(assets/ui/button_disabled.png); cursor: default; }
 .stepper:disabled::before { opacity: .45; }
 .stepper:not(:disabled):active {
@@ -235,23 +237,22 @@ body { display: flex; justify-content: center; }
   border-image-source: url(assets/ui/button_pressed.png);
 }
 
-/* Gold is the number that runs the game: it gets size, with the per-second
-   rate below it, which is what tells you whether to wait or buy now. */
+/* Gold is the number that runs the game: it keeps the size, and the rate
+   sits beside it instead of under it. The stack was the other HUD row. */
 .purse {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: baseline;
+  gap: 4px;
   line-height: 1.05;
+  min-width: 0;
 }
+.purse .ico { align-self: center; }
 .purse__now {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #ffe9ae;
 }
-.purse__rate { font-size: 10px; color: #e2c9a5; }
+.purse__rate { font-size: 9px; color: #e2c9a5; white-space: nowrap; }
 .purse__rate b { color: #b8f0bd; font-weight: 700; }
 
 /* experience bar */
@@ -270,7 +271,7 @@ body { display: flex; justify-content: center; }
   --px: 2;
   position: relative;
   flex: 1 1 auto;
-  height: 15px;
+  height: 11px;
   border-style: solid;
   border-width: calc(var(--px) * 1px) calc(var(--px) * 1px) calc(var(--px) * 2px);
   border-image-source: url(assets/ui/bar_track.png);
@@ -410,7 +411,7 @@ body { display: flex; justify-content: center; }
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   gap: 3px;
-  padding: 4px 4px 5px;
+  padding: 3px 4px 4px;
   background-color: var(--wood);
   background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
   background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
@@ -421,7 +422,7 @@ body { display: flex; justify-content: center; }
 .tab {
   --px: 2;
   position: relative;
-  padding: 3px 1px 4px;
+  padding: 2px 1px 3px;
   border: 0;
   font: inherit;
   font-size: 9px;

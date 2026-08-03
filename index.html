@@ -18,16 +18,16 @@
     <div class="hud__row">
       <div class="hud__stage">
         <button class="stepper stepper--prev" id="stage-prev" type="button" aria-label="Previous stage"></button>
-        <div class="hud__stage-label">
+        <span class="hud__stage-label">
           <span class="hud__stage-name" id="stage-name">Stage 1</span>
           <span class="hud__stage-sub" id="stage-sub">0 / 10</span>
-        </div>
+        </span>
         <button class="stepper stepper--next" id="stage-next" type="button" aria-label="Next stage"></button>
       </div>
-      <div class="purse">
-        <span class="purse__now"><i class="ico ico--lg ico--gold"></i><b id="stat-gold">0</b></span>
+      <span class="purse">
+        <i class="ico ico--gold"></i><b class="purse__now" id="stat-gold">0</b>
         <span class="purse__rate"><b id="stat-gps">0</b>/s</span>
-      </div>
+      </span>
     </div>
     <div class="hud__row hud__row--xp">
       <span class="hud__lvl">Lv.<b id="stat-level">1</b></span>
