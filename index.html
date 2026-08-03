@@ -72,7 +72,7 @@
         Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
-        Prestige<i class="pip" id="pip-prestige" hidden></i>
+        Ascend<i class="pip" id="pip-prestige" hidden></i>
       </button>
     </nav>
 
@@ -186,9 +186,20 @@
         Dungeon <b>keys</b> are forged there too.</p>
     </div>
 
-    <!-- tab 5: rebirth -->
+    <!-- tab 5: ascension, the two reset layers -->
     <div class="pane" id="pane-prestige">
-      <div class="prestige">
+      <div class="pane__head">
+        <div class="segmented" id="asc-switch">
+          <button class="is-on" data-asc="rebirth" type="button">Rebirth</button>
+          <button data-asc="awaken" type="button">Awaken<i class="pip" id="pip-awaken" hidden></i></button>
+        </div>
+        <span class="pane__points" id="asc-souls" hidden>
+          <i class="ico ico--sm ico--orb"></i> <b id="souls-have">0</b> soul(s)
+        </span>
+      </div>
+
+      <!-- layer 1: rebirth pays relics -->
+      <div class="prestige" id="asc-rebirth">
         <div class="prestige__gain">
           <i class="ico ico--lg ico--relic"></i>
           <div>
@@ -217,6 +228,34 @@
           <h3>Permanent bonuses</h3>
           <ul id="perks-list"></ul>
         </section>
+      </div>
+
+      <!-- layer 2: awakening resets the relic layer too and pays souls -->
+      <div class="prestige" id="asc-awaken" hidden>
+        <div class="prestige__gain prestige__gain--soul">
+          <i class="ico ico--lg ico--orb"></i>
+          <div>
+            <strong id="awk-gain">0</strong> soul(s)
+            <small>if you awaken now</small>
+          </div>
+        </div>
+
+        <dl class="facts">
+          <div><dt>Souls held</dt><dd id="awk-have">0</dd></div>
+          <div><dt>Awakenings</dt><dd id="awk-count">0</dd></div>
+          <div><dt>Damage and gold</dt><dd id="awk-mul">x1</dd></div>
+          <div><dt>Next soul</dt><dd id="awk-next">50 relics</dd></div>
+        </dl>
+
+        <p class="prestige__note">
+          Awakening wipes everything Rebirth wipes <b>plus relics, the relic
+          tree, rebirths, dust and gear</b>. You keep your <b>souls</b> and
+          everything on the <b>Skills</b> tab. Souls come from every relic
+          this ascension has earned (<b id="awk-progress">0</b> so far), and
+          each one multiplies <b>damage and gold, forever</b>.
+        </p>
+
+        <button class="big-btn" id="awk-go" type="button" disabled>Awaken</button>
 
         <button class="link link--danger" id="btn-reset" type="button">Erase everything and start over</button>
       </div>

@@ -6,7 +6,7 @@ clears stages. All you decide is where the gold goes.
 
 The layout follows the three bands from the original sketch: **UI** on top,
 **Fight** in the middle, and a tabbed panel below with **Upgrades**,
-**Talents**, **Skills**, **Forge** and **Prestige**.
+**Talents**, **Skills**, **Forge** and **Ascend**.
 
 ```
 +------------------------------+
@@ -109,10 +109,18 @@ it.
    - In both, a node only opens once the previous one in its branch has a point.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
-5. **Prestige**: rebirth. Wipes stage, gold, upgrades, level and skill points,
-   and turns the depth of the run into relics. The first one lands at stage 25;
-   since the formula is cumulative minus what you already collected, repeating
-   the same depth does not pay twice.
+5. **Ascend**: the two reset layers behind one switch.
+   - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
+     the depth of the run into relics. The first one lands at stage 25; since
+     the formula is cumulative minus what you already collected, repeating
+     the same depth does not pay twice.
+   - *Awaken* is the layer above: it wipes everything Rebirth wipes **plus
+     relics, the relic tree, rebirths, dust and gear**, and pays **souls**.
+     Souls are measured against every relic the ascension earned, from all
+     three sources: banked by past rebirths, still pending in the current
+     run, and paid by dungeon clears. The first soul lands at 50 relics, and
+     each one is a permanent +30% to damage and gold that nothing, not even
+     the next awakening, ever takes back. The Skills tab survives, as always.
 
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**.
@@ -296,16 +304,16 @@ src/
     levels.js       XP curve and gain per kill
     talents.js      both trees (nodes, effects, costs)
     gear.js         forge: slots, rarities, odds and costs
-    prestige.js     what a run is worth in relics
+    prestige.js     what a run is worth in relics, and a cycle in souls
     sprites.js      GENERATED, frame counts and body box per sprite
   engine/
     loader.js       image loading
     anim.js         spritesheet player
   game/
-    state.js        derived stats, trees, level, forge, prestige, save/load
+    state.js        derived stats, trees, level, forge, ascension, save/load
     battle.js       arena simulation (knows nothing about canvas or DOM)
     render.js       canvas: procedural scenery, sprites, bars, numbers
-  ui/ui.js          HUD, tabs, shop, trees, forge and prestige panel
+  ui/ui.js          HUD, tabs, shop, trees, forge and ascension panel
 little-rpg.html     GENERATED, the whole game in one file
 tools/
   extract_assets.py    crops the source packs down to what the game uses
@@ -363,7 +371,7 @@ whole vocabulary is sixteen crops:
 
 | sprite | slice | where it goes |
 |---|---|---|
-| `board` | `6 6 7 6`, no fill | every card: stat plaques, forge slots, prestige facts, boss timer, toast |
+| `board` | `6 6 7 6`, no fill | every card: stat plaques, forge slots, ascension facts, boss timer, toast |
 | `button` | `3 3 4 3 fill` | shop rows, tabs, steppers, rebirth. `button_disabled` for off, `button_pressed` for `:active` |
 | `frame_gem` / `frame_lit` | `6 6 7 6` | tree nodes, gems dark when empty and lit when maxed |
 | `scroll` | `3 5 4 5 fill` | the parchment strip that explains a tab |

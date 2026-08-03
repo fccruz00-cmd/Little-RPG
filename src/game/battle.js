@@ -225,6 +225,9 @@ export class Battle {
     const { key, cleared } = this.run;
     const reward = dungeonReward(key, cleared, won);
     this.state.relics += reward.relics;
+    // Counted separately so awakening pays for them too: relicsEarned is the
+    // stage curve's offset and cannot absorb relics the curve never granted.
+    this.state.extraRelics += reward.relics;
     this.state.dust += reward.dust;
     // Priced off YOUR stage, not the key's level. A key twenty stages above
     // you would otherwise hand over twenty stages of gold inflation in one
@@ -248,6 +251,19 @@ export class Battle {
   /** Walk out early, keeping what the cleared rooms are worth. */
   leaveDungeon() {
     return this.run ? this.finishDungeon(false) : null;
+  }
+
+  /**
+   * Drops the run with no payout. Rebirth and awakening both wipe the state a
+   * reward would land in, so paying one out is meaningless; what matters is
+   * that `run` is cleared, because `enterStage` alone leaves it standing and
+   * the hero would restart on stage 1 while the arena still scaled every
+   * enemy off the key's level.
+   */
+  forfeitDungeon() {
+    if (!this.run) return;
+    this.run = null;
+    this.emit('dungeon', null);
   }
 
   // --- spawning -----------------------------------------------------

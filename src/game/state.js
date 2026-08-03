@@ -3,7 +3,7 @@ import {
 } from '../data/balance.js';
 import { LEVELS, xpToNext } from '../data/levels.js';
 import { TALENT_TREE, RELIC_TREE, BONUS_KEYS, relicCost } from '../data/talents.js';
-import { relicsEarnedAt } from '../data/prestige.js';
+import { relicsEarnedAt, soulsEarnedAt, AWAKEN } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
 import {
@@ -19,7 +19,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 8;
+const SAVE_VERSION = 9;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -44,6 +44,14 @@ function defaults() {
     relicsEarned: 0,
     relicTalents: {},
     prestiges: 0,
+
+    souls: 0,
+    awakens: 0,
+    // Relics this ascension earned OFF the stage curve, which today means
+    // dungeon clears. It cannot live in relicsEarned, because that doubles as
+    // the offset `pendingRelics` subtracts from the curve: adding to it there
+    // would silently cancel a rebirth payout the player already reached.
+    extraRelics: 0,
 
     dust: 0,
     gear: {},        // slotId -> index of the equipped rarity
@@ -102,13 +110,15 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 7) {
+  if (data.version >= 1 && data.version <= 8) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
     // v6: before smithing. Its level and tree simply start empty, and the
     // constructor fills the new skill in, so nothing needs remapping.
     // v7: before dungeon keys and the boss hold. Both start empty too.
+    // v8: before awakening; souls, awakens and extraRelics start at zero via
+    // defaults, so an old save simply begins its first ascension cycle here.
     const out = {
       ...defaults(),
       ...data,
@@ -194,6 +204,13 @@ export class GameState {
       if (slot.mode === 'mul') b[slot.key] *= 1 + amount;
       else if (slot.mode === 'less') b[slot.key] *= Math.max(0.1, 1 - amount);
       else b[slot.key] += amount;
+    }
+
+    // Souls sit above both trees and the gear: awakening's pay is the one
+    // multiplier nothing in the game ever wipes.
+    if (this.souls > 0) {
+      b.dmgMul *= this.soulMul;
+      b.goldMul *= this.soulMul;
     }
 
     this._bonus = b;
@@ -638,6 +655,13 @@ export class GameState {
     this.relicsEarned += gain;
     this.prestiges += 1;
 
+    this.resetRun();
+    this.save();
+    return gain;
+  }
+
+  /** The wipe both reset layers share: the gold run itself. */
+  resetRun() {
     this.gold = 0;
     this.levels = emptyLevels();
     this.level = 1;
@@ -652,6 +676,51 @@ export class GameState {
     this.maxStage = this.startStage;
     this.bossHeld = false;
     this.hp = this.maxHp;
+  }
+
+  // --- awakening ------------------------------------------------------
+  get soulMul() {
+    return 1 + AWAKEN.perSoul * this.souls;
+  }
+
+  /**
+   * Every relic this ascension has earned, from all three sources: banked by
+   * past rebirths, still pending in the current run, and paid out by dungeon
+   * clears. This is what souls are measured against.
+   */
+  get cycleRelics() {
+    return this.relicsEarned + this.pendingRelics + this.extraRelics;
+  }
+
+  /**
+   * Souls an awakening would pay right now. Pending relics count, so
+   * awakening straight off a deep run does not forfeit the rebirth it
+   * skipped, and neither does a key you cleared on the way there.
+   */
+  get pendingSouls() {
+    return soulsEarnedAt(this.cycleRelics);
+  }
+
+  /** Awaken. Returns the souls gained (0 when it did not fire). */
+  awaken() {
+    const gain = this.pendingSouls;
+    if (gain <= 0) return 0;
+
+    this.souls += gain;
+    this.awakens += 1;
+
+    // The relic layer goes with the run: that is the whole point of the
+    // deeper reset. Wiped before resetRun so startStage (Heirloom) and
+    // maxHp read the stripped tree, not the one that just vanished.
+    this.relics = 0;
+    this.relicsEarned = 0;
+    this.extraRelics = 0;
+    this.relicTalents = {};
+    this.prestiges = 0;
+    this.dust = 0;
+    this.gear = {};
+
+    this.resetRun();
     this.save();
     return gain;
   }
@@ -712,7 +781,8 @@ export class GameState {
   toJSON() {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
-      relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
+      relics, relicsEarned, relicTalents, prestiges, souls, awakens, extraRelics,
+      dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld,
       buyMax, goldPerSec,
@@ -720,7 +790,8 @@ export class GameState {
     return {
       version: SAVE_VERSION,
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
-      relics, relicsEarned, relicTalents, prestiges, dust, gear, autoCraftOn,
+      relics, relicsEarned, relicTalents, prestiges, souls, awakens, extraRelics,
+      dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld,
       buyMax, goldPerSec, lastSeen: Date.now(),

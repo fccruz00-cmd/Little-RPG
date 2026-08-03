@@ -1,7 +1,10 @@
 import { UPGRADES } from '../data/upgrades.js';
 import { GameState } from '../game/state.js';
 import { TALENT_TREE, RELIC_TREE, describeNode, relicCost } from '../data/talents.js';
-import { nextRelicStage, relicsEarnedAt, PRESTIGE } from '../data/prestige.js';
+import {
+  nextRelicStage, relicsEarnedAt, PRESTIGE,
+  nextSoulRelics, soulsEarnedAt, AWAKEN,
+} from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
@@ -80,7 +83,13 @@ export class UI {
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
       presGain: $('pres-gain'), presHave: $('pres-have'), presCount: $('pres-count'),
       presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
-      presGainBox: document.querySelector('.prestige__gain'),
+      presGainBox: document.querySelector('#asc-rebirth .prestige__gain'),
+      ascSwitch: $('asc-switch'), ascSouls: $('asc-souls'), soulsHave: $('souls-have'),
+      ascRebirth: $('asc-rebirth'), ascAwaken: $('asc-awaken'), pipAwaken: $('pip-awaken'),
+      awkGain: $('awk-gain'), awkHave: $('awk-have'), awkCount: $('awk-count'),
+      awkMul: $('awk-mul'), awkNext: $('awk-next'), awkGo: $('awk-go'),
+      awkProgress: $('awk-progress'),
+      awkGainBox: document.querySelector('#asc-awaken .prestige__gain'),
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
@@ -90,6 +99,7 @@ export class UI {
 
     this.tab = 'upgrades';
     this.tree = 'talents';
+    this.asc = 'rebirth';    // which reset layer the Ascension tab shows
     this.skill = 'mining';   // which skill the tab is showing, not what is equipped
     // Set while the tab is hidden and the fight is being fast-forwarded.
     // Nobody is looking, so skip the DOM: a two minute catch-up can contain
@@ -344,10 +354,16 @@ export class UI {
     el.stagePrev.addEventListener('click', () => battle.goToStage(state.stage - 1));
     el.stageNext.addEventListener('click', () => battle.goToStage(state.stage + 1));
 
+    el.ascSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button) this.showAsc(button.dataset.asc);
+    });
+
     el.presGo.addEventListener('click', () => {
       const gain = state.pendingRelics;
       if (gain <= 0) return;
       if (!confirm(`Rebirth now pays ${gain} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?`)) return;
+      battle.forfeitDungeon();
       state.prestige();
       battle.enterStage(state.startStage, { silent: true });
       this.refreshShop(true);
@@ -361,8 +377,22 @@ export class UI {
       });
     });
 
+    el.awkGo.addEventListener('click', () => {
+      const gain = state.pendingSouls;
+      if (gain <= 0) return;
+      if (!confirm(`Awakening pays ${gain} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive. Confirm?`)) return;
+      battle.forfeitDungeon();
+      state.awaken();
+      battle.enterStage(state.startStage, { silent: true });
+      this.refreshShop(true);
+      this.refreshTrees(true);
+      this.refreshForge();
+      this.showTab('upgrades');
+      this.toast({ text: `AWAKENED: +${gain} SOUL(S)` });
+    });
+
     el.reset.addEventListener('click', () => {
-      if (!confirm('Erase EVERYTHING, relics and prestige included?')) return;
+      if (!confirm('Erase EVERYTHING, souls, relics and prestige included?')) return;
       GameState.wipe();
       location.reload();
     });
@@ -393,6 +423,17 @@ export class UI {
     this.el.respec.hidden = name !== 'talents';
     setText(this.el.treeDetail, 'Tap a node to invest.');
     this.refreshTrees(true);
+  }
+
+  /** Flips the Ascension tab between its two reset layers. */
+  showAsc(name) {
+    this.asc = name;
+    for (const button of this.el.ascSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.asc === name);
+    }
+    this.el.ascRebirth.hidden = name !== 'rebirth';
+    this.el.ascAwaken.hidden = name !== 'awaken';
+    this.refreshPrestige();
   }
 
   /** Where a tree keeps its ranks. One map per kind, same shape. */
@@ -499,7 +540,7 @@ export class UI {
     // Well Fed is a live combat state, so it lives in the HUD, not the tab.
     el.fed.hidden = !state.fed;
     if (state.fed) setText(el.fedTime, String(Math.ceil(state.fedTimer)));
-    el.pipPrestige.hidden = state.pendingRelics <= 0;
+    el.pipPrestige.hidden = state.pendingRelics <= 0 && state.pendingSouls <= 0;
     el.pipPrestige.classList.add('pip--gold');
     el.tabForge.hidden = !state.forgeUnlocked;
     el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
@@ -946,6 +987,35 @@ export class UI {
     setText(el.presGo, gain > 0
       ? `Rebirth for ${gain} relic(s)`
       : `Reach stage ${isFinite(next) ? next : PRESTIGE.minStage}`);
+
+    // The soul purse only appears once awakening has entered the game.
+    el.ascSouls.hidden = state.souls <= 0 && state.awakens <= 0;
+    setText(el.soulsHave, fmt(state.souls));
+    this.refreshAwaken();
+  }
+
+  /** The Awaken side: what an ascension-wide reset would pay right now. */
+  refreshAwaken() {
+    const { state, el } = this;
+    const gain = state.pendingSouls;
+    const earned = state.cycleRelics;
+
+    setText(el.awkGain, String(gain));
+    setText(el.awkHave, fmt(state.souls));
+    setText(el.awkCount, String(state.awakens));
+    setText(el.awkMul, `x${state.soulMul.toFixed(2)}`);
+    setText(el.awkProgress, fmt(earned));
+
+    // Measured from what the cycle is already worth, like the relic readout.
+    const next = nextSoulRelics(soulsEarnedAt(earned));
+    setText(el.awkNext, isFinite(next) ? `${next} relics` : 'n/a');
+
+    el.awkGainBox.classList.toggle('is-empty', gain <= 0);
+    el.pipAwaken.hidden = gain <= 0;
+    el.awkGo.disabled = gain <= 0;
+    setText(el.awkGo, gain > 0
+      ? `Awaken for ${gain} soul(s)`
+      : `Earn ${isFinite(next) ? next : AWAKEN.minRelics} relics first`);
   }
 
   /** Lists what the relic tree already grants; hides itself when empty. */
