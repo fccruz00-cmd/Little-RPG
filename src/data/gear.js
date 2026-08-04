@@ -33,6 +33,28 @@ export const SLOTS = [
   { id: 'ring',   name: 'Ring',   icon: 'it_ring',   key: 'critAdd',     mode: 'add',  per: 0.006 },
 ];
 
+// Wearing the whole board at one rarity or better pays a set bonus on top,
+// indexed by the LOWEST rarity you wear. It is what the auto-forge is
+// grinding toward once every slot is purple and the rolls keep missing.
+export const SET_BONUS = [
+  null,                                          // all Common: no prize
+  { dmgMul: 0.05, hpMul: 0.05 },                 // all Uncommon+
+  { dmgMul: 0.10, hpMul: 0.10 },                 // all Rare+
+  { dmgMul: 0.18, hpMul: 0.18 },                 // all Epic+
+  { dmgMul: 0.30, hpMul: 0.30, goldMul: 0.15 },  // all Legendary
+];
+
+/** Lowest rarity worn, or null while any slot is empty. */
+export function setRarity(gear) {
+  let lowest = Infinity;
+  for (const slot of SLOTS) {
+    const r = gear[slot.id];
+    if (r == null) return null;
+    lowest = Math.min(lowest, r);
+  }
+  return lowest;
+}
+
 // Soul dust
 export const DUST = {
   mobChance: 0.20,   // per regular mob

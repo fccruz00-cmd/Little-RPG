@@ -27,6 +27,9 @@ One entry in your browser's `localStorage`, under the key
 - Soul dust, forged gear, dungeon keys
 - Gathering skills: levels, trees, tools, raw and refined resources
 - Pets: which are tamed and their levels
+- Potion timers: seconds remaining on active brews
+- Lifetime counters used by feats: kills, bosses, deaths, forges, refines,
+  feeds, brews, dungeon clears
 - Settings: buy-max and auto-forge toggles
 - A timestamp of when you last had the game open, used only to work out
   offline earnings the next time you open it

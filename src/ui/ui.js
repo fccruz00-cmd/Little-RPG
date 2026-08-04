@@ -8,10 +8,11 @@ import {
   nextSoulRelics, soulsEarnedAt, AWAKEN,
 } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
-import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
+import { SLOTS, RARITIES, SET_BONUS, setRarity, describeGear, rarityOdds } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
+import { FEATS, featDone } from '../data/feats.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
@@ -93,6 +94,7 @@ export class UI {
       presGainBox: document.querySelector('#asc-rebirth .prestige__gain'),
       ascSwitch: $('asc-switch'), ascSouls: $('asc-souls'), soulsHave: $('souls-have'),
       ascRebirth: $('asc-rebirth'), ascAwaken: $('asc-awaken'), pipAwaken: $('pip-awaken'),
+      ascFeats: $('asc-feats'), featsList: $('feats-list'),
       awkGain: $('awk-gain'), awkHave: $('awk-have'), awkCount: $('awk-count'),
       awkSpent: $('awk-spent'), awkNext: $('awk-next'), awkGo: $('awk-go'),
       awkProgress: $('awk-progress'),
@@ -103,6 +105,7 @@ export class UI {
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
+      setStatus: $('set-status'),
       reset: $('btn-reset'),
     };
 
@@ -130,6 +133,7 @@ export class UI {
     this.buildCauldron();
     this.buildForge();
     this.buildPets();
+    this.buildFeats();
     this.bind();
 
     battle.on('toast', (t) => this.toast(t));
@@ -513,7 +517,7 @@ export class UI {
     this.refreshTrees(true);
   }
 
-  /** Flips the Ascension tab between its two reset layers. */
+  /** Flips the Ascension tab between its reset layers and the feats. */
   showAsc(name) {
     this.asc = name;
     for (const button of this.el.ascSwitch.querySelectorAll('button')) {
@@ -521,7 +525,31 @@ export class UI {
     }
     this.el.ascRebirth.hidden = name !== 'rebirth';
     this.el.ascAwaken.hidden = name !== 'awaken';
+    this.el.ascFeats.hidden = name !== 'feats';
     this.refreshPrestige();
+  }
+
+  buildFeats() {
+    this.featRows = new Map();
+    const frag = document.createDocumentFragment();
+    for (const feat of FEATS) {
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="featlist__name">${feat.name}</span>
+        <span class="featlist__desc">${feat.desc} &middot; <b>${describeNode(feat, 1)}</b></span>
+        <b class="featlist__mark"></b>`;
+      frag.append(li);
+      this.featRows.set(feat.id, { feat, li, mark: li.querySelector('.featlist__mark') });
+    }
+    this.el.featsList.append(frag);
+  }
+
+  refreshFeats() {
+    const { state } = this;
+    for (const { feat, li, mark } of this.featRows.values()) {
+      const done = featDone(feat, state.stats);
+      li.classList.toggle('is-done', done);
+      setText(mark, done ? '\u2713' : `${fmt(Math.min(state.stats[feat.stat] ?? 0, feat.need))}/${fmt(feat.need)}`);
+    }
   }
 
   /** Where a tree keeps its ranks. One map per kind, same shape. */
@@ -799,6 +827,15 @@ export class UI {
         ? 'maxed'
         : `<i class="ico ico--sm ico--dust"></i> ${cost}`);
     }
+
+    // The set line: what the whole board pays now, or what it would.
+    const worn = setRarity(state.gear);
+    const bonus = worn != null ? SET_BONUS[worn] : null;
+    setHtml(this.el.setStatus, bonus
+      ? `Set bonus, all ${RARITIES[worn].name}+: <b>+${Math.round(bonus.dmgMul * 100)}% damage and health${bonus.goldMul ? `, +${Math.round(bonus.goldMul * 100)}% gold` : ''}</b>.`
+      : worn != null
+        ? 'Set bonus: raise every slot past Common to start it.'
+        : 'Set bonus: fill every slot to start it.');
   }
 
   /**
@@ -1177,6 +1214,7 @@ export class UI {
     el.ascSouls.hidden = state.souls <= 0 && state.awakens <= 0;
     setText(el.soulsHave, fmt(state.souls));
     this.refreshAwaken();
+    this.refreshFeats();
   }
 
   /** The Awaken side: what an ascension-wide reset would pay right now. */

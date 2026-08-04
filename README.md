@@ -193,6 +193,24 @@ cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
 gathering economy touches, pets and their levels survive **rebirth and
 awakening both**.
 
+### The cauldron, feats and Bloodmoons
+
+- **Cauldron** (Smithing workshop): three potions, each drinking one line's
+  surplus. Time Draught (planks, +20s on every boss clock), Fury Tonic
+  (bars, +25% damage), Lucky Brew (dust, +50% gold). Ten minutes each,
+  bankable to thirty; prices scale with the deepest material band seen.
+- **Feats** (Ascend tab): fourteen lifetime marks, each paying a small
+  permanent bonus. The counters never reset, not even on an awakening.
+- **Bloodmoon runs**: a dungeon tier you have already cleared can be
+  reopened with no regen and double loot. Same key, higher stakes.
+- **Boss traits**: from stage 30 every boss fights with one named trick,
+  from the Templar's Shield Wall to the Doom Herald's ramping damage.
+- **Forge set bonus**: wearing all seven slots at one rarity or better pays
+  a bonus keyed to the LOWEST slot, up to +30% damage and health plus
+  +15% gold for a full Legendary board.
+- **Soul tree**: five branches now; Menagerie amplifies pets and cheapens
+  their feed, Harvest reaches every gathering line at once.
+
 ### Skills: Mining, Chopping, Fishing and Smithing
 
 Nodes spawn on the same line the hero already walks. It stops, works them,

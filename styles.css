@@ -1370,6 +1370,32 @@ body { display: flex; justify-content: center; }
 }
 .perks li b { color: var(--gold); margin-left: auto; }
 
+/* Feats: lifetime marks on the Ascend tab. Rows echo the perks list. */
+.featlist {
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+.featlist li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 7px;
+  font-size: 10px;
+  color: var(--ink-dim);
+  background: #241b16;
+  border-left: 3px solid var(--stone);
+  box-shadow: 0 0 0 1px #00000088;
+}
+.featlist li.is-done { border-left-color: var(--gold); }
+.featlist__name { font-weight: 700; color: var(--cream); white-space: nowrap; }
+.featlist li.is-done .featlist__name { color: var(--gold); }
+.featlist__desc { min-width: 0; }
+.featlist__desc b { color: var(--cream); }
+.featlist__mark { white-space: nowrap; color: var(--ink-mute); }
+.featlist li.is-done .featlist__mark { color: var(--gold); }
+
 /* --- footer --- */
 .foot {
   flex: none;

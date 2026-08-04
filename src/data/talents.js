@@ -21,6 +21,8 @@ export const BONUS_KEYS = [
   'dustChance', 'dustMul', 'bossTime', 'autoBuy', 'autoCraft', 'autoSwitch',
   // combat skills
   'doubleHit', 'lifesteal', 'executeMul', 'ambush',
+  // pets and gathering, reached only by the soul tree
+  'petPower', 'feedLess', 'yieldAll', 'workAll',
 ];
 
 /** Seconds between automatic purchases at the first rank of Herald. */
@@ -153,6 +155,22 @@ export const SOUL_TREE = [
       { id: 'conquest', name: 'Conquest', icon: 'scout', max: 3, cost: 3, key: 'killsLess', mode: 'add', per: 1 },
     ],
   },
+  // The two branches that reach systems no other tree can touch: the pets
+  // at your heel and the whole gathering economy at once.
+  {
+    id: 'menagerie', name: 'Menagerie', accent: '#e67a84',
+    nodes: [
+      { id: 'packLeader',   name: 'Pack Leader',    icon: 'crown', max: 6, cost: 2, key: 'petPower', mode: 'add',  per: 0.15 },
+      { id: 'keepersTable', name: "Keeper's Table", icon: 'fish',  max: 4, cost: 2, key: 'feedLess', mode: 'less', per: 0.10 },
+    ],
+  },
+  {
+    id: 'harvest', name: 'Harvest', accent: '#6dba79',
+    nodes: [
+      { id: 'greenThumb', name: 'Green Thumb', icon: 'ore', max: 6, cost: 2, key: 'yieldAll', mode: 'add',  per: 0.10 },
+      { id: 'quickHands', name: 'Quick Hands', icon: 'axe', max: 4, cost: 2, key: 'workAll',  mode: 'less', per: 0.08 },
+    ],
+  },
 ];
 
 /** What a node does at a given number of points. */
@@ -176,6 +194,10 @@ export function describeNode(node, ranks) {
     case 'lifesteal':    return `heals ${pct(total)} of damage dealt`;
     case 'executeMul':   return `+${pct(total)} damage below 30% health`;
     case 'ambush':       return `+${pct(total)} on the first hit on each enemy`;
+    case 'petPower':     return `pet buffs +${pct(total)} stronger`;
+    case 'feedLess':     return `pets eat ${pct(total)} less fish`;
+    case 'yieldAll':     return `+${pct(total)} yield, every gathering skill`;
+    case 'workAll':      return `${pct(total)} faster work, every gathering skill`;
     default:             return `${mult(1 + total)} ${LABEL[node.key] ?? ''}`.trim();
   }
 }

@@ -194,7 +194,8 @@
       <div class="forge" id="forge-list"></div>
       <dl class="odds" id="odds"></dl>
       <p class="foot-note">Odds move with <b>Smithing</b>, on the Skills tab.
-        Dungeon <b>keys</b> are forged there too.</p>
+        Dungeon <b>keys</b> are forged there too.<br>
+        <span id="set-status"></span></p>
     </div>
 
     <!-- tab 5: pets. The slime is free; the rest are objectives. -->
@@ -218,6 +219,7 @@
         <div class="segmented" id="asc-switch">
           <button class="is-on" data-asc="rebirth" type="button">Rebirth</button>
           <button data-asc="awaken" type="button">Awaken<i class="pip" id="pip-awaken" hidden></i></button>
+          <button data-asc="feats" type="button">Feats</button>
         </div>
         <span class="pane__points" id="asc-souls" hidden>
           <i class="ico ico--sm ico--orb"></i> <b id="souls-have">0</b> soul(s)
@@ -254,6 +256,16 @@
           <h3>Permanent bonuses</h3>
           <ul id="perks-list"></ul>
         </section>
+      </div>
+
+      <!-- feats: lifetime marks, each worth a small permanent bonus -->
+      <div class="prestige" id="asc-feats" hidden>
+        <p class="prestige__note">
+          Feats are lifetime marks: the counters never reset, not even on an
+          awakening, and each finished feat pays a <b>small permanent
+          bonus</b> forever.
+        </p>
+        <ul class="featlist" id="feats-list"></ul>
       </div>
 
       <!-- layer 2: awakening resets the relic layer too and pays souls -->

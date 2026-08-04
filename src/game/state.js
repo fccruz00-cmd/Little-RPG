@@ -5,7 +5,7 @@ import { LEVELS, xpToNext } from '../data/levels.js';
 import { TALENT_TREE, RELIC_TREE, SOUL_TREE, BONUS_KEYS, relicCost, soulCost } from '../data/talents.js';
 import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
-import { SLOTS, RARITIES, DUST, craftCost, rollRarity, gearValue } from '../data/gear.js';
+import { SLOTS, RARITIES, DUST, SET_BONUS, setRarity, craftCost, rollRarity, gearValue } from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
   MEAL, SMITH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
@@ -13,11 +13,12 @@ import {
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
 import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
 import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
+import { FEATS, featDone, emptyStats } from '../data/feats.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
   'dmgMul', 'atkSpeedMul', 'hpMul', 'regenMul', 'goldMul', 'xpMul', 'moveMul',
-  'damageTaken', 'respawnMul', 'dustMul',
+  'damageTaken', 'respawnMul', 'dustMul', 'feedLess', 'workAll',
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
@@ -77,6 +78,9 @@ function defaults() {
 
     // cauldron: potion id -> seconds of effect remaining
     potions: {},
+
+    // lifetime counters, the raw material of feats. Nothing resets them.
+    stats: emptyStats(),
 
     // dungeons
     keys: {},         // key tier -> how many are held
@@ -177,6 +181,7 @@ export class GameState {
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
+    this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
     // Unlocks read live state, so a save from before pets existed walks out
     // of load with everything it already earned, the slime included. Silent
     // on purpose: the battle announces tames that happen live, not backlog.
@@ -228,11 +233,30 @@ export class GameState {
       else b[slot.key] += amount;
     }
 
-    // Every tamed pet is one more node, with its level as the ranks. The
-    // choice already happened at the taming; from here they all pull.
+    // Wearing every slot at one rarity or better pays the set bonus, keyed
+    // by the LOWEST rarity worn: the whole board has to rise together.
+    const setLevel = setRarity(this.gear);
+    if (setLevel != null && SET_BONUS[setLevel]) {
+      for (const [key, amount] of Object.entries(SET_BONUS[setLevel])) {
+        b[key] *= 1 + amount;
+      }
+    }
+
+    // Completed feats are nodes with a single permanent rank. Completion is
+    // monotone (the counters only climb), so it derives instead of storing.
+    for (const feat of FEATS) {
+      if (featDone(feat, this.stats)) apply(feat, 1);
+    }
+
+    // Every tamed pet is one more node, with its level as the ranks, and
+    // Pack Leader (soul tree) amplifies the lot. Pets fold LAST so petPower
+    // is already summed whichever branch order the trees ran in.
     for (const pet of PETS) {
       const level = this.pets[pet.id];
-      if (level) apply(pet, level);
+      if (!level) continue;
+      const amount = pet.per * level * (1 + b.petPower);
+      if (pet.mode === 'mul') b[pet.key] *= 1 + amount;
+      else b[pet.key] += amount;
     }
 
     this._bonus = b;
@@ -265,6 +289,10 @@ export class GameState {
         else b[node.key] += amount;
       }
     }
+    // The Harvest branch of the soul tree is the one bonus source outside
+    // the skill's own tree: it reaches every line at once.
+    b.yieldMul *= 1 + this.bonus.yieldAll;
+    b.gatherSpeed *= this.bonus.workAll;
     this._gatherBonus[skillId] = b;
     return b;
   }
@@ -461,6 +489,7 @@ export class GameState {
     if (made <= 0) return 0;
     this.raw[resource.id] -= made * this.refineCostFor(skillId, resource);
     this.refined[resource.id] = (this.refined[resource.id] ?? 0) + made;
+    this.stats.refines += made;
     // Refining is half of what Smithing does, and the half that works from
     // stage 1: the forge itself does not open until the first rebirth.
     this.gainGatherXp('smithing', made * resource.xp * SMITH.refineXp);
@@ -503,7 +532,8 @@ export class GameState {
   petFood(id) {
     const pet = PET_BY_ID[id];
     const fish = SKILLS.fishing.resources[pet.fishTier];
-    return { fish, cost: petFeedCost(this.pets[id] ?? 1) };
+    const cost = Math.max(1, Math.ceil(petFeedCost(this.pets[id] ?? 1) * this.bonus.feedLess));
+    return { fish, cost };
   }
 
   canFeedPet(id) {
@@ -517,6 +547,7 @@ export class GameState {
     const { fish, cost } = this.petFood(id);
     this.raw[fish.id] -= cost;
     this.pets[id] += 1;
+    this.stats.feeds += 1;
     this.invalidateBonus();
     return true;
   }
@@ -560,6 +591,7 @@ export class GameState {
     // you can stockpile for a week is a stat with extra steps.
     const potion = POTION_BY_ID[id];
     this.potions[id] = Math.min((this.potions[id] ?? 0) + potion.duration, potion.duration * 3);
+    this.stats.brews += 1;
     return true;
   }
 
@@ -741,6 +773,8 @@ export class GameState {
     this.gainGatherXp('smithing', cost * SMITH.forgeXp);
 
     const rolled = rollRarity(this.forgeQuality, this.forgeFloor);
+    this.stats.forges += 1;
+    if (rolled === RARITIES.length - 1) this.stats.legendaries += 1;
     const current = this.gear[slotId];
     const better = current == null || rolled > current;
 
@@ -930,7 +964,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
       buyMax, goldPerSec,
     } = this;
     return {
@@ -940,7 +974,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }

@@ -8,6 +8,7 @@ import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balan
 import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
+import { FEATS, featDone } from '../data/feats.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
@@ -94,6 +95,9 @@ export class Battle {
     this.petActors = [];
     this._petKey = '';
     this.syncPets();
+
+    // Feats finished before this session loaded are old news, not toasts.
+    this._featsDone = new Set(FEATS.filter((f) => featDone(f, state.stats)).map((f) => f.id));
 
     // Loading a save keeps the kills already made: closing the game mid
     // stage does not send you back to its start.
@@ -192,6 +196,14 @@ export class Battle {
   updatePets(dt) {
     for (const pet of this.state.tamePets()) {
       this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+    }
+    // Feats ride the same tick: counters move on many sites, and the ones
+    // that climb in the background should still pay when they cross.
+    for (const feat of FEATS) {
+      if (this._featsDone.has(feat.id) || !featDone(feat, this.state.stats)) continue;
+      this._featsDone.add(feat.id);
+      this.state.invalidateBonus();
+      this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}` });
     }
     this.syncPets();
     const walking = this.hero.anim.name === 'walk';
@@ -293,6 +305,10 @@ export class Battle {
     // to run a deeper key is relics and dust.
     const gold = this.state.earn(enemyGold(Math.min(key.level, this.state.stage), 1) * reward.goldMul);
     this.state.deepestKey = won ? Math.max(this.state.deepestKey ?? -1, key.tier) : (this.state.deepestKey ?? -1);
+    if (won) {
+      this.state.stats.dungeonWins += 1;
+      if (bloody) this.state.stats.bloodWins += 1;
+    }
 
     this.run = null;
     this.hero.dead = false;
@@ -656,6 +672,8 @@ export class Battle {
 
   killEnemy(target) {
     const { state } = this;
+    state.stats.kills += 1;
+    if (target.isBoss) state.stats.bossKills += 1;
     target.dead = true;
     target.corpseTimer = CORPSE_TIME;
     target.anim.play('death', { fps: 10, loop: false, force: true });
@@ -757,6 +775,7 @@ export class Battle {
       enemy.hp = Math.min(enemy.maxHp, enemy.hp + taken * trait.power);
     }
     if (killed) {
+      this.state.stats.deaths += 1;
       hero.dead = true;
       hero.anim.play('death', { fps: 8, loop: false, force: true });
       this.respawnTimer = RESPAWN_DELAY * this.state.respawnMul;
