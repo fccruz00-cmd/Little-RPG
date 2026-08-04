@@ -24,14 +24,52 @@ const BAR_TRACK = '#150f0d';
 const BAR_RAIL_DIM = '#7a6a4e';
 const BAR_TRIM = '#dacea4';   // cream rail, for the encounters worth framing
 
-// Biome palettes, swapped every 10 stages.
-const BIOMES = [
-  { sky: ['#1b2340', '#3d3357'], far: '#2a2743', mid: '#1d1b31', tree: '#12101f', ground: '#2f2a3d', grass: '#4a4460' },
-  { sky: ['#152a2a', '#37543f'], far: '#22402f', mid: '#17301f', tree: '#0d1c12', ground: '#243a26', grass: '#3d6b3f' },
-  { sky: ['#301a22', '#6b3524'], far: '#4a2320', mid: '#331717', tree: '#1d0d0c', ground: '#3d2320', grass: '#6b3b28' },
-  { sky: ['#101a2c', '#24405e'], far: '#1b3350', mid: '#122238', tree: '#0a1422', ground: '#1d2c40', grass: '#2f5570' },
-  { sky: ['#231533', '#4b2a5e'], far: '#33204a', mid: '#211433', tree: '#150c22', ground: '#2c1d3d', grass: '#553670' },
+// Scenery tiers. The roster descends into hell at stage 64 and bottoms out
+// past 150, and the sky is what should say so first: the sprites alone were
+// carrying the whole descent. Within a tier the palettes still swap every
+// 10 stages, so the line keeps changing on the way down.
+//
+// `embers` flips the stars from pinpricks to warm sparks drifting upward,
+// and the moon runs blood-red over hell, bone-pale over the depths.
+const BIOME_TIERS = [
+  {
+    from: 1, moon: '#f6f0dc', star: '#ffffff', embers: false,
+    biomes: [
+      { sky: ['#1b2340', '#3d3357'], far: '#2a2743', mid: '#1d1b31', tree: '#12101f', ground: '#2f2a3d', grass: '#4a4460' },
+      { sky: ['#152a2a', '#37543f'], far: '#22402f', mid: '#17301f', tree: '#0d1c12', ground: '#243a26', grass: '#3d6b3f' },
+      { sky: ['#301a22', '#6b3524'], far: '#4a2320', mid: '#331717', tree: '#1d0d0c', ground: '#3d2320', grass: '#6b3b28' },
+      { sky: ['#101a2c', '#24405e'], far: '#1b3350', mid: '#122238', tree: '#0a1422', ground: '#1d2c40', grass: '#2f5570' },
+      { sky: ['#231533', '#4b2a5e'], far: '#33204a', mid: '#211433', tree: '#150c22', ground: '#2c1d3d', grass: '#553670' },
+    ],
+  },
+  {
+    from: 64, moon: '#d94f38', star: '#ffb37a', embers: true,
+    biomes: [
+      { sky: ['#2a0f0d', '#612514'], far: '#451a14', mid: '#2e100c', tree: '#1b0805', ground: '#33150f', grass: '#8a3a1e' },
+      { sky: ['#331109', '#7a2d12'], far: '#521f10', mid: '#36130a', tree: '#200a04', ground: '#3a180d', grass: '#a04a1a' },
+      { sky: ['#241014', '#54202c'], far: '#3d1720', mid: '#280e15', tree: '#17070c', ground: '#2e1218', grass: '#7a2c38' },
+      { sky: ['#2e0d16', '#6b1f2e'], far: '#4a1622', mid: '#310d17', tree: '#1d060e', ground: '#361019', grass: '#8f2f3a' },
+      { sky: ['#1f0c0a', '#4a1c0e'], far: '#38140c', mid: '#250c07', tree: '#150503', ground: '#2b0f0a', grass: '#6e2f16' },
+    ],
+  },
+  {
+    from: 150, moon: '#9aa3b8', star: '#aab6c8', embers: false,
+    biomes: [
+      { sky: ['#0e0e16', '#28242f'], far: '#1e1b28', mid: '#14121c', tree: '#0a0910', ground: '#201d28', grass: '#3d3850' },
+      { sky: ['#0c1013', '#20292c'], far: '#182226', mid: '#101719', tree: '#080c0d', ground: '#1a2124', grass: '#33454a' },
+      { sky: ['#0d0a15', '#241c38'], far: '#1a142a', mid: '#110d1d', tree: '#080611', ground: '#1c1628', grass: '#3a2d55' },
+      { sky: ['#111013', '#2c2624'], far: '#211d1b', mid: '#151312', tree: '#0b0a09', ground: '#231f1d', grass: '#453c36' },
+    ],
+  },
 ];
+
+/** Palette for a stage: its tier, and the 10-stage rotation inside it. */
+function biomeFor(stage) {
+  let tier = BIOME_TIERS[0];
+  for (const t of BIOME_TIERS) if (stage >= t.from) tier = t;
+  const biome = tier.biomes[Math.floor((stage - 1) / 10) % tier.biomes.length];
+  return { tier, biome };
+}
 
 export class Renderer {
   /** @param {HTMLCanvasElement} canvas */
@@ -72,12 +110,12 @@ export class Renderer {
   draw(battle, time) {
     const { ctx } = this;
     const camX = battle.camX;
-    const biome = BIOMES[Math.floor((battle.state.stage - 1) / 10) % BIOMES.length];
+    const { tier, biome } = biomeFor(battle.state.stage);
 
     ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
 
-    this.drawBackground(camX, biome, time);
+    this.drawBackground(camX, biome, tier, time);
     this.drawNodes(battle, camX);
 
     for (const corpse of battle.corpses) this.drawActor(corpse, camX, { fade: corpse.corpseTimer });
@@ -97,7 +135,7 @@ export class Renderer {
   }
 
   // --- scenery ------------------------------------------------------
-  drawBackground(camX, biome, time) {
+  drawBackground(camX, biome, tier, time) {
     const { ctx, width: W, height: H, groundY } = this;
 
     const sky = ctx.createLinearGradient(0, 0, 0, groundY);
@@ -106,21 +144,26 @@ export class Renderer {
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
 
-    // stars
-    ctx.fillStyle = '#ffffff';
+    // Stars, or over hell, embers drifting up out of the ground haze.
+    ctx.fillStyle = tier.star;
+    const field = groundY - 14;
     for (let i = 0; i < 40; i++) {
       const sx = (hash(i) * 400 - camX * 0.05) % 400;
       const x = sx < 0 ? sx + 400 : sx;
       if (x > W) continue;
-      const y = hash(i + 900) * (groundY - 14);
+      let y = hash(i + 900) * field;
+      if (tier.embers) {
+        y = (y - time * (3 + hash(i + 31) * 5)) % field;
+        if (y < 0) y += field;
+      }
       ctx.globalAlpha = 0.25 + hash(i + 77) * 0.5;
       ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
     }
     ctx.globalAlpha = 1;
 
-    // moon
+    // moon: bone over the overworld, blood over hell, ash in the depths
     const moonX = 20 - ((camX * 0.02) % (W + 60));
-    ctx.fillStyle = '#f6f0dc';
+    ctx.fillStyle = tier.moon;
     ctx.globalAlpha = 0.85;
     ctx.beginPath();
     ctx.arc(moonX + W * 0.7, 12, 5, 0, Math.PI * 2);
