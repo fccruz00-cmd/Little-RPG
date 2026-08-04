@@ -39,21 +39,40 @@ export const MOBS = [
 // that also climbed with the tier would count the same growth twice, and the
 // second count lands entirely on the timer. Ramping `dmg` instead puts the
 // tier's threat somewhere the player can answer, with health and regen.
+// From stage 30 every boss also fights with a TRAIT, one trick each, named
+// in its arrival toast. Below 30 they stay plain: the opening stages are
+// tuned tight already, and the stretch that needed teeth was 30 through 90,
+// where a run used to sail through without a single death.
+export const TRAIT_FROM = 30;
+
 export const BOSSES = [
-  { id: 'orc_rider',      name: 'Orc Rider',   from: 1,   hp: 1.00, dmg: 1.6, speed: 16, reach: 22, hit: 0.60 },
-  { id: 'knight_templar', name: 'Templar',     from: 1,   hp: 1.15, dmg: 1.5, speed: 15, reach: 21, hit: 0.55 },
-  { id: 'swordsman',      name: 'Swordsman',   from: 1,   hp: 1.05, dmg: 1.7, speed: 20, reach: 20, hit: 0.55 },
-  { id: 'necromancer',    name: 'Necromancer', from: 1,   hp: 1.25, dmg: 1.8, speed: 13, reach: 24, hit: 0.65 },
-  { id: 'wizard',         name: 'Archmage',    from: 1,   hp: 1.35, dmg: 2.0, speed: 14, reach: 24, hit: 0.60 },
+  { id: 'orc_rider',      name: 'Orc Rider',   from: 1,   hp: 1.00, dmg: 1.6, speed: 16, reach: 22, hit: 0.60,
+    trait: { kind: 'doublehit', power: 4,    label: 'Rider & Mount' } },   // every 4th swing lands twice
+  { id: 'knight_templar', name: 'Templar',     from: 1,   hp: 1.15, dmg: 1.5, speed: 15, reach: 21, hit: 0.55,
+    trait: { kind: 'block',     power: 0.25, label: 'Shield Wall' } },     // every 3rd hit does a quarter
+  { id: 'swordsman',      name: 'Swordsman',   from: 1,   hp: 1.05, dmg: 1.7, speed: 20, reach: 20, hit: 0.55,
+    trait: { kind: 'riposte',   power: 5,    label: 'Riposte' } },         // every 5th hit taken answers
+  { id: 'necromancer',    name: 'Necromancer', from: 1,   hp: 1.25, dmg: 1.8, speed: 13, reach: 24, hit: 0.65,
+    trait: { kind: 'leech',     power: 0.6,  label: 'Soul Drain' } },      // heals from damage dealt
+  { id: 'wizard',         name: 'Archmage',    from: 1,   hp: 1.35, dmg: 2.0, speed: 14, reach: 24, hit: 0.60,
+    trait: { kind: 'burn',      power: 3,    label: 'Scorch' } },          // hits stop regen for 3s
   // --- hell ---
-  { id: 'black_knight_a', name: 'Black Knight',from: 70,  hp: 1.20, dmg: 2.1, speed: 17, reach: 21, hit: 0.60 },
-  { id: 'demoness_a',     name: 'Succubus',    from: 90,  hp: 1.28, dmg: 2.3, speed: 16, reach: 24, hit: 0.60 },
-  { id: 'demon_d',        name: 'Pit Lord',    from: 110, hp: 1.34, dmg: 2.5, speed: 15, reach: 23, hit: 0.60 },
-  { id: 'black_knight_b', name: 'Dread Knight',from: 130, hp: 1.40, dmg: 2.7, speed: 18, reach: 21, hit: 0.55 },
-  { id: 'warlock',        name: 'Warlock',     from: 150, hp: 1.46, dmg: 2.9, speed: 14, reach: 25, hit: 0.65 },
-  { id: 'demoness_b',     name: 'Hell Matron', from: 170, hp: 1.52, dmg: 3.2, speed: 17, reach: 22, hit: 0.60 },
-  { id: 'demon_e',        name: 'Archdemon',   from: 190, hp: 1.58, dmg: 3.5, speed: 16, reach: 24, hit: 0.60 },
-  { id: 'black_knight_c', name: 'Doom Herald', from: 210, hp: 1.65, dmg: 3.8, speed: 19, reach: 23, hit: 0.55 },
+  { id: 'black_knight_a', name: 'Black Knight',from: 70,  hp: 1.20, dmg: 2.1, speed: 17, reach: 21, hit: 0.60,
+    trait: { kind: 'aura',      power: 0.2,  label: 'Dread Aura' } },      // your swings 20% slower
+  { id: 'demoness_a',     name: 'Succubus',    from: 90,  hp: 1.28, dmg: 2.3, speed: 16, reach: 24, hit: 0.60,
+    trait: { kind: 'leech',     power: 1.0,  label: 'Life Kiss' } },
+  { id: 'demon_d',        name: 'Pit Lord',    from: 110, hp: 1.34, dmg: 2.5, speed: 15, reach: 23, hit: 0.60,
+    trait: { kind: 'enrage',    power: 0.6,  label: 'Tantrum' } },         // +60% damage under 30% hp
+  { id: 'black_knight_b', name: 'Dread Knight',from: 130, hp: 1.40, dmg: 2.7, speed: 18, reach: 21, hit: 0.55,
+    trait: { kind: 'block',     power: 0,    label: 'Iron Wall' } },       // every 3rd hit does nothing
+  { id: 'warlock',        name: 'Warlock',     from: 150, hp: 1.46, dmg: 2.9, speed: 14, reach: 25, hit: 0.65,
+    trait: { kind: 'curse',     power: 0.5,  label: 'Withering Curse' } }, // your regen halved
+  { id: 'demoness_b',     name: 'Hell Matron', from: 170, hp: 1.52, dmg: 3.2, speed: 17, reach: 22, hit: 0.60,
+    trait: { kind: 'frenzy',    power: 0.4,  label: 'Frenzy' } },          // swings faster as she bleeds
+  { id: 'demon_e',        name: 'Archdemon',   from: 190, hp: 1.58, dmg: 3.5, speed: 16, reach: 24, hit: 0.60,
+    trait: { kind: 'executioner', power: 0.8, label: 'Executioner' } },    // +80% when you are half dead
+  { id: 'black_knight_c', name: 'Doom Herald', from: 210, hp: 1.65, dmg: 3.8, speed: 19, reach: 23, hit: 0.55,
+    trait: { kind: 'ramp',      power: 0.04, label: 'Gathering Doom' } },  // +4% damage per second
 ];
 
 // The Soldier is the only character in the pack shipping with a shadow baked

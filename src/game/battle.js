@@ -1,7 +1,7 @@
 import { Animator } from '../engine/anim.js';
 import { SPRITES, GROUND_LINE } from '../data/sprites.js';
 import {
-  HERO, MOBS, mobsForStage, eliteForStage, isBossStage, bossForStage,
+  HERO, MOBS, mobsForStage, eliteForStage, isBossStage, bossForStage, TRAIT_FROM,
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
@@ -72,6 +72,7 @@ export class Battle {
     this.respawnTimer = 0;
     this.spawnTimer = 0;
     this.bossTimer = 0;
+    this.burnTimer = 0;   // Scorch: seconds of regen still snuffed out
 
     // Gathering nodes live on the same line as everything else. `nextNodeX`
     // walks forward with the hero so a node is placed once and never twice.
@@ -365,9 +366,20 @@ export class Battle {
       // drunk mid-fight pays on the NEXT attempt, not this one.
       this.bossTimer = (this.run ? DUNGEON.bossTime : BOSS_TIME)
         + this.state.bonus.bossTime + this.state.potionBossTime;
+      // From TRAIT_FROM every boss fights with its one trick. The counters
+      // live on the actor, so a retry starts the trick from zero too.
+      if (def.trait && this.level >= TRAIT_FROM) {
+        actor.trait = def.trait;
+        actor.hitsTaken = 0;
+        actor.swings = 0;
+        actor.fightT = 0;
+      }
     }
     if (actor.isElite && !this.run) this.emit('toast', { text: `MINI BOSS: ${def.name}` });
-    if (actor.isBoss) this.emit('toast', { text: `BOSS: ${def.name}`, bad: true });
+    if (actor.isBoss) {
+      const trick = actor.trait ? ` \u00b7 ${actor.trait.label.toUpperCase()}` : '';
+      this.emit('toast', { text: `BOSS: ${def.name}${trick}`, bad: true });
+    }
     this.emit('spawn', actor);
   }
 
@@ -541,7 +553,11 @@ export class Battle {
   updateHero(dt) {
     const { state, hero } = this;
 
-    if (hero.hp < hero.maxHp) hero.hp = Math.min(hero.maxHp, hero.hp + state.regen * dt);
+    if (this.burnTimer > 0) this.burnTimer -= dt;
+    const curse = this.enemy?.trait?.kind === 'curse' ? 1 - this.enemy.trait.power : 1;
+    if (hero.hp < hero.maxHp && this.burnTimer <= 0) {
+      hero.hp = Math.min(hero.maxHp, hero.hp + state.regen * curse * dt);
+    }
 
     const target = this.enemy;
     const inRange = target && !target.dead
@@ -563,8 +579,10 @@ export class Battle {
     }
     this.working = null;
 
-    // In range: swing at the pace of the attack speed stat.
-    const period = 1 / state.attackRate;
+    // In range: swing at the pace of the attack speed stat. A Dread Aura
+    // stretches the period while its owner stands.
+    const aura = target.trait?.kind === 'aura' ? 1 + target.trait.power : 1;
+    const period = aura / state.attackRate;
     hero.attackTimer -= dt;
     if (hero.attackTimer <= 0) {
       hero.attackTimer = period;
@@ -596,6 +614,18 @@ export class Battle {
         dealt *= 1 + state.bonus.ambush;
       }
       if (target.hp / target.maxHp <= 0.3) dealt *= 1 + state.bonus.executeMul;
+
+      if (target.trait) {
+        target.hitsTaken += 1;
+        // Shield/Iron Wall: every 3rd hit lands at `power` of its value.
+        if (target.trait.kind === 'block' && target.hitsTaken % 3 === 0) {
+          dealt *= target.trait.power;
+        }
+        // Riposte: every `power`-th hit taken answers outside the cadence.
+        if (target.trait.kind === 'riposte' && target.hitsTaken % target.trait.power === 0) {
+          this.enemyStrike(target);
+        }
+      }
 
       const killed = target.hurt(dealt);
       this.pushFloater(target, dealt, crit ? 'crit' : 'hit');
@@ -670,9 +700,14 @@ export class Battle {
       return;
     }
 
+    if (enemy.trait) enemy.fightT += dt;
+    let period = enemy.period;
+    if (enemy.trait?.kind === 'frenzy') {
+      period *= 1 - enemy.trait.power * (1 - enemy.hp / enemy.maxHp);
+    }
     enemy.attackTimer -= dt;
     if (enemy.attackTimer <= 0) {
-      enemy.attackTimer = enemy.period;
+      enemy.attackTimer = period;
       enemy.swung = false;
       enemy.anim.playTimed('attack', 0.65, { force: true });
     } else if (enemy.anim.name === 'attack' && enemy.anim.done) {
@@ -690,9 +725,26 @@ export class Battle {
   enemyStrike(enemy) {
     const { hero } = this;
     if (hero.dead) return;
-    const taken = enemy.damage * this.state.damageTaken;
+    let power = 1;
+    const trait = enemy.trait;
+    if (trait) {
+      if (trait.kind === 'enrage' && enemy.hp / enemy.maxHp <= 0.3) power += trait.power;
+      if (trait.kind === 'executioner' && hero.hp / hero.maxHp < 0.5) power += trait.power;
+      if (trait.kind === 'ramp') power += trait.power * enemy.fightT;
+      // Rider & Mount: every `power`-th swing lands twice.
+      if (trait.kind === 'doublehit') {
+        enemy.swings += 1;
+        if (enemy.swings % trait.power === 0) power *= 2;
+      }
+      // Scorch: the hit snuffs regen for a few seconds.
+      if (trait.kind === 'burn') this.burnTimer = trait.power;
+    }
+    const taken = enemy.damage * power * this.state.damageTaken;
     const killed = hero.hurt(taken);
     this.pushFloater(hero, taken, 'player');
+    if (trait?.kind === 'leech' && !enemy.dead) {
+      enemy.hp = Math.min(enemy.maxHp, enemy.hp + taken * trait.power);
+    }
     if (killed) {
       hero.dead = true;
       hero.anim.play('death', { fps: 8, loop: false, force: true });
