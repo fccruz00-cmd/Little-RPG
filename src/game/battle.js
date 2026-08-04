@@ -7,7 +7,7 @@ import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
-import { PET_BY_ID } from '../data/pets.js';
+import { PETS } from '../data/pets.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
@@ -88,10 +88,11 @@ export class Battle {
     // to make in the fight itself.
     this.run = null;
 
-    // The equipped pet, walking at the hero's heel. Pure presence: it does
-    // not fight, its buff lives in state.bonus like any other node's.
-    this.petActor = null;
-    this.syncPet();
+    // Every tamed pet trails the hero in a little parade. Pure presence:
+    // they do not fight, their buffs live in state.bonus like any node's.
+    this.petActors = [];
+    this._petKey = '';
+    this.syncPets();
 
     // Loading a save keeps the kills already made: closing the game mid
     // stage does not send you back to its start.
@@ -159,37 +160,46 @@ export class Battle {
     const next = this.state.stage + 1;
     this.state.maxStage = Math.max(this.state.maxStage, next);
     this.state.bestStage = Math.max(this.state.bestStage, next);
-    // New depth is what tames: announce anything the line just reached.
-    for (const pet of this.state.tamePets()) {
-      this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
-      this.syncPet();
-    }
     this.enterStage(next);
   }
 
-  /** Rebuilds the follower actor after an equip (or the first tame). */
-  syncPet() {
-    const pet = PET_BY_ID[this.state.pet];
-    if (!pet) { this.petActor = null; return; }
-    if (this.petActor?.def.petId === pet.id) return;
-    // The sprite is a roster mob; hover comes from its own def so the bat
-    // pet flies exactly as high as the bat it used to be.
-    const mob = MOBS.find((m) => m.id === pet.sprite);
-    const def = { id: pet.sprite, petId: pet.id, hover: mob?.hover ?? 0, reach: 0, speed: 0, hit: 0 };
-    this.petActor = new Actor(def, this.sheets[pet.sprite], {
-      x: this.hero.x - 16, facing: 1,
+  /** Rebuilds the parade when the tamed set changes. */
+  syncPets() {
+    const tamed = PETS.filter((p) => this.state.pets[p.id]);
+    const key = tamed.map((p) => p.id).join(',');
+    if (key === this._petKey) return;
+    this._petKey = key;
+    this.petActors = tamed.map((pet, i) => {
+      // The sprite is a roster mob; hover comes from its own def so the bat
+      // pet flies exactly as high as the bat it used to be.
+      const mob = MOBS.find((m) => m.id === pet.sprite);
+      const def = { id: pet.sprite, petId: pet.id, hover: mob?.hover ?? 0, reach: 0, speed: 0, hit: 0 };
+      const actor = new Actor(def, this.sheets[pet.sprite], {
+        x: this.hero.x - 14 - i * 9, facing: 1,
+      });
+      actor.scale = 0.5;
+      return actor;
     });
-    this.petActor.scale = 0.55;
   }
 
-  /** Keeps the pet at the heel and its little legs honest. */
-  updatePet(dt) {
-    const pet = this.petActor;
-    if (!pet) return;
-    pet.x = this.hero.x - 16;
+  /**
+   * Tames anything whose objective just completed, keeps the parade in step
+   * behind the hero, and their little legs honest. Objectives complete off
+   * every system (a mining level, a dungeon, a rebirth), so the check lives
+   * in the tick rather than on any single event.
+   */
+  updatePets(dt) {
+    for (const pet of this.state.tamePets()) {
+      this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+    }
+    this.syncPets();
     const walking = this.hero.anim.name === 'walk';
-    pet.anim.play(walking ? 'walk' : 'idle', { fps: walking ? 10 : 8 });
-    pet.anim.update(dt);
+    for (let i = 0; i < this.petActors.length; i++) {
+      const actor = this.petActors[i];
+      actor.x = this.hero.x - 14 - i * 9;
+      actor.anim.play(walking ? 'walk' : 'idle', { fps: walking ? 10 : 8 });
+      actor.anim.update(dt);
+    }
   }
 
   goToStage(stage) {
@@ -493,7 +503,7 @@ export class Battle {
     state.tickMeals(dt);
 
     this.updateEnemy(dt);
-    this.updatePet(dt);
+    this.updatePets(dt);
     this.updateCorpses(dt);
     this.updateFloaters(dt);
 

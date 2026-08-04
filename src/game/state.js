@@ -20,7 +20,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 10;
+const SAVE_VERSION = 11;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -70,9 +70,9 @@ function defaults() {
     fedTier: -1,      // tier of the meal being eaten, -1 when not fed
     fedTimer: 0,
 
-    // pets: tamed for good, fed on raw fish, all of it awaken-proof
+    // pets: tamed for good, fed on raw fish, all of it awaken-proof.
+    // Every tamed pet's buff is on; the collection is the progression.
     pets: {},         // petId -> level (absent = not tamed yet)
-    pet: null,        // the one walking beside the hero
 
     // dungeons
     keys: {},         // key tier -> how many are held
@@ -116,7 +116,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 9) {
+  if (data.version >= 1 && data.version <= 10) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -125,7 +125,9 @@ function migrate(data) {
     // v7: before dungeon keys and the boss hold. Both start empty too.
     // v8: before awakening; souls, awakens and extraRelics start at zero via
     // defaults, so an old save simply begins its first ascension cycle here.
-    // v9: before pets; the constructor tames whatever bestStage has earned.
+    // v9: before pets; the constructor tames whatever the save has earned.
+    // v10: pets followed one at a time; the equipped-pet field goes, since
+    // every tamed pet is active now.
     const out = {
       ...defaults(),
       ...data,
@@ -144,7 +146,7 @@ function migrate(data) {
       out.raw = { ...(data.ore ?? {}) };
       out.refined = { ...(data.bars ?? {}) };
     }
-    for (const k of ['mineLevel', 'mineXp', 'miningTalents', 'ore', 'bars', 'pick']) delete out[k];
+    for (const k of ['mineLevel', 'mineXp', 'miningTalents', 'ore', 'bars', 'pick', 'pet']) delete out[k];
     return out;
   }
   return null;
@@ -169,10 +171,9 @@ export class GameState {
     this.refined = { ...(data.refined ?? {}) };
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
-    if (!PET_BY_ID[this.pet] || !this.pets[this.pet]) this.pet = null;
-    // Taming reads bestStage, so a save from before pets existed walks out
-    // of load with everything its depth already earned. Silent on purpose:
-    // the battle announces tames that happen live, not the backlog.
+    // Unlocks read live state, so a save from before pets existed walks out
+    // of load with everything it already earned, the slime included. Silent
+    // on purpose: the battle announces tames that happen live, not backlog.
     this.tamePets();
     if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
@@ -221,10 +222,12 @@ export class GameState {
       else b[slot.key] += amount;
     }
 
-    // The pet walking beside the hero is one more node, with its level as
-    // the ranks. Only the equipped one counts: that is the whole choice.
-    const pet = PET_BY_ID[this.pet];
-    if (pet) apply(pet, this.pets[this.pet] ?? 0);
+    // Every tamed pet is one more node, with its level as the ranks. The
+    // choice already happened at the taming; from here they all pull.
+    for (const pet of PETS) {
+      const level = this.pets[pet.id];
+      if (level) apply(pet, level);
+    }
 
     this._bonus = b;
     return b;
@@ -475,26 +478,19 @@ export class GameState {
 
   // --- pets -----------------------------------------------------------
   /**
-   * Tames every pet bestStage has reached and does not own yet. Returns the
-   * newly tamed defs so the caller can announce them; the first pet ever
-   * tamed equips itself, because a pet nobody equips is a tab nobody finds.
+   * Tames every pet whose objective the save has met and does not own yet.
+   * Returns the newly tamed defs so the caller can announce them. A fresh
+   * tame is live immediately: its buff joins the fold on the spot.
    */
   tamePets() {
     const tamed = [];
     for (const pet of PETS) {
-      if (this.pets[pet.id] || this.bestStage < pet.tameStage) continue;
+      if (this.pets[pet.id] || !pet.unlock.test(this)) continue;
       this.pets[pet.id] = 1;
       tamed.push(pet);
     }
-    if (!this.pet && tamed.length) {
-      this.pet = tamed[0].id;
-      this.invalidateBonus();
-    }
+    if (tamed.length) this.invalidateBonus();
     return tamed;
-  }
-
-  get anyPets() {
-    return Object.keys(this.pets).length > 0;
   }
 
   /** The fish this pet eats, and how many the next level costs. */
@@ -515,14 +511,6 @@ export class GameState {
     const { fish, cost } = this.petFood(id);
     this.raw[fish.id] -= cost;
     this.pets[id] += 1;
-    if (this.pet === id) this.invalidateBonus();
-    return true;
-  }
-
-  /** Puts a tamed pet at the hero's heel. Only its buff applies. */
-  equipPet(id) {
-    if (!this.pets[id] || this.pet === id) return false;
-    this.pet = id;
     this.invalidateBonus();
     return true;
   }
@@ -871,7 +859,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, pet,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets,
       buyMax, goldPerSec,
     } = this;
     return {
@@ -881,7 +869,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, pet,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }

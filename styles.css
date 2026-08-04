@@ -1112,7 +1112,6 @@ body { display: flex; justify-content: center; }
   width: 3px;
   background: var(--accent);
 }
-.pet.is-on::before { box-shadow: 0 0 6px -1px var(--accent); }
 .pet.is-locked { opacity: .55; }
 .pet.is-locked .pet__thumb { filter: grayscale(1) brightness(.6); }
 
@@ -1137,10 +1136,9 @@ body { display: flex; justify-content: center; }
 }
 .pet__effect b { color: var(--cream); }
 
-.pet__buttons { display: grid; gap: 3px; justify-items: stretch; }
-.pet__buttons .equip { justify-content: center; font-size: 9px; padding: 2px 6px 3px; }
-.pet__buttons .equip[hidden] { display: none; }
-.pet__buttons .equip:disabled { cursor: default; }
+.pet__feed { justify-content: center; font-size: 9px; padding: 2px 6px 3px; }
+.pet__feed[hidden] { display: none; }
+.pet__feed:disabled { cursor: default; }
 .pet__fish { opacity: .8; }
 .pet__feed.can-buy { animation: nodeGlow 1.8s ease-in-out infinite; }
 

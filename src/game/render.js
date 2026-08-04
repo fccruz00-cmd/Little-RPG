@@ -82,8 +82,11 @@ export class Renderer {
 
     for (const corpse of battle.corpses) this.drawActor(corpse, camX, { fade: corpse.corpseTimer });
     if (battle.enemy) this.drawActor(battle.enemy, camX);
-    // The pet draws first so an overlap tucks it behind its owner.
-    if (battle.petActor) this.drawActor(battle.petActor, camX);
+    // The parade draws back-to-front so each pet tucks behind the one
+    // ahead of it, and all of them behind their owner.
+    for (let i = battle.petActors.length - 1; i >= 0; i--) {
+      this.drawActor(battle.petActors[i], camX);
+    }
     this.drawActor(battle.hero, camX);
 
     this.drawBars(battle, camX);

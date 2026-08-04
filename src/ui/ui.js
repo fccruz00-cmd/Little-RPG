@@ -10,7 +10,7 @@ import {
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
-import { PETS, PET_BY_ID } from '../data/pets.js';
+import { PETS } from '../data/pets.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
@@ -97,7 +97,7 @@ export class UI {
       awkGainBox: document.querySelector('#asc-awaken .prestige__gain'),
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
-      tabPets: $('tab-pets'), pipPets: $('pip-pets'),
+      pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
@@ -167,10 +167,11 @@ export class UI {
 
   /**
    * Builds the pets list: one board per pet, all five present from the
-   * start so the locked ones read as a roadmap ("reach stage 70").
-   * Thumbnails are the sprite's own idle frame, cropped to its body box and
-   * drawn pixelated, because a pet that does not look like the thing
-   * following you is just a stat row.
+   * start so the locked ones read as a roadmap, each objective a pillar of
+   * the game (mining, rebirth, dungeons, awakening). Thumbnails are the
+   * sprite's own idle frame, cropped to its body box and drawn pixelated,
+   * because a pet that does not look like the thing following you is just
+   * a stat row.
    */
   buildPets() {
     const frag = document.createDocumentFragment();
@@ -186,17 +187,13 @@ export class UI {
           <span class="pet__name">${pet.name} <em class="pet__lvl"></em></span>
           <span class="pet__effect"></span>
         </span>
-        <span class="pet__buttons">
-          <button class="equip pet__follow" type="button">Follow</button>
-          <button class="equip pet__feed" type="button">Feed</button>
-        </span>`;
+        <button class="equip pet__feed" type="button">Feed</button>`;
       this.drawPetThumb(row.querySelector('canvas'), pet.sprite);
       frag.append(row);
       this.petRows.set(pet.id, {
         pet, row,
         lvl: row.querySelector('.pet__lvl'),
         effect: row.querySelector('.pet__effect'),
-        follow: row.querySelector('.pet__follow'),
         feed: row.querySelector('.pet__feed'),
       });
     }
@@ -397,21 +394,10 @@ export class UI {
 
     el.petsList.addEventListener('click', (e) => {
       const row = e.target.closest('.pet');
-      if (!row) return;
-      const id = row.dataset.pet;
-      if (e.target.closest('.pet__feed')) {
-        if (!state.feedPet(id)) return;
-        state.save();
-        this.refreshPets();
-        return;
-      }
-      if (e.target.closest('.pet__follow')) {
-        if (!state.equipPet(id)) return;
-        battle.syncPet();
-        state.save();
-        this.toast({ text: `${PET_BY_ID[id].name.toUpperCase()} AT YOUR HEEL` });
-        this.refreshPets();
-      }
+      if (!row || !e.target.closest('.pet__feed')) return;
+      if (!state.feedPet(row.dataset.pet)) return;
+      state.save();
+      this.refreshPets();
     });
 
     el.autoCraft.checked = state.autoCraftOn !== false;
@@ -639,7 +625,6 @@ export class UI {
     el.tabForge.hidden = !state.forgeUnlocked;
     el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
     el.pipForge.classList.add('pip--gold');
-    el.tabPets.hidden = !state.anyPets;
     el.pipPets.hidden = !PETS.some((p) => state.canFeedPet(p.id));
     el.pipPets.classList.add('pip--gold');
 
@@ -1074,18 +1059,19 @@ export class UI {
 
   refreshPets() {
     const { state, el } = this;
-    setText(el.petsCount, String(Object.keys(state.pets).length));
+    setText(el.petsCount, `${Object.keys(state.pets).length}/${PETS.length}`);
 
-    for (const { pet, row, lvl, effect, follow, feed } of this.petRows.values()) {
+    for (const { pet, row, lvl, effect, feed } of this.petRows.values()) {
       const level = state.pets[pet.id] ?? 0;
       const tamed = level > 0;
       row.classList.toggle('is-locked', !tamed);
-      row.classList.toggle('is-on', state.pet === pet.id);
 
       if (!tamed) {
-        setText(lvl, '');
-        setText(effect, `reach stage ${pet.tameStage} to tame, ${pet.blurb}`);
-        follow.hidden = true;
+        // The objective is the row: what it does, and how to earn it.
+        const u = pet.unlock;
+        const progress = u.now ? ` (${fmt(u.now(state))}/${u.need})` : '';
+        setText(lvl, 'locked');
+        setHtml(effect, `${pet.blurb}. Tame: <b>${u.desc}</b>${progress}.`);
         feed.hidden = true;
         continue;
       }
@@ -1095,12 +1081,7 @@ export class UI {
       // Today's buff, then what the next meal buys: the whole decision.
       setHtml(effect, `${describeNode(pet, level)} &middot; next: <b>${describeNode(pet, level + 1)}</b>`);
 
-      follow.hidden = false;
       feed.hidden = false;
-      const following = state.pet === pet.id;
-      follow.disabled = following;
-      setText(follow, following ? 'With you' : 'Follow');
-      follow.classList.toggle('is-on', following);
       feed.disabled = !state.canFeedPet(pet.id);
       setHtml(feed, `Feed &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
       feed.classList.toggle('can-buy', !feed.disabled);

@@ -132,7 +132,7 @@ it.
      a point.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
-5. **Pets**: appears with the first tame, at stage 15. See *Pets* below.
+5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
 6. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
@@ -167,22 +167,24 @@ tree is about 226 souls, which is many awakenings deep on purpose.
 
 ### Pets
 
-Five companions, tamed automatically the first time the line reaches their
-stage: 15, 40, 70, 100 and 140. Taming reads **bestStage**, so nothing you
-ever tamed can lock itself again, and a save that predates pets walks out of
-load with everything its depth already earned.
+Five companions. The slime is with you from the start; the other four are
+locked behind **objectives, one per pillar of the game**, so the collection
+doubles as a tour of the systems. Objectives are checked against live state
+every tick, a tame lands the moment it is earned, and nothing ever comes
+undone: an old save walks out of load with everything it already qualifies
+for.
 
-**One follows you at a time and only its buff applies**, the same tradeoff
-the tool slot makes. The follower is drawn at the hero's heel in the arena,
-at pet scale, straight from the enemy roster's own sheets.
+**Every tamed pet is active at once.** All of them trail the hero in a
+little parade, drawn from the enemy roster's own sheets at pet scale, and
+all their buffs stack. The choice lives in the taming, not in a slot.
 
-| pet | tame | eats | buff per level |
+| pet | tamed by | eats | buff per level |
 |---|---|---|---|
-| Pocket Slime   | stage 15  | Minnows   | +4% health |
-| Belfry Bat     | stage 40  | Carp      | +1.5% attack speed |
-| Hellpup        | stage 70  | Trout     | +4% damage |
-| Little Watcher | stage 100 | Salmon    | +0.4% crit chance |
-| Cinder Slime   | stage 140 | Sturgeon  | +5% gold |
+| Pocket Slime   | with you from the start | Minnows  | +4% health |
+| Belfry Bat     | Mining level 10         | Carp     | +1.5% attack speed |
+| Little Watcher | first rebirth           | Salmon   | +0.4% crit chance |
+| Hellpup        | clearing any dungeon    | Trout    | +4% damage |
+| Cinder Slime   | first awakening         | Sturgeon | +5% gold |
 
 Levels are bought with **raw fish of the pet's own tier**. Meals always cook
 from the best fish first, so the lower tiers pile up as dead stock the moment

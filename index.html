@@ -71,7 +71,7 @@
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
-      <button class="tab" data-tab="pets" type="button" role="tab" id="tab-pets" hidden>
+      <button class="tab" data-tab="pets" type="button" role="tab">
         Pets<i class="pip" id="pip-pets" hidden></i>
       </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
@@ -193,15 +193,16 @@
         Dungeon <b>keys</b> are forged there too.</p>
     </div>
 
-    <!-- tab 5: pets (shows up with the first tame, stage 15) -->
+    <!-- tab 5: pets. The slime is free; the rest are objectives. -->
     <div class="pane" id="pane-pets">
       <div class="pane__head">
-        <span class="pane__hint">One follows you; only its buff is on.</span>
-        <span class="pane__points"><i class="ico ico--sm ico--fish"></i> <b id="pets-count">0</b> pet(s)</span>
+        <span class="pane__hint">Every tamed pet's buff is on.</span>
+        <span class="pane__points"><i class="ico ico--sm ico--fish"></i> <b id="pets-count">1/5</b></span>
       </div>
       <p class="pane__detail" id="pet-detail">
-        Pets are tamed by <b>reaching stages</b> and levelled by <b>feeding
-        them raw fish</b> of their own water. Levels survive <b>everything</b>,
+        Pets are tamed by <b>playing the game's pillars</b> and levelled by
+        <b>feeding them raw fish</b> of their own water. All of them follow
+        you, all their buffs stack, and levels survive <b>everything</b>,
         rebirth and awakening alike.
       </p>
       <div class="pets" id="pets-list"></div>
