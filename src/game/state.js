@@ -576,7 +576,13 @@ export class GameState {
     return { res, amount };
   }
 
+  /** Banked past two bottles: a third would be truncated by the cap. */
+  brewCapped(id) {
+    return (this.potions[id] ?? 0) > POTION_BY_ID[id].duration * 2;
+  }
+
   canBrew(id) {
+    if (this.brewCapped(id)) return false;
     const cost = this.potionCost(id);
     if (cost.dust) return this.forgeUnlocked && this.dust >= cost.amount;
     return (this.refined[cost.res.id] ?? 0) >= cost.amount;
@@ -908,7 +914,10 @@ export class GameState {
   earn(amount) {
     const value = amount * this.goldGain;
     this.gold += value;
-    this._goldWindow.push({ t: this.clock, value });
+    // The window feeds goldPerSec, whose real job is pricing OFFLINE time.
+    // It tracks the rate without the Lucky Brew: a ten-minute bottle must
+    // not colour an eight-hour night at full strength.
+    this._goldWindow.push({ t: this.clock, value: value / this.potionMul('lucky') });
     return value;
   }
 
@@ -1012,7 +1021,13 @@ export class GameState {
   /** Credits gold banked while the game was closed. Returns `{seconds, gold}`. */
   collectOffline(lastSeen) {
     if (!lastSeen) return null;
-    return this.bankIdle((Date.now() - lastSeen) / 1000);
+    const away = (Date.now() - lastSeen) / 1000;
+    // A drink does not keep overnight. Without this, a bottle brewed before
+    // closing came back whole in the morning, every morning.
+    for (const id in this.potions) {
+      if (this.potions[id] > 0) this.potions[id] = Math.max(0, this.potions[id] - away);
+    }
+    return this.bankIdle(away);
   }
 
   /**

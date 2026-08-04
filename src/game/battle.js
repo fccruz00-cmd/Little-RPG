@@ -289,7 +289,10 @@ export class Battle {
     if (!this.run) return null;
     const { key, cleared, bloody } = this.run;
     const reward = dungeonReward(key, cleared, won);
-    if (bloody) {
+    // The double is the prize for FINISHING under the moon. Doubling the
+    // partial share too made leave-at-room-seven pay 1.75x a normal full
+    // clear with the boss fight skipped: a bet that could not lose.
+    if (bloody && won) {
       reward.relics *= 2;
       reward.dust *= 2;
       reward.goldMul *= 2;
@@ -554,7 +557,19 @@ export class Battle {
 
     if (this.enemy?.isBoss && !hero.dead) {
       this.bossTimer -= dt;
-      if (this.bossTimer <= 0) this.failBoss('THE BOSS GOT AWAY');
+      if (this.bossTimer <= 0) {
+        // On the line the boss gets away and waits behind the button. In a
+        // dungeon the key IS the wager: failBoss here healed the hero to
+        // full and respawned the boss on a fresh clock forever, which made
+        // the timer free and voided the Bloodmoon's entire stake.
+        if (this.run) {
+          this.emit('toast', { text: 'THE BOSS OUTLASTED YOU', bad: true });
+          const out = this.finishDungeon(false);
+          if (out) this.emit('reward', out);
+        } else {
+          this.failBoss('THE BOSS GOT AWAY');
+        }
+      }
     }
 
     hero.anim.update(dt);
@@ -648,10 +663,6 @@ export class Battle {
         if (target.trait.kind === 'block' && target.hitsTaken % 3 === 0) {
           dealt *= target.trait.power;
         }
-        // Riposte: every `power`-th hit taken answers outside the cadence.
-        if (target.trait.kind === 'riposte' && target.hitsTaken % target.trait.power === 0) {
-          this.enemyStrike(target);
-        }
       }
 
       const killed = target.hurt(dealt);
@@ -665,6 +676,16 @@ export class Battle {
       if (killed) {
         this.killEnemy(target);
         return;
+      }
+
+      // Riposte: every `power`-th hit the boss SURVIVES answers on the
+      // spot. It fires after the hit lands, so a killing blow is never
+      // countered by a corpse, and a counter that drops the hero ends the
+      // swing instead of letting a dead man keep striking.
+      const trait = target.trait;
+      if (trait?.kind === 'riposte' && target.hitsTaken % trait.power === 0) {
+        this.enemyStrike(target);
+        if (hero.dead) return;
       }
     }
     if (target.anim.name !== 'attack') target.anim.play('hurt', { fps: 14, loop: false, force: true });

@@ -976,7 +976,14 @@ export class UI {
         + `<i class="ico ico--sm ico--${icon}"></i>${fmt(have)}/${fmt(cost.amount)}`);
       const secs = state.potions[potion.id] ?? 0;
       setText(left, secs > 0 ? duration(secs) : '');
-      setText(action, can ? 'brew' : 'need');
+      // Three honest reasons to say no, each with its own word: banked to
+      // the cap, the forge not built yet (dust exists before it does), or
+      // simply short on the pile.
+      const label = can ? 'brew'
+        : state.brewCapped(potion.id) ? 'full'
+        : cost.dust && !state.forgeUnlocked ? 'forge'
+        : 'need';
+      setText(action, label);
       row.disabled = !can;
       row.classList.toggle('can-smelt', can);
     }
