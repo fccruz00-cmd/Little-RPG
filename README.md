@@ -1,25 +1,28 @@
 # Little RPG
 
-A browser idle auto-battler built for a phone held upright. The hero walks a
-straight line on its own, runs into monsters, kills them without input and
-clears stages. All you decide is where the gold goes.
+A browser idle auto-battler, played with the phone turned sideways. The hero
+walks a straight line on its own, runs into monsters, kills them without
+input and clears stages. All you decide is where the gold goes.
 
-The layout follows the three bands from the original sketch: **UI** on top,
-**Fight** in the middle, and a tabbed panel below with **Shop**,
-**Talents**, **Skills**, **Forge**, **Pets** and **Ascend**.
+The **UI** keeps the top; under it the **Fight** takes a column of its own
+and the tabbed panel takes another — **Shop**, **Talents**, **Skills**,
+**Forge**, **Pets** and **Ascend**.
 
 ```
-+------------------------------+
-| < Stage 7 >         gold /s  |  UI
-+------------------------------+
-|      hero ---->  monster     |  Fight
-|  scrolling ground, parallax  |
-+------------------------------+
-| Upgrades | Talents | Skills |  tabs
-|  Damage           Lv. 12 221 |
-|  Attack Speed     Lv.  6 181 |
-+------------------------------+
++--------------------------------------------------+
+| < Stage 7 >   gold /s   Lv.34  [gems]  xp ====== |  UI
++---------------------------+----------------------+
+|    hero ---->  monster    | Shop|Talents|Skills| |  tabs
+|  scrolling ground,        +----------------------+
+|  parallax, a blood moon   | Damage      Lv.12 221|
+|                           | Attack Spd  Lv. 6 181|
+|   [ Open the Copper Key ] | Crit Chance Lv. 4  90|
++---------------------------+ Max Health  Lv.18 340|
+| dmg/s | health | crit |$| |  ...                 |
++---------------------------+----------------------+
 ```
+
+(A phone held upright asks you to turn it. See *Layout*.)
 
 ## Running it
 
@@ -493,8 +496,41 @@ extra points that survive rebirth.
 
 ## Layout
 
+**Little RPG is a landscape game.** Turned sideways, the HUD keeps the full
+width and everything under it becomes two columns: the arena and the stat
+readout on the left, the whole tabbed panel on the right. The panel stops
+competing with the arena for height, which is the entire point — on an
+844x390 phone it goes from **212px tall to 340**, and from 460px wide to 490.
+
+Before the rework, `#app` was capped at 460px and centred, so the same phone
+spent **45% of its screen on black bars** and showed one and a half shop
+rows; a 1180px tablet wasted 61%.
+
+The one rule that makes it work is that **the canvas keeps a wide box**
+(`aspect-ratio: 4/3`), rather than filling a tall column. The renderer
+derives its zoom from canvas *height*, so a tall narrow canvas zooms in and
+the visible stretch of road shrinks — the enemy stops walking in and starts
+arriving mid-swing. Pinning the box wide keeps the world within ~10% of the
+portrait numbers the game was balanced against (117x88 at scale 3, against
+portrait's 130x84 at 3), and the space left under it is where the action
+buttons live: off the game world, and low enough to reach one-handed.
+
+The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
+`orientation: landscape`, which fires on a 600x500 desktop window that has no
+room for two columns. Pane internals switch on a **container query** against
+the panel itself, because once the arena takes 42% the viewport width stops
+meaning anything to them: the shop, forge, pets and feats go to two columns
+at 520px of panel and three at 820px, and the relic tree's six branches go
+from two rows of three to one row of six.
+
+**Portrait still works** and is still the whole original stylesheet. A phone
+held upright gets a "turn your phone sideways" prompt; a narrow *desktop*
+window does not, because you cannot rotate a monitor — the test is
+`pointer: coarse`, not width.
+
+
 ```
-index.html          the three layout bands
+index.html          the shell: HUD, arena column, tabbed panel
 styles.css          UI: every frame, strip and bar is 9-sliced pack art
 src/
   main.js           bootstrap, the game loop (fixed 1/60 s step) and the

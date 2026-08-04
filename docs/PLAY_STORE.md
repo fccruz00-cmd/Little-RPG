@@ -200,3 +200,25 @@ Two lines to hold in the listing and in any update:
 
 Google's own **Data safety** and **Ads** declarations stay simple as a
 result: purchases yes, ads no, analytics no, data collection none.
+
+---
+
+## 8. Orientation
+
+The game is landscape. Nothing in this repo owns that — there is no PWA
+manifest here — so it lives in the wrapper's `AndroidManifest.xml`:
+
+```xml
+<activity android:screenOrientation="sensorLandscape" ... >
+```
+
+**`sensorLandscape`, not `landscape`.** The plain value pins one rotation, so
+half your players hold the phone "upside down" and get an inverted screen.
+`sensorLandscape` accepts both, which also means **the notch can be on either
+side** — that is why `#app` pads with both `safe-area-inset-left` and
+`-right`, and why you should test a rotation in both directions on a notched
+device rather than only the one your hand prefers.
+
+If you skip the lock entirely, nothing breaks: a phone held upright shows the
+"turn your phone sideways" prompt, and turning it reveals the game. The lock
+just means nobody ever meets that screen.

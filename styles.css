@@ -638,6 +638,11 @@ body { display: flex; justify-content: center; }
 /* Stat strip: four studded plaques. Deliberately NOT on wood, because the
    tab row right above it already is, and three plank bands stacked read as
    noise. Dark here lets the plaques read as plaques. */
+/* Portrait keeps the old three-band stack exactly: `display: contents` means
+   the wrapper is not a box at all and the arena and statbar are still direct
+   children of #app. Landscape turns it into the left column. */
+.stage-col { display: contents; }
+
 .statbar {
   --px: 1;
   flex: none;
@@ -1572,9 +1577,6 @@ body { display: flex; justify-content: center; }
 /* Five tabs on a 320px phone: the longest label would otherwise run under
    its own corner pip. Dropping a point buys the clearance without letting
    the row wrap, which costs 10px of panel. */
-@media (max-width: 340px) {
-  .tab { font-size: 8px; }
-}
 
 /* --- tweaks by screen height --- */
 @media (min-height: 720px) {
@@ -1600,4 +1602,172 @@ body { display: flex; justify-content: center; }
   .tree-scroll { min-height: 88px; }
   .skillbar { padding: 3px 8px; }
   .mine-tools { padding: 3px 5px; }
+}
+
+/* ============================================================
+   LANDSCAPE -- the shape the game is actually played in
+
+   Portrait was a single 460px column: a phone held upright, three bands
+   stacked. That column is still here and still works, but it caps the game
+   at 460px, so a phone turned sideways spent 45% of its screen on black
+   bars and showed one and a half shop rows.
+
+   Landscape turns the stack into a grid: the HUD keeps the full width, the
+   arena takes a left column, and the whole tabbed panel gets a right column
+   of its own. The panel stops competing with the arena for height, which is
+   the entire point -- it goes from 212px tall to 340, and from 460 wide to
+   490 and beyond.
+
+   THE GATE. Not `(orientation: landscape)`: that fires on a 600x500 desktop
+   window, which has no room for two columns. Wide AND at least as wide as
+   it is tall.
+   ============================================================ */
+@media (min-width: 560px) and (min-aspect-ratio: 1/1) {
+  #app {
+    display: grid;
+    /* The arena never gets so narrow that the fight stops reading, and
+       never so wide that the panel is the cramped one. */
+    grid-template-columns: minmax(300px, 42%) 1fr;
+    grid-template-rows: auto 1fr;
+    max-width: none;
+    /* Landscape puts the notch on a SIDE, so the bottom inset the portrait
+       footer handles is no longer the one that bites. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .hud { grid-column: 1 / -1; }
+
+  /* --- left column: the fight --- */
+  .stage-col {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    border-right: 2px solid #000;
+  }
+  .arena {
+    /* Grid items default to min-content in both axes, which is the same
+       trap `min-height: 0` fixes in flexbox. */
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    /* the seam moves from under the arena to beside it, and onto the column
+       so it runs the whole height rather than stopping under the canvas */
+    border-bottom: 0;
+  }
+
+  /* THE LOAD-BEARING RULE. Left to itself the canvas would fill a tall
+     narrow column, and the renderer derives its zoom from canvas HEIGHT
+     (render.js resize): a tall box zooms in, and the visible stretch of
+     road shrinks to nothing. Pinning the box wide keeps the world within
+     ~10% of the portrait numbers this game was balanced against, and the
+     space left under it is exactly where the action buttons want to be
+     anyway -- off the game world, and low enough to reach one-handed. */
+  #stage {
+    flex: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    /* a short column wins: better a wider canvas than a clipped one */
+    max-height: 100%;
+  }
+
+  /* Directly under the canvas, not pinned to the floor: on a tall screen
+     the leftover belongs at the BOTTOM of the column as plain background,
+     not as a black gap wedged between the fight and the numbers. */
+  .statbar { flex: none; border-bottom: 0; }
+
+  /* --- right column: everything else --- */
+  .panel {
+    grid-column: 2;
+    min-width: 0;
+    min-height: 0;
+    /* Pane internals size themselves off THIS box, not the viewport: with
+       the arena taking 42%, viewport width stopped meaning anything to
+       them. */
+    container-type: inline-size;
+    container-name: panel;
+  }
+
+  /* The panel is short and wide now, so the tabs give back a row of height
+     they no longer need to spend on two lines of label. */
+  .tab { font-size: 10px; padding: 3px 2px 4px; }
+}
+
+/* ============================================================
+   Wide panel: put the room to work
+
+   Keyed off the PANEL, not the viewport. A 1180px tablet gives the panel
+   684px; a 667px phone gives it 367px. The viewport number is not the one
+   that decides how many columns fit.
+   ============================================================ */
+@container panel (min-width: 520px) {
+  .shop, .forge, .pets, .featlist { grid-template-columns: repeat(2, 1fr); }
+  /* Six relic branches in two rows of three becomes one row of six. */
+  .tree { grid-template-columns: repeat(6, 1fr); }
+  .keys, #cauldron { grid-template-columns: repeat(2, 1fr); }
+  .prestige { display: grid; grid-template-columns: repeat(2, 1fr); align-content: start; }
+  .prestige__gain, .prestige__note, .big-btn, .perks, .featlist { grid-column: 1 / -1; }
+}
+
+@container panel (min-width: 820px) {
+  .shop, .forge, .featlist { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* On a tall screen the arena column has height to spare and the canvas does
+   not, so give the column more WIDTH instead: a 4:3 canvas grows with it and
+   the leftover shrinks. The panel still clears 520px, so it keeps two
+   columns. */
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) and (min-height: 640px) {
+  #app { grid-template-columns: minmax(300px, 52%) 1fr; }
+}
+
+/* ============================================================
+   Portrait, on a phone: ask for the rotation
+
+   Hidden by every other condition. `pointer: coarse` is the test that
+   matters -- a narrow desktop window is portrait too, and it keeps the old
+   stacked layout because you cannot turn a monitor on its side.
+   ============================================================ */
+.rotate { display: none; }
+
+@media (hover: none) and (pointer: coarse) and (max-aspect-ratio: 1/1) {
+  .rotate {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    padding: 24px;
+    text-align: center;
+    background: var(--bg-deep);
+  }
+  /* A phone drawn with borders, tipping. No sprite for this in the pack and
+     a glyph would land as tofu in a monospace fallback. */
+  .rotate__phone {
+    width: 34px;
+    height: 58px;
+    border: 3px solid var(--cream);
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 2px var(--bg-deep), inset 0 0 0 3px var(--wood);
+    animation: tip 2.2s ease-in-out infinite;
+  }
+  .rotate__say { font-size: 13px; font-weight: 700; color: var(--cream); }
+  .rotate__note { font-size: 10px; color: var(--ink-dim); }
+}
+
+@keyframes tip {
+  0%, 30%   { transform: rotate(0deg); }
+  55%, 100% { transform: rotate(-90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate__phone { animation: none; transform: rotate(-90deg); }
 }

@@ -197,6 +197,13 @@ export class UI {
    * whole innerHTML, ids preserved. English is a no-op.
    */
   applyStatic() {
+    // Every table below is a list of CSS selectors, several of them
+    // positional (`:nth-child`, `:nth-of-type`, `~`). A selector that stops
+    // matching because the markup moved fails SILENTLY and in one language
+    // only: English never runs this, so the miss shows up as an untranslated
+    // string on a Portuguese screen and nowhere else. The misses are counted
+    // and shouted about, and a test asserts the count is zero.
+    this.i18nMisses = [];
     if (lang !== 'pt') return;
     const TEXT = [
       ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
@@ -225,10 +232,12 @@ export class UI {
       ['#opt-save-note', 'Back up or move your save between devices.'],
       ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
       ['#options-close', 'Close'], ['#gemshop-close', 'Close'],
+      ['#rotate-say', 'Turn your phone sideways'],
+      ['#rotate-note', 'Little RPG is played in landscape.'],
       ['.loading span', 'loading...'],
     ];
     for (const [sel, key] of TEXT) {
-      const el = document.querySelector(sel);
+      const el = this.pick(sel);
       if (!el) continue;
       // the first non-empty text node, so pips and icons stay put
       const node = [...el.childNodes].find((n) => n.nodeType === 3 && n.nodeValue.trim());
@@ -244,7 +253,7 @@ export class UI {
       ['#packs-title', 'More gems'],
     ];
     for (const [sel, key] of TAIL) {
-      const el = document.querySelector(sel);
+      const el = this.pick(sel);
       const node = el && [...el.childNodes].reverse().find((n) => n.nodeType === 3 && n.nodeValue.trim());
       if (node) node.nodeValue = ' ' + t(key);
     }
@@ -267,7 +276,7 @@ export class UI {
       ['#asc-awaken .prestige__gain div', `<strong id="awk-gain">0</strong> alma(s)\n<small>${t('if you awaken now')}</small>`],
     ];
     for (const [sel, html] of HTML) {
-      const el = document.querySelector(sel);
+      const el = this.pick(sel);
       if (el) el.innerHTML = html;
     }
     const DT = [
@@ -285,9 +294,19 @@ export class UI {
       ['#workshop .facts div:nth-child(4) dt', 'Never rolls below'],
     ];
     for (const [sel, key] of DT) {
-      const el = document.querySelector(sel);
+      const el = this.pick(sel);
       if (el) el.textContent = t(key);
     }
+    if (this.i18nMisses.length) {
+      console.warn('i18n: selectors that matched nothing:', this.i18nMisses);
+    }
+  }
+
+  /** querySelector that records a miss instead of shrugging one off. */
+  pick(selector) {
+    const el = document.querySelector(selector);
+    if (!el) this.i18nMisses.push(selector);
+    return el;
   }
 
   // --- building -----------------------------------------------------

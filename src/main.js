@@ -45,10 +45,23 @@ async function boot() {
   // Debug handle: lets you inspect and poke state from the console.
   globalThis.__rpg = { state, battle, renderer, ui };
 
-  const fitCanvas = () => { battle.viewWidth = renderer.resize(); };
+  // The canvas is a grid cell now, not a full-width band, so it can change
+  // size without the window doing anything: a rotation, the mobile URL bar
+  // sliding away and changing dvh, a safe-area inset appearing. Watching the
+  // element itself catches all of them, including the orientation flip that
+  // the old 120ms setTimeout was guessing at. Coalesced to one resize per
+  // frame, because a rotation fires a burst.
+  let pendingFit = 0;
+  const fitCanvas = () => {
+    pendingFit = 0;
+    battle.viewWidth = renderer.resize();
+  };
+  const scheduleFit = () => { if (!pendingFit) pendingFit = requestAnimationFrame(fitCanvas); };
   fitCanvas();
-  addEventListener('resize', fitCanvas);
-  addEventListener('orientationchange', () => setTimeout(fitCanvas, 120));
+  new ResizeObserver(scheduleFit).observe(document.getElementById('stage'));
+  // Belt and braces: an observer can miss a dvh change that resizes nothing
+  // in the layout it is watching.
+  addEventListener('resize', scheduleFit);
 
   if (offline) ui.showOffline(offline);
 

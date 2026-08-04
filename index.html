@@ -46,7 +46,11 @@
     </div>
   </header>
 
-  <!-- ===== FIGHT ===== -->
+  <!-- ===== FIGHT =====
+       The arena and the stat readout travel together: portrait stacks them
+       like every other band (`display: contents`, so this wrapper is not
+       even a box), landscape makes them the left column. -->
+  <div class="stage-col">
   <section class="arena" id="arena">
     <canvas id="stage"></canvas>
     <div class="arena__progress">
@@ -65,6 +69,14 @@
       <button class="act-btn act-btn--out" id="act-leave" type="button" hidden>Leave</button>
     </div>
   </section>
+
+  <dl class="statbar">
+    <div><dt><i class="ico ico--sm ico--damage"></i>dmg/s</dt><dd id="sb-dps">0</dd></div>
+    <div><dt><i class="ico ico--sm ico--health"></i>health</dt><dd id="sb-hp">0</dd></div>
+    <div><dt><i class="ico ico--sm ico--crit"></i>crit</dt><dd id="sb-crit">0%</dd></div>
+    <div><dt><i class="ico ico--sm ico--gold"></i>gold</dt><dd id="sb-gold">x1</dd></div>
+  </dl>
+  </div>
 
   <!-- ===== TABBED PANEL ===== -->
   <section class="panel">
@@ -89,12 +101,6 @@
 
     <!-- tab 1: gold upgrades -->
     <div class="pane is-on" id="pane-upgrades">
-      <dl class="statbar">
-        <div><dt><i class="ico ico--sm ico--damage"></i>dmg/s</dt><dd id="sb-dps">0</dd></div>
-        <div><dt><i class="ico ico--sm ico--health"></i>health</dt><dd id="sb-hp">0</dd></div>
-        <div><dt><i class="ico ico--sm ico--crit"></i>crit</dt><dd id="sb-crit">0%</dd></div>
-        <div><dt><i class="ico ico--sm ico--gold"></i>gold</dt><dd id="sb-gold">x1</dd></div>
-      </dl>
       <div class="pane__head">
         <span class="pane__hint" id="shop-hint"></span>
         <label class="toggle">
@@ -373,6 +379,16 @@
     </div>
     <button class="act-btn" id="gemshop-close" type="button">Close</button>
   </div>
+</div>
+
+<!-- Little RPG is a landscape game. On a phone held upright there is a way
+     out of that -- turn it -- so say so instead of squeezing the game into a
+     column. Only shown on touch devices: a narrow desktop window cannot be
+     rotated, and telling someone to turn their monitor is not advice. -->
+<div class="rotate" id="rotate" aria-hidden="true">
+  <i class="rotate__phone"></i>
+  <p class="rotate__say" id="rotate-say">Turn your phone sideways</p>
+  <small class="rotate__note" id="rotate-note">Little RPG is played in landscape.</small>
 </div>
 
 <div class="loading" id="loading"><span>loading...</span></div>

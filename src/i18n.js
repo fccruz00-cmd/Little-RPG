@@ -307,6 +307,10 @@ const PT = {
   '+{0} GOLD': '+{0} DE OURO',
   'DEEPEST YET': 'MAIS FUNDO QUE NUNCA',
 
+  // --- landscape ---
+  'Turn your phone sideways': 'Vire o celular de lado',
+  'Little RPG is played in landscape.': 'Little RPG se joga na horizontal.',
+
   // --- options ---
   'Options': 'Opções',
   'options': 'opções',

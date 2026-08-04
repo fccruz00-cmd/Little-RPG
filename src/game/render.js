@@ -5,6 +5,12 @@ import { fmt } from '../format.js';
 // puts the hero at about a quarter of the arena and leaves roughly 5 body
 // widths on screen, enough to watch the enemy walk in before the clash.
 const TARGET_WORLD_H = 92;
+// And the floor under that promise. Zoom is derived from canvas HEIGHT, so a
+// tall narrow canvas zooms in and quietly shortens the stretch of road you
+// can see -- the walk-in disappears and the enemy arrives already swinging.
+// The CSS pins the canvas to a wide box so this rarely binds; it is here so a
+// future layout change cannot starve the camera without anyone noticing.
+const MIN_WORLD_W = 100;
 const GROUND_FROM_BOTTOM = 16;
 
 /** Deterministic noise: same input, same scenery, no popping. */
@@ -94,7 +100,12 @@ export class Renderer {
     const cssW = Math.max(1, rect.width);
     const cssH = Math.max(1, rect.height);
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
-    this.scale = Math.min(6, Math.max(2, Math.round(cssH / TARGET_WORLD_H)));
+    // Height picks the zoom; width vetoes it. `floor` on the width term, not
+    // `round`: rounding UP is exactly the case that lands the world under
+    // MIN_WORLD_W, which is the number the term exists to protect.
+    const byHeight = Math.round(cssH / TARGET_WORLD_H);
+    const byWidth = Math.floor(cssW / MIN_WORLD_W);
+    this.scale = Math.min(6, Math.max(2, Math.min(byHeight, byWidth)));
 
     this.canvas.width = Math.round(cssW * this.dpr);
     this.canvas.height = Math.round(cssH * this.dpr);
@@ -171,8 +182,8 @@ export class Renderer {
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    this.drawHills(camX * 0.15, groundY + 2, 26, 46, biome.far);
-    this.drawHills(camX * 0.38, groundY + 2, 16, 31, biome.mid);
+    this.drawHills(camX * 0.15, groundY + 2, 26, 46, biome.far, 26);
+    this.drawHills(camX * 0.38, groundY + 2, 16, 31, biome.mid, 16);
     this.drawTrees(camX * 0.62, groundY, biome.tree);
 
     // ground
@@ -205,7 +216,14 @@ export class Renderer {
     }
   }
 
-  drawHills(offset, baseY, minH, maxH, color) {
+  /**
+   * `seed` is what makes the two parallax bands different silhouettes. It
+   * used to be derived from `minH`, which worked only because 26 and 16
+   * round to different integers -- give the bands the same minimum, or a
+   * fractional one, and the near band becomes a copy of the far one sliding
+   * at a different speed. Naming it stops that from being an accident.
+   */
+  drawHills(offset, baseY, minH, maxH, color, seed = 0) {
     const { ctx, width: W } = this;
     const span = 34;
     ctx.fillStyle = color;
@@ -214,7 +232,7 @@ export class Renderer {
     const first = Math.floor(offset / span) - 1;
     for (let k = first; k * span - offset < W + span * 2; k++) {
       const x = k * span - offset;
-      const h = minH + hash(k * 7 + Math.round(minH)) * (maxH - minH);
+      const h = minH + hash(k * 7 + seed) * (maxH - minH);
       ctx.lineTo(x, baseY - h * 0.35);
       ctx.lineTo(x + span * 0.5, baseY - h);
       ctx.lineTo(x + span, baseY - h * 0.3);
@@ -561,7 +579,10 @@ export class Renderer {
       const style = FLOATER_STYLE[f.kind];
       const x = (f.x - camX) * S;
       const y = (this.groundY - (f.base ?? 26) + f.y) * S;
-      const size = Math.max(11, Math.min(26, style.size * S * 0.32));
+      // Crits have to LOOK bigger than hits -- it is the game's whole "that
+      // one landed" signal. A flat ceiling of 26 met both at scale 4 and up,
+      // so the two became the same size exactly when the zoom got good.
+      const size = Math.max(11, Math.min(40, style.size * Math.sqrt(S) * 0.55));
 
       ctx.globalAlpha = alpha;
       ctx.font = `700 ${Math.round(size)}px ui-monospace, Menlo, monospace`;
