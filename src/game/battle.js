@@ -241,11 +241,15 @@ export class Battle {
 
   // --- dungeons -----------------------------------------------------
   /** Spends the key and drops the hero into its rooms. */
-  enterDungeon(tier) {
+  enterDungeon(tier, { bloody = false } = {}) {
     if (this.run) return false;
+    // The Bloodmoon is the same rooms with the safety rail removed: no
+    // regen inside, twice the payout. Only a tier already cleared offers
+    // it, so it is a bet you place on a fight you have already won once.
+    if (bloody && this.state.deepestKey < tier) return false;
     const key = this.state.spendKey(tier);
     if (!key) return false;
-    this.run = { key, room: 1, cleared: 0 };
+    this.run = { key, room: 1, cleared: 0, bloody };
     this.enemy = null;
     this.corpses.length = 0;
     this.nodes.length = 0;
@@ -256,7 +260,9 @@ export class Battle {
     this.hero.dead = false;
     this.respawnTimer = 0;
     this.state.hp = this.hero.hp = this.hero.maxHp;
-    this.emit('toast', { text: `${key.name.toUpperCase()}: ${DUNGEON.rooms} ROOMS` });
+    this.emit('toast', bloody
+      ? { text: `BLOODMOON ${key.name.toUpperCase()}: NO REGEN, DOUBLE LOOT`, bad: true }
+      : { text: `${key.name.toUpperCase()}: ${DUNGEON.rooms} ROOMS` });
     this.emit('dungeon', this.run);
     return true;
   }
@@ -269,8 +275,13 @@ export class Battle {
    */
   finishDungeon(won) {
     if (!this.run) return null;
-    const { key, cleared } = this.run;
+    const { key, cleared, bloody } = this.run;
     const reward = dungeonReward(key, cleared, won);
+    if (bloody) {
+      reward.relics *= 2;
+      reward.dust *= 2;
+      reward.goldMul *= 2;
+    }
     this.state.relics += reward.relics;
     // Counted separately so awakening pays for them too: relicsEarned is the
     // stage curve's offset and cannot absorb relics the curve never granted.
@@ -555,7 +566,7 @@ export class Battle {
 
     if (this.burnTimer > 0) this.burnTimer -= dt;
     const curse = this.enemy?.trait?.kind === 'curse' ? 1 - this.enemy.trait.power : 1;
-    if (hero.hp < hero.maxHp && this.burnTimer <= 0) {
+    if (hero.hp < hero.maxHp && this.burnTimer <= 0 && !this.run?.bloody) {
       hero.hp = Math.min(hero.maxHp, hero.hp + state.regen * curse * dt);
     }
 

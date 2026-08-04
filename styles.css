@@ -964,6 +964,11 @@ body { display: flex; justify-content: center; }
   text-shadow: 0 1px 0 #0009;
   border-image-source: url(assets/ui/button_disabled.png);
 }
+/* The bet button: same chrome, blood in the letters. */
+.act-btn--blood {
+  color: #7a1d24;
+  text-shadow: 0 1px 0 #ffffff33;
+}
 @keyframes actIn {
   from { opacity: 0; transform: translateY(4px); }
 }

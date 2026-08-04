@@ -84,7 +84,7 @@ export class UI {
       workshop: $('workshop'), smithOdds: $('smith-odds'), toolWrap: $('tool-wrap'),
       keys: $('keys'), cauldron: $('cauldron'), brews: $('brews'), brewsN: $('brews-n'),
       arenaAct: $('arena-act'), actBoss: $('act-boss'),
-      actEnter: $('act-enter'), actLeave: $('act-leave'),
+      actEnter: $('act-enter'), actBlood: $('act-blood'), actLeave: $('act-leave'),
       smithCost: $('smith-cost'), smithRefine: $('smith-refine'),
       smithScrap: $('smith-scrap'), smithFloor: $('smith-floor'),
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
@@ -376,6 +376,10 @@ export class UI {
       if (this._enterTier == null) return;
       if (battle.enterDungeon(this._enterTier)) state.save();
     });
+    el.actBlood.addEventListener('click', () => {
+      if (this._enterTier == null) return;
+      if (battle.enterDungeon(this._enterTier, { bloody: true })) state.save();
+    });
     el.actLeave.addEventListener('click', () => {
       const out = battle.leaveDungeon();
       if (out) { state.save(); this.showReward(out); }
@@ -625,8 +629,11 @@ export class UI {
     el.actLeave.hidden = !inDungeon;
     el.actEnter.hidden = inDungeon || state.bossHeld || !bestKey;
     if (!el.actEnter.hidden) setText(el.actEnter, `Open the ${bestKey.name}`);
+    // The Bloodmoon needs the tier beaten once: a bet, not a first date.
+    el.actBlood.hidden = el.actEnter.hidden || state.deepestKey < bestKey.tier;
     this._enterTier = bestKey ? bestKey.tier : null;
-    el.arenaAct.hidden = el.actBoss.hidden && el.actLeave.hidden && el.actEnter.hidden;
+    el.arenaAct.hidden = el.actBoss.hidden && el.actLeave.hidden
+      && el.actEnter.hidden && el.actBlood.hidden;
 
     // Well Fed is a live combat state, so it lives in the HUD, not the tab.
     el.fed.hidden = !state.fed;
