@@ -14,6 +14,7 @@ import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { GEM_WARES, WARE_BY_ID } from '../data/gems.js';
+import { Billing } from '../store/billing.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
@@ -119,6 +120,7 @@ export class UI {
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
       gemPill: $('gem-pill'), gemCount: $('stat-gems'),
       gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
+      packsWrap: $('packs-wrap'), packs: $('packs'),
       options: $('btn-options'), optionsModal: $('options'),
       optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
       langSwitch: $('lang-switch'), optionsClose: $('options-close'),
@@ -178,6 +180,11 @@ export class UI {
 
     // The band. Generative, so it never repeats; the key follows the
     // descent, so stage 70 broods and stage 160 barely breathes.
+    // The till. Finds nothing in a browser, which is the normal case, and
+    // then the shop simply never grows a "More gems" section.
+    this.billing = new Billing(state, (gems) => this.onGemsBought(gems));
+    this.billing.connect().then((ok) => { if (ok) this.refreshPacks(); });
+
     this.music = new Music(this.sfx, () => !this.state.musicOff);
     const moodFor = (stage) => (stage >= 150 ? 2 : stage >= 64 ? 1 : 0);
     this.music.setMood(moodFor(state.stage));
@@ -234,6 +241,7 @@ export class UI {
       ['#workshop .sect:nth-of-type(2)', 'Cauldron'],
       ['#workshop .sect:nth-of-type(3)', 'What smithing gives you'],
       ['#gem-title', 'Gem shop'],
+      ['#packs-title', 'More gems'],
     ];
     for (const [sel, key] of TAIL) {
       const el = document.querySelector(sel);
@@ -252,6 +260,7 @@ export class UI {
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
       ['#asc-feats .prestige__note', 'Feitos são marcas da vida inteira: os contadores nunca zeram, nem no despertar, e cada feito completo paga um <b>bônus permanente pequeno</b> para sempre.'],
       ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
+      ['#packs-note', 'Toda gema daqui também pode ser ganha limpando masmorras. As compras são feitas pela loja; o jogo nunca vê seus dados de pagamento.'],
       ['.foot > span:first-child', `Fase <b id="stat-stage-foot">1</b>`],
       ['.foot__best', `Recorde: fase <b id="stat-best">1</b>`],
       ['#asc-rebirth .prestige__gain div', `<strong id="pres-gain">0</strong> relíquia(s)\n<small>${t('if you rebirth now')}</small>`],
@@ -639,6 +648,10 @@ export class UI {
     el.wares.addEventListener('click', (e) => {
       const row = e.target.closest('[data-ware]');
       if (row && !row.disabled) this.buyWare(row.dataset.ware);
+    });
+    el.packs.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-pack]');
+      if (row && !row.disabled) this.buyPack(row.dataset.pack);
     });
 
     // --- options ---
@@ -1279,6 +1292,52 @@ export class UI {
       row.disabled = !offer.ok || inRun;
       row.classList.toggle('can-buy', offer.ok && !inRun);
     }
+  }
+
+  /**
+   * The store's own shelf, built from what it actually offered and priced in
+   * its own strings. It is rebuilt rather than refreshed because it only
+   * changes when the store answers, which happens once.
+   */
+  refreshPacks() {
+    const { el } = this;
+    const catalogue = this.billing.catalogue();
+    el.packsWrap.hidden = catalogue.length === 0;
+    if (!catalogue.length) return;
+    el.packs.replaceChildren(...catalogue.map((pack) => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ware can-buy';
+      row.dataset.pack = pack.sku;
+      row.innerHTML = `
+        <i class="ico ico--lg ico--gem"></i>
+        <span>
+          <span class="ware__name">${t(pack.name)}</span><br>
+          <span class="ware__what">${t('{0} gems', pack.gems)}</span>
+        </span>
+        <span class="ware__cost">${pack.price}</span>`;
+      return row;
+    }));
+  }
+
+  /** A pack landed: say so, and let an open shop repaint its prices. */
+  onGemsBought(gems) {
+    this.state.save();
+    this.toast({ text: t('+{0} GEM(S)', gems) });
+    this.sfx.play('jingle');
+    if (!this.el.gemShop.hidden) this.refreshWares();
+  }
+
+  async buyPack(sku) {
+    const result = await this.billing.buy(sku);
+    if (result.ok) return;                    // onGemsBought already spoke
+    if (result.reason === 'pending') {
+      this.toast({ text: t('PAYMENT PENDING, GEMS ARRIVE WHEN IT CLEARS') });
+    } else if (result.reason === 'failed') {
+      this.toast({ text: t('THE PURCHASE DID NOT GO THROUGH'), bad: true });
+    }
+    // 'cancelled' and 'unavailable' say nothing: the player either backed
+    // out on purpose or never had a store, and neither needs a banner.
   }
 
   /**

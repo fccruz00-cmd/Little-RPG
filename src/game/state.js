@@ -25,8 +25,9 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 13;
+const SAVE_VERSION = 14;
 const SAVE_EVERY = 5; // seconds
+const REDEEMED_KEPT = 50; // purchase tokens kept against double-crediting
 
 function emptyLevels() {
   return Object.fromEntries(Object.keys(STATS).map((k) => [k, 0]));
@@ -98,6 +99,8 @@ function defaults() {
     // priced off: the live rate is zero for the hour after a rebirth, which
     // is precisely the hour the ware exists for.
     bestGps: 0,
+    // Store purchase tokens already credited. See redeemPurchase().
+    redeemed: [],
 
     buyMax: false,
     muted: false,
@@ -140,7 +143,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 12) {
+  if (data.version >= 1 && data.version <= 13) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -155,6 +158,8 @@ function migrate(data) {
     // v11: before the cauldron; potion timers start empty via defaults.
     // v12: before gems. A zero best-rate is correct for a save that never
     // tracked one, and the purse is back-paid for clears already made, below.
+    // v13: before store purchases. An empty ledger is right: a save from
+    // before billing existed cannot have a purchase owed to it.
     const out = {
       ...defaults(),
       ...data,
@@ -209,6 +214,7 @@ export class GameState {
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
+    this.redeemed = Array.isArray(data.redeemed) ? [...data.redeemed] : [];
     this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
     // Unlocks read live state, so a save from before pets existed walks out
     // of load with everything it already earned, the slime included. Silent
@@ -921,10 +927,9 @@ export class GameState {
   }
 
   /**
-   * The one door money would come through. Nothing calls it today: the game
-   * ships with no network and no store, so every gem in the purse was cleared
-   * for. A store integration credits gems HERE and nowhere else, which is what
-   * keeps "buying gems" and "earning gems" the same thing downstream.
+   * The one door money comes through. Store code credits gems HERE and
+   * nowhere else, which is what keeps "buying gems" and "earning gems" the
+   * same thing everywhere downstream.
    */
   grantGems(amount) {
     const n = Math.max(0, Math.floor(amount));
@@ -932,6 +937,33 @@ export class GameState {
     this.gems += n;
     this.save();
     return n;
+  }
+
+  /**
+   * Credits one store purchase, exactly once, keyed by its purchase token.
+   *
+   * THIS IS WHY IT EXISTS. A consumable is only re-buyable once it has been
+   * consumed, and consuming can fail: the network drops, the process dies,
+   * the user force-quits between the two calls. So a purchase MUST be
+   * credited before it is consumed, and anything left uneaten is re-delivered
+   * on the next launch. Without this ledger that re-delivery pays twice, and
+   * a player who learns to kill the app at the right moment mints gems.
+   *
+   * The reverse order is worse: consume-then-credit loses a purchase that
+   * was paid for, and that is somebody's money.
+   *
+   * @returns {number} gems actually credited; 0 means already redeemed.
+   */
+  redeemPurchase(token, amount) {
+    if (!token) return 0;
+    if (this.redeemed.includes(token)) return 0;
+    this.redeemed.push(token);
+    // Tokens are long and the ledger only has to outlive a failed consume,
+    // so the tail is all that matters. Trimming keeps the save small.
+    if (this.redeemed.length > REDEEMED_KEPT) {
+      this.redeemed = this.redeemed.slice(-REDEEMED_KEPT);
+    }
+    return this.grantGems(amount);
   }
 
   // --- prestige -----------------------------------------------------
@@ -1105,7 +1137,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      gems, bestGps,
+      gems, bestGps, redeemed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1116,7 +1148,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      gems, bestGps,
+      gems, bestGps, redeemed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

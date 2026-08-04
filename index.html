@@ -360,6 +360,16 @@
         pace, never a ceiling.
       </p>
       <div class="wares" id="wares"></div>
+      <!-- Only ever shown when a real store answered. In a browser, and in
+           the file you can open from disk, this stays empty and hidden. -->
+      <div id="packs-wrap" hidden>
+        <h3 class="sect" id="packs-title"><i class="ico ico--sm ico--gem"></i> More gems</h3>
+        <div class="wares" id="packs"></div>
+        <p class="opt-note" id="packs-note">
+          Every gem here can also be earned by clearing dungeons. Purchases
+          are handled by the store; the game never sees your payment details.
+        </p>
+      </div>
     </div>
     <button class="act-btn" id="gemshop-close" type="button">Close</button>
   </div>

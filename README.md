@@ -385,10 +385,24 @@ make it worthless exactly then. Bought gold is added straight to the pile and
 deliberately kept out of the income window, or the offline payout would come
 to believe the hero farms an hour a second.
 
-**On selling gems.** The game ships with no network and no store, so every
-gem in the purse today was cleared for. `GameState.grantGems()` is the single
-seam a purchase would credit through, and it is the only one — which is what
-keeps *buying* gems and *earning* gems the same thing everywhere downstream.
+**On selling gems.** `src/store/billing.js` is the whole of it, and it is the
+only code in the game that talks to anything. In a browser it finds no store,
+`available` stays false, and the shop never grows a *More gems* section —
+which is every build you can open from disk. Inside a Play wrapper it speaks
+either the Digital Goods API (a TWA needs no bridge) or a native bridge at
+`window.LittleRPGBilling` (Capacitor), loads the store's own localised
+prices, and credits through `GameState.redeemPurchase()`.
+
+That method is keyed on the store's purchase token and pays each one exactly
+once, which is what makes the required order safe: **pay, credit, save, then
+consume**. Consuming can fail, and a purchase that was credited but not
+consumed is re-delivered on the next launch for free. The reverse order loses
+gems that were paid for.
+
+Prices are never in the repo. The store owns them; it knows the country, the
+currency and the tax. See **[docs/PLAY_STORE.md](docs/PLAY_STORE.md)** for
+the wrapper choice, the SKUs, and the save-durability problem you have to
+solve before selling anything.
 
 ### Smithing, and a forge that finally progresses
 
@@ -484,6 +498,7 @@ src/
     state.js        derived stats, trees, level, forge, ascension, save/load
     battle.js       arena simulation (knows nothing about canvas or DOM)
     render.js       canvas: procedural scenery, sprites, bars, numbers
+  store/billing.js  Play Billing, the only code that talks to anything
   ui/ui.js          HUD, tabs, shop, trees, forge and ascension panel
 little-rpg.html     GENERATED, the whole game in one file
 tools/

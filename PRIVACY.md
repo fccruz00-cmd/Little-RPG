@@ -1,20 +1,22 @@
 # Privacy Policy
 
-**Last updated:** 3 August 2026
+**Last updated:** 4 August 2026
 
 ## The short version
 
-Little RPG runs entirely on your device. It has no servers, makes no network
-requests, and collects nothing about you. Your save lives in your own
-browser's storage and never leaves it.
+Little RPG runs entirely on your device. We have no servers, the game sends
+us nothing, and it collects nothing about you. Your save lives in your own
+device's storage and never leaves it.
 
-The one place personal data does change hands is **buying the game**, and
-that happens on the store, not in the game. See *Purchases* below.
+Personal data changes hands in exactly one place: **paying**, whether that is
+buying the game or buying gems inside it. Both happen on the app store, not
+in the game. See *Purchases* below.
 
-You do not have to take this on faith. The whole game is one readable HTML
-file with no minification and no bundled tracker, and the source is public.
-Search it for `fetch`, `XMLHttpRequest`, `WebSocket` or `sendBeacon` and you
-will find nothing.
+You do not have to take this on faith. The game is readable source with no
+minification and no bundled tracker, and it is public. Search it for `fetch`,
+`XMLHttpRequest`, `WebSocket` or `sendBeacon` and you will find nothing: the
+only code that talks to anything is `src/store/billing.js`, it speaks solely
+to the app store's billing service, and it does so only when you tap a pack.
 
 ## What the game stores on your device
 
@@ -33,9 +35,12 @@ One entry in your browser's `localStorage`, under the key
 - Settings: buy-max, auto-forge, sound, music, damage numbers and language
 - A timestamp of when you last had the game open, used only to work out
   offline earnings the next time you open it
+- If your copy sells gems: the store's receipt id for each gem pack already
+  delivered, so an interrupted purchase is not paid out twice. The last fifty
+  are kept. See *Buying gems inside the game* below
 
 There is no name, no email, no account, no device identifier and no location
-in that record. It is written by your browser, read by your browser, and is
+in that record. It is written by your device, read by your device, and is
 never transmitted anywhere.
 
 The game reads exactly two things from your browser beyond that save:
@@ -57,7 +62,10 @@ where you paste it.
 - No cookies
 - No third-party scripts, fonts, or content delivery networks. The game uses
   the monospace font already installed on your system
-- No network requests of any kind, to us or to anyone else
+- No network requests of its own, to us or to anyone else. The one exception
+  is a gem purchase, which is handed to the app store's billing service and
+  goes nowhere near a server of ours. With no purchase in flight, the game
+  works with the network switched off
 - No selling or sharing of personal information, because none is collected
 
 ## Purchases
@@ -66,11 +74,29 @@ Little RPG is a paid game. Payment is handled entirely by the store you buy
 it from. **We never see or receive your card number, billing address or
 payment credentials.**
 
-The gems the game uses are earned by clearing dungeons and are spent in the
-game's own shop. The version you have makes no purchases of any kind: there
-is no store inside the game, no gem pack to buy and no request to any payment
-provider. If that ever changes, the section below on *Changes to this policy*
-applies, and this page will say so before that version ships.
+### Buying gems inside the game
+
+Gems are earned by clearing dungeons. Some versions of the game also sell
+them, and if yours does, a **More gems** section appears in the gem shop
+with prices in your own currency. If you do not see that section, your copy
+has no store attached and makes no purchases of any kind.
+
+Where it does appear, the purchase is carried out **by the app store's own
+billing service**, not by the game. The game asks the store what the packs
+cost and tells it which one you chose; the store handles everything else.
+**Your card number, billing address and payment credentials never pass
+through the game**, and there is no server of ours involved at any point.
+
+What the game keeps afterwards is one thing: a **purchase token** for each
+pack it has already credited, stored in your save alongside everything else.
+It is a pseudonymous receipt id issued by the store, and it exists so that a
+purchase which was interrupted can be re-delivered without paying you twice.
+It contains no name, no email and no payment details, and the last fifty are
+kept. It is never transmitted anywhere; the game only ever hands it back to
+the same store that issued it, to mark the purchase as delivered.
+
+The store is an independent controller of your purchase data under its own
+privacy policy. See *Purchases* above.
 
 The store is the party that collects and controls your purchase data. What it
 collects, how long it keeps it, and what rights you have over it are governed
@@ -95,8 +121,10 @@ because that is how the internet delivers a file, and stores additionally
 hold your account and purchase history. Those parties are independent
 controllers of that data under their own policies.
 
-Once the game is downloaded and running, it does not talk to any of them
-again. It works with the network switched off.
+Once the game is downloaded and running, the only thing that ever reaches
+the store again is a gem purchase you started, and only for as long as it
+takes to complete. Nothing else does, and with no purchase in flight the
+game works with the network switched off.
 
 ## Your data, your control
 
@@ -106,15 +134,17 @@ Because the save never leaves your device, you control it completely.
   *Erase everything and start over*. This removes the save entry outright.
 - **Delete it from the browser:** clear site data or local storage for
   wherever the game is running.
-- **Back it up or move it:** *Ascend* tab, *Export save* copies your whole
-  save as one line of text; *Import save* pastes it back in anywhere. The
-  same value is also visible as `little-rpg.save.v1` in your browser's
-  developer tools.
+- **Back it up or move it:** the *options* link at the bottom of the screen,
+  then *Export save*, copies your whole save as one line of text; *Import
+  save* pastes it back in anywhere. The same value is also visible as
+  `little-rpg.save.v1` in your browser's developer tools.
 
 Note that saves are per-browser and per-origin. The downloaded single file
 opened from your disk and a hosted copy on the web keep separate saves, and
-clearing your browser data removes the save with it. We cannot recover a lost
-save, because we never had a copy.
+clearing your browser data removes the save with it. **We cannot recover a
+lost save, because we never had a copy** — that includes gems, whether they
+were cleared for or bought. Export is the only backup there is, and it is
+worth using before you clear browser data or move devices.
 
 ## Children
 
