@@ -549,10 +549,13 @@ export class Renderer {
   // --- floating numbers ----------------------------------------------
   drawFloaters(battle, camX) {
     const { ctx, scale: S } = this;
+    // Champion banners still show: they are an event, not a damage number.
+    const numbersOff = battle.state.floatersOff;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     for (const f of battle.floaters) {
+      if (numbersOff && f.kind !== 'champ') continue;
       const t = f.life / 0.9;
       const alpha = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
       const style = FLOATER_STYLE[f.kind];

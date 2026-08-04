@@ -1,4 +1,5 @@
 import { pct, mult } from '../format.js';
+import { t } from '../i18n.js';
 
 /**
  * Equipment forge, unlocked on the first rebirth.
@@ -111,9 +112,9 @@ export function gearValue(slot, rarityIndex) {
 
 export function describeGear(slot, rarityIndex) {
   const total = gearValue(slot, rarityIndex);
-  if (slot.key === 'critAdd') return `+${pct(total)} crit chance`;
-  if (slot.key === 'damageTaken') return `${pct(total)} less damage taken`;
-  return `${mult(1 + total)} ${GEAR_LABEL[slot.key]}`;
+  if (slot.key === 'critAdd') return t('+{0} crit chance', pct(total));
+  if (slot.key === 'damageTaken') return t('{0} less damage taken', pct(total));
+  return `${mult(1 + total)} ${t(GEAR_LABEL[slot.key])}`;
 }
 
 const GEAR_LABEL = {

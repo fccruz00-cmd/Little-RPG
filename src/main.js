@@ -5,6 +5,7 @@ import { GameState } from './game/state.js';
 import { Battle } from './game/battle.js';
 import { Renderer } from './game/render.js';
 import { UI } from './ui/ui.js';
+import { setLang } from './i18n.js';
 
 const STEP = 1 / 60;      // fixed simulation step
 const MAX_CATCHUP = 0.25; // at most 15 steps per frame
@@ -28,6 +29,7 @@ async function boot() {
   const sheets = await loadActors(allActorIds(), SPRITES);
 
   const { state, offline } = GameState.load();
+  setLang(state.lang);   // before anything builds a string
   const renderer = new Renderer(document.getElementById('stage'));
   const battle = new Battle(state, sheets);
   const ui = new UI(state, battle);

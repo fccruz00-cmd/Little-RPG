@@ -30,7 +30,7 @@ One entry in your browser's `localStorage`, under the key
 - Potion timers: seconds remaining on active brews
 - Lifetime counters used by feats: kills, bosses, deaths, forges, refines,
   feeds, brews, dungeon clears
-- Settings: buy-max, auto-forge, sound and music toggles
+- Settings: buy-max, auto-forge, sound, music, damage numbers and language
 - A timestamp of when you last had the game open, used only to work out
   offline earnings the next time you open it
 

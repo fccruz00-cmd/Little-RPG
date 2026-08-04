@@ -1,4 +1,5 @@
 import { pct, mult } from '../format.js';
+import { t } from '../i18n.js';
 
 /**
  * The two skill trees.
@@ -178,27 +179,27 @@ export function describeNode(node, ranks) {
   const n = Math.max(1, ranks); // with no points yet, show what the first buys
   const total = node.per * n;
   switch (node.key) {
-    case 'critAdd':      return `+${pct(total)} crit chance`;
-    case 'critPowerAdd': return `+${total.toFixed(2)} crit damage`;
-    case 'startStage':   return `start at stage ${1 + total}`;
-    case 'killsLess':    return `${total} fewer mob per stage`;
-    case 'extraPoints':  return `+${total} skill point`;
-    case 'damageTaken':  return `${pct(total)} less damage taken`;
-    case 'respawnMul':   return `${pct(total)} faster to get up`;
-    case 'dustChance':   return `+${pct(total)} dust chance`;
-    case 'bossTime':     return `+${total}s on the boss timer`;
-    case 'autoBuy':      return `buys for you every ${(AUTO_BUY_BASE - n + 1).toFixed(0)}s`;
-    case 'autoCraft':    return 'forges for you when dust piles up';
-    case 'autoSwitch':   return `swaps your tool every ${AUTO_SWITCH_EVERY}s so no skill stalls`;
-    case 'doubleHit':    return `+${pct(total)} chance to strike twice`;
-    case 'lifesteal':    return `heals ${pct(total)} of damage dealt`;
-    case 'executeMul':   return `+${pct(total)} damage below 30% health`;
-    case 'ambush':       return `+${pct(total)} on the first hit on each enemy`;
-    case 'petPower':     return `pet buffs +${pct(total)} stronger`;
-    case 'feedLess':     return `pets eat ${pct(total)} less fish`;
-    case 'yieldAll':     return `+${pct(total)} yield, every gathering skill`;
-    case 'workAll':      return `${pct(total)} faster work, every gathering skill`;
-    default:             return `${mult(1 + total)} ${LABEL[node.key] ?? ''}`.trim();
+    case 'critAdd':      return t('+{0} crit chance', pct(total));
+    case 'critPowerAdd': return t('+{0} crit damage', total.toFixed(2));
+    case 'startStage':   return t('start at stage {0}', 1 + total);
+    case 'killsLess':    return t('{0} fewer mob per stage', total);
+    case 'extraPoints':  return t('+{0} skill point', total);
+    case 'damageTaken':  return t('{0} less damage taken', pct(total));
+    case 'respawnMul':   return t('{0} faster to get up', pct(total));
+    case 'dustChance':   return t('+{0} dust chance', pct(total));
+    case 'bossTime':     return t('+{0}s on the boss timer', total);
+    case 'autoBuy':      return t('buys for you every {0}s', (AUTO_BUY_BASE - n + 1).toFixed(0));
+    case 'autoCraft':    return t('forges for you when dust piles up');
+    case 'autoSwitch':   return t('swaps your tool every {0}s so no skill stalls', AUTO_SWITCH_EVERY);
+    case 'doubleHit':    return t('+{0} chance to strike twice', pct(total));
+    case 'lifesteal':    return t('heals {0} of damage dealt', pct(total));
+    case 'executeMul':   return t('+{0} damage below 30% health', pct(total));
+    case 'ambush':       return t('+{0} on the first hit on each enemy', pct(total));
+    case 'petPower':     return t('pet buffs +{0} stronger', pct(total));
+    case 'feedLess':     return t('pets eat {0} less fish', pct(total));
+    case 'yieldAll':     return t('+{0} yield, every gathering skill', pct(total));
+    case 'workAll':      return t('{0} faster work, every gathering skill', pct(total));
+    default:             return `${mult(1 + total)} ${t(LABEL[node.key] ?? '')}`.trim();
   }
 }
 

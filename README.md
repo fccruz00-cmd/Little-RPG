@@ -193,6 +193,21 @@ cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
 gathering economy touches, pets and their levels survive **rebirth and
 awakening both**.
 
+### Options and languages
+
+The footer's **options** opens the game's one modal: sound effects, music,
+damage numbers, language, and the save export/import. The list scrolls, so
+it stays usable on a short phone.
+
+**Portuguese and English.** The English string IS the key: display sites
+call `t('...')`, English falls through untouched, and a missing entry shows
+English rather than a blank, so a forgotten string is cosmetic and never a
+broken screen. Proper nouns stay English in both languages on purpose:
+Soulfire, Hellpup, the Templar and the Time Draught are names, not
+sentences. Switching language saves and reloads, because every string is
+read as the world is built, and a rebuild is cleaner than re-translating a
+live DOM.
+
 ### Sound, champions and the road
 
 - **Sound** is synthesized in WebAudio: no samples, no files, no licences.

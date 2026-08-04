@@ -257,12 +257,6 @@
           <ul id="perks-list"></ul>
         </section>
 
-        <!-- The save lives only on this device; these are the player's keys. -->
-        <div class="savebar">
-          <button class="link" id="btn-export" type="button">Export save</button>
-          <span class="savebar__dot">&middot;</span>
-          <button class="link" id="btn-import" type="button">Import save</button>
-        </div>
       </div>
 
       <!-- feats: lifetime marks, each worth a small permanent bonus -->
@@ -308,12 +302,45 @@
 
     <footer class="foot">
       <span>Stage <b id="stat-stage-foot">1</b></span>
-      <button class="link" id="btn-mute" type="button">sound: on</button>
-      <button class="link" id="btn-music" type="button">music: on</button>
+      <button class="link" id="btn-options" type="button">options</button>
       <span class="foot__best">Best: stage <b id="stat-best">1</b></span>
     </footer>
   </section>
 
+</div>
+
+<!-- Options: the one modal in the game, scrollable, board-framed. -->
+<div class="modal" id="options" hidden>
+  <div class="modal__box">
+    <h3 class="sect" id="opt-title">Options</h3>
+    <div class="modal__scroll">
+      <label class="toggle opt-row">
+        <input type="checkbox" id="opt-sfx">
+        <span>Sound effects</span>
+      </label>
+      <label class="toggle opt-row">
+        <input type="checkbox" id="opt-music">
+        <span>Music</span>
+      </label>
+      <label class="toggle opt-row">
+        <input type="checkbox" id="opt-float">
+        <span>Damage numbers</span>
+      </label>
+      <div class="opt-row opt-row--lang">
+        <span id="opt-lang">Language</span>
+        <div class="segmented" id="lang-switch">
+          <button data-lang="en" type="button">EN</button>
+          <button data-lang="pt" type="button">PT</button>
+        </div>
+      </div>
+      <p class="opt-note" id="opt-save-note">Back up or move your save between devices.</p>
+      <div class="opt-row opt-row--buttons">
+        <button class="equip" id="btn-export" type="button">Export save</button>
+        <button class="equip" id="btn-import" type="button">Import save</button>
+      </div>
+    </div>
+    <button class="act-btn" id="options-close" type="button">Close</button>
+  </div>
 </div>
 
 <div class="loading" id="loading"><span>loading...</span></div>

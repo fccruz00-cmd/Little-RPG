@@ -24,6 +24,8 @@
  * leave every sink downstream stale.
  */
 
+import { t } from '../i18n.js';
+
 // Depth gates are shared across the three skills on purpose: switching tools
 // should change what you collect, never how deep you have to be.
 const GATES = [1, 8, 20, 36, 55];
@@ -312,18 +314,18 @@ export function describeGatherNode(node, ranks) {
   const total = node.per * n;
   const pct = (v) => `${(v * 100).toFixed(v * 100 % 1 ? 1 : 0)}%`;
   switch (node.key) {
-    case 'yieldDouble': return `+${pct(total)} chance a node pays twice`;
-    case 'gatherSpeed': return `${pct(total)} faster to work a node`;
-    case 'refineLess':  return `${pct(total)} less raw per unit`;
-    case 'nodeGold':    return `nodes also pay ${total.toFixed(2)}x a mob's gold`;
-    case 'nodeDust':    return `+${pct(total)} chance a node drops dust`;
-    case 'fedArmor':    return `Well Fed also cuts ${pct(total)} more damage`;
-    case 'mealTime':    return `meals last ${pct(total)} longer`;
-    case 'fedRegen':    return `Well Fed regen +${pct(total)}`;
-    case 'yieldMul':    return `x${(1 + total).toFixed(2)} per node`;
-    case 'nodeMul':     return `x${(1 + total).toFixed(2)} nodes on the road`;
-    case 'gatherXpMul': return `x${(1 + total).toFixed(2)} skill XP`;
-    case 'forgeLuck':   return `+${total.toFixed(2)} forge quality, odds move up the ladder`;
+    case 'yieldDouble': return t('+{0} chance a node pays twice', pct(total));
+    case 'gatherSpeed': return t('{0} faster to work a node', pct(total));
+    case 'refineLess':  return t('{0} less raw per unit', pct(total));
+    case 'nodeGold':    return t("nodes also pay {0}x a mob's gold", total.toFixed(2));
+    case 'nodeDust':    return t('+{0} chance a node drops dust', pct(total));
+    case 'fedArmor':    return t('Well Fed also cuts {0} more damage', pct(total));
+    case 'mealTime':    return t('meals last {0} longer', pct(total));
+    case 'fedRegen':    return t('Well Fed regen +{0}', pct(total));
+    case 'yieldMul':    return t('x{0} per node', (1 + total).toFixed(2));
+    case 'nodeMul':     return t('x{0} nodes on the road', (1 + total).toFixed(2));
+    case 'gatherXpMul': return t('x{0} skill XP', (1 + total).toFixed(2));
+    case 'forgeLuck':   return t('+{0} forge quality, odds move up the ladder', total.toFixed(2));
     case 'forgeFloor':  return `the forge never rolls below ${['Uncommon', 'Rare', 'Epic'][Math.min(n, 3) - 1]}`;
     case 'forgeCostLess': return `${pct(total)} cheaper to forge`;
     case 'refineAll':   return `${pct(total)} less raw per unit, in EVERY skill`;

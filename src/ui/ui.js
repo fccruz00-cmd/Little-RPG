@@ -20,6 +20,7 @@ import {
 } from '../data/gathering.js';
 import { fmt, pct, mult, duration } from '../format.js';
 import { SFX } from '../engine/sfx.js';
+import { t, lang, setLang } from '../i18n.js';
 import { Music } from '../engine/music.js';
 
 const AUTO_FORGE_EVERY = 1.5;   // seconds between Anvil forges
@@ -109,7 +110,9 @@ export class UI {
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
-      mute: $('btn-mute'), music: $('btn-music'),
+      options: $('btn-options'), optionsModal: $('options'),
+      optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
+      langSwitch: $('lang-switch'), optionsClose: $('options-close'),
     };
 
     this.tab = 'upgrades';
@@ -126,6 +129,7 @@ export class UI {
 
     this.slots = new Map();
 
+    this.applyStatic();
     this.buildShop();
     this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
@@ -168,6 +172,101 @@ export class UI {
     battle.on('stage', (stage) => this.music.setMood(moodFor(stage)));
   }
 
+  /**
+   * Translates every string index.html shipped in English. Text nodes are
+   * replaced in place so pips and icons survive; the rich blocks swap their
+   * whole innerHTML, ids preserved. English is a no-op.
+   */
+  applyStatic() {
+    if (lang !== 'pt') return;
+    const TEXT = [
+      ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
+      ['[data-tab="skills"]', 'Skills'], ['[data-tab="forge"]', 'Forge'],
+      ['[data-tab="pets"]', 'Pets'], ['[data-tab="prestige"]', 'Ascend'],
+      ['[data-tree="talents"]', 'Talents'], ['[data-tree="relics"]', 'Relics'],
+      ['[data-tree="souls"]', 'Souls'],
+      ['[data-skill="mining"]', 'Mining'], ['[data-skill="chopping"]', 'Chopping'],
+      ['[data-skill="fishing"]', 'Fishing'], ['[data-skill="smithing"]', 'Smithing'],
+      ['[data-asc="rebirth"]', 'Rebirth'], ['[data-asc="awaken"]', 'Awaken'],
+      ['[data-asc="feats"]', 'Feats'],
+      ['#btn-respec', 'respec'], ['#btn-respec-skill', 'respec'],
+      ['#act-boss', 'Try boss'], ['#act-blood', 'Bloodmoon'], ['#act-leave', 'Leave'],
+      ['#pane-upgrades .toggle span', 'Buy max'],
+      ['#autocraft-wrap span', 'Auto forge'],
+      ['#equip-label', 'Equip'],
+      ['#pane-pets .pane__hint', "Every tamed pet's buff is on."],
+      ['#tree-detail', 'Tap a node to invest.'],
+      ['#skill-detail', 'Tap a node to invest.'],
+      ['#perks h3', 'Permanent bonuses'],
+      ['#pres-go', 'Rebirth'], ['#awk-go', 'Awaken'],
+      ['#btn-reset', 'Erase everything and start over'],
+      ['#btn-options', 'options'], ['#opt-title', 'Options'],
+      ['#opt-sfx ~ span', 'Sound effects'], ['#opt-music ~ span', 'Music'],
+      ['#opt-float ~ span', 'Damage numbers'], ['#opt-lang', 'Language'],
+      ['#opt-save-note', 'Back up or move your save between devices.'],
+      ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
+      ['#options-close', 'Close'],
+      ['.loading span', 'loading...'],
+    ];
+    for (const [sel, key] of TEXT) {
+      const el = document.querySelector(sel);
+      if (!el) continue;
+      // the first non-empty text node, so pips and icons stay put
+      const node = [...el.childNodes].find((n) => n.nodeType === 3 && n.nodeValue.trim());
+      if (node) node.nodeValue = node.nodeValue.replace(node.nodeValue.trim(), t(key));
+      else el.textContent = t(key);
+    }
+    // text that trails an icon: replace the LAST text node
+    const TAIL = [
+      ['#workshop .sect:nth-of-type(1)', 'Dungeon keys'],
+      ['#workshop .sect:nth-of-type(2)', 'Cauldron'],
+      ['#workshop .sect:nth-of-type(3)', 'What smithing gives you'],
+    ];
+    for (const [sel, key] of TAIL) {
+      const el = document.querySelector(sel);
+      const node = el && [...el.childNodes].reverse().find((n) => n.nodeType === 3 && n.nodeValue.trim());
+      if (node) node.nodeValue = ' ' + t(key);
+    }
+    const HTML = [
+      ['.hud__lvl', `Nv.<b id="stat-level">1</b>`],
+      ['.statbar div:nth-child(1) dt', `<i class="ico ico--sm ico--damage"></i>${t('dmg/s')}`],
+      ['.statbar div:nth-child(2) dt', `<i class="ico ico--sm ico--health"></i>${t('health')}`],
+      ['.statbar div:nth-child(3) dt', `<i class="ico ico--sm ico--crit"></i>${t('crit')}`],
+      ['.statbar div:nth-child(4) dt', `<i class="ico ico--sm ico--gold"></i>${t('gold')}`],
+      ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos te seguem, todos os buffs somam, e os níveis sobrevivem a <b>tudo</b>, renascimento e despertar.'],
+      ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
+      ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
+      ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
+      ['#asc-feats .prestige__note', 'Feitos são marcas da vida inteira: os contadores nunca zeram, nem no despertar, e cada feito completo paga um <b>bônus permanente pequeno</b> para sempre.'],
+      ['.foot > span:first-child', `Fase <b id="stat-stage-foot">1</b>`],
+      ['.foot__best', `Recorde: fase <b id="stat-best">1</b>`],
+      ['#asc-rebirth .prestige__gain div', `<strong id="pres-gain">0</strong> relíquia(s)\n<small>${t('if you rebirth now')}</small>`],
+      ['#asc-awaken .prestige__gain div', `<strong id="awk-gain">0</strong> alma(s)\n<small>${t('if you awaken now')}</small>`],
+    ];
+    for (const [sel, html] of HTML) {
+      const el = document.querySelector(sel);
+      if (el) el.innerHTML = html;
+    }
+    const DT = [
+      ['#asc-rebirth .facts div:nth-child(1) dt', 'Relics banked'],
+      ['#asc-rebirth .facts div:nth-child(2) dt', 'Rebirths'],
+      ['#asc-rebirth .facts div:nth-child(3) dt', 'Deepest stage'],
+      ['#asc-rebirth .facts div:nth-child(4) dt', 'Next relic'],
+      ['#asc-awaken .facts div:nth-child(1) dt', 'Souls to spend'],
+      ['#asc-awaken .facts div:nth-child(2) dt', 'Awakenings'],
+      ['#asc-awaken .facts div:nth-child(3) dt', 'Souls spent'],
+      ['#asc-awaken .facts div:nth-child(4) dt', 'Next soul'],
+      ['#workshop .facts div:nth-child(1) dt', 'Forge cost'],
+      ['#workshop .facts div:nth-child(2) dt', 'Refining, all skills'],
+      ['#workshop .facts div:nth-child(3) dt', 'Dust back on a miss'],
+      ['#workshop .facts div:nth-child(4) dt', 'Never rolls below'],
+    ];
+    for (const [sel, key] of DT) {
+      const el = document.querySelector(sel);
+      if (el) el.textContent = t(key);
+    }
+  }
+
   // --- building -----------------------------------------------------
   buildShop() {
     const frag = document.createDocumentFragment();
@@ -187,7 +286,7 @@ export class UI {
           </span>
         </button>`;
       const button = li.querySelector('button');
-      button.querySelector('.up__name').textContent = up.name;
+      button.querySelector('.up__name').textContent = t(up.name);
       this.rows.set(up.key, {
         up, button,
         effect: button.querySelector('.up__effect'),
@@ -383,7 +482,7 @@ export class UI {
       const made = state.refine(entry.skill, entry.resource);
       if (!made) return;
       state.save();
-      this.toast({ text: `+${fmt(made)} ${entry.resource.name} ${SKILLS[entry.skill].refinedName}(s)` });
+      this.toast({ text: `+${fmt(made)} ${entry.resource.name} ${t(SKILLS[entry.skill].refinedName)}(s)` });
       this.refreshSkills();
     });
 
@@ -392,7 +491,7 @@ export class UI {
       if (!row || !state.brew(row.dataset.potion)) return;
       state.save();
       this.sfx.play('brew');
-      this.toast({ text: `${row.dataset.potion.toUpperCase()} BREWED` });
+      this.toast({ text: t('{0} BREWED', row.dataset.potion.toUpperCase()) });
       this.refreshSkills();
     });
 
@@ -403,7 +502,7 @@ export class UI {
       if (!state.forgeKey(tier)) return;
       state.save();
       this.sfx.play('jingle');
-      this.toast({ text: `${KEYS[tier].name.toUpperCase()} FORGED` });
+      this.toast({ text: t('{0} FORGED', KEYS[tier].name.toUpperCase()) });
       this.refreshSkills();
     });
 
@@ -432,7 +531,7 @@ export class UI {
 
     el.respecSkill.addEventListener('click', () => {
       if (!state.skillSpent(this.skill)) return;
-      if (!confirm(`Refund every ${SKILLS[this.skill].name} point so you can respend them?`)) return;
+      if (!confirm(t('Refund every {0} point so you can respend them?', t(SKILLS[this.skill].name)))) return;
       state.respecSkill(this.skill);
       state.save();
       this.refreshSkills();
@@ -460,7 +559,7 @@ export class UI {
 
     el.respec.addEventListener('click', () => {
       if (!state.spentPoints) return;
-      if (!confirm('Refund every skill point so you can respend them?')) return;
+      if (!confirm(t('Refund every skill point so you can respend them?'))) return;
       state.respecTalents();
       state.save();
       this.refreshTrees(true);
@@ -483,7 +582,7 @@ export class UI {
     el.presGo.addEventListener('click', () => {
       const gain = state.pendingRelics;
       if (gain <= 0) return;
-      if (!confirm(`Rebirth now pays ${gain} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?`)) return;
+      if (!confirm(t('Rebirth now pays {0} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?', gain))) return;
       battle.forfeitDungeon();
       state.prestige();
       battle.enterStage(state.startStage, { silent: true });
@@ -493,15 +592,15 @@ export class UI {
       this.showTree('relics');
       this.toast({
         text: state.prestiges === 1
-          ? 'REBORN: THE FORGE IS OPEN'
-          : `REBORN: +${gain} RELIC(S)`,
+          ? t('REBORN: THE FORGE IS OPEN')
+          : t('REBORN: +{0} RELIC(S)', gain),
       });
     });
 
     el.awkGo.addEventListener('click', () => {
       const gain = state.pendingSouls;
       if (gain <= 0) return;
-      if (!confirm(`Awakening pays ${gain} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive. Confirm?`)) return;
+      if (!confirm(t('Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive. Confirm?', gain))) return;
       battle.forfeitDungeon();
       state.awaken();
       battle.enterStage(state.startStage, { silent: true });
@@ -511,24 +610,47 @@ export class UI {
       // and it is one tab over from where the button was.
       this.showTab('talents');
       this.showTree('souls');
-      this.toast({ text: `AWAKENED: +${gain} SOUL(S)` });
+      this.toast({ text: t('AWAKENED: +{0} SOUL(S)', gain) });
     });
 
-    const muteLabel = () => setText(el.mute, state.muted ? 'sound: off' : 'sound: on');
-    muteLabel();
-    el.mute.addEventListener('click', () => {
-      state.muted = !state.muted;
+    // --- options ---
+    el.optSfx.checked = !state.muted;
+    el.optMusic.checked = !state.musicOff;
+    el.optFloat.checked = !state.floatersOff;
+    for (const button of el.langSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.lang === lang);
+    }
+
+    const openOptions = (open) => { el.optionsModal.hidden = !open; };
+    el.options.addEventListener('click', () => openOptions(true));
+    el.optionsClose.addEventListener('click', () => openOptions(false));
+    // Tapping the backdrop closes; tapping the box does not.
+    el.optionsModal.addEventListener('click', (e) => {
+      if (e.target === el.optionsModal) openOptions(false);
+    });
+
+    el.optSfx.addEventListener('change', () => {
+      state.muted = !el.optSfx.checked;
       state.save();
-      muteLabel();
       if (!state.muted) this.sfx.play('buy');   // one tick so the ear knows
     });
-
-    const musicLabel = () => setText(el.music, state.musicOff ? 'music: off' : 'music: on');
-    musicLabel();
-    el.music.addEventListener('click', () => {
-      state.musicOff = !state.musicOff;
+    el.optMusic.addEventListener('change', () => {
+      state.musicOff = !el.optMusic.checked;
       state.save();
-      musicLabel();
+    });
+    el.optFloat.addEventListener('change', () => {
+      state.floatersOff = !el.optFloat.checked;
+      state.save();
+    });
+    el.langSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (!button || button.dataset.lang === lang) return;
+      state.lang = button.dataset.lang;
+      state.save();
+      // Every string is read as the world is built, so the cleanest switch
+      // is to rebuild the world: reload, now in the other language.
+      this._skipUnloadSave = true;
+      location.reload();
     });
 
     el.exportSave.addEventListener('click', async () => {
@@ -538,20 +660,20 @@ export class UI {
       // everywhere the game runs.
       try {
         await navigator.clipboard.writeText(text);
-        this.toast({ text: 'SAVE COPIED TO CLIPBOARD' });
+        this.toast({ text: t('SAVE COPIED TO CLIPBOARD') });
       } catch {
-        window.prompt('Copy your save:', text);
+        window.prompt(t('Copy your save:'), text);
       }
     });
 
     el.importSave.addEventListener('click', () => {
-      const text = window.prompt('Paste your save:');
+      const text = window.prompt(t('Paste your save:'));
       if (text === null || text.trim() === '') return;
       // Confirm BEFORE anything is written: a cancel must leave the current
       // save exactly as it was.
-      if (!confirm('Replace the CURRENT save with the pasted one?')) return;
+      if (!confirm(t('Replace the CURRENT save with the pasted one?'))) return;
       if (!GameState.importSave(text)) {
-        this.toast({ text: 'THAT DID NOT READ AS A SAVE', bad: true });
+        this.toast({ text: t('THAT DID NOT READ AS A SAVE'), bad: true });
         return;
       }
       // Reloading boots from the imported save. The pagehide save would
@@ -561,7 +683,7 @@ export class UI {
     });
 
     el.reset.addEventListener('click', () => {
-      if (!confirm('Erase EVERYTHING, souls, relics and prestige included?')) return;
+      if (!confirm(t('Erase EVERYTHING, souls, relics and prestige included?'))) return;
       GameState.wipe();
       location.reload();
     });
@@ -614,7 +736,7 @@ export class UI {
     for (const feat of FEATS) {
       const li = document.createElement('li');
       li.innerHTML = `<span class="featlist__name">${feat.name}</span>
-        <span class="featlist__desc">${feat.desc} &middot; <b>${describeNode(feat, 1)}</b></span>
+        <span class="featlist__desc">${t(feat.desc)} &middot; <b>${describeNode(feat, 1)}</b></span>
         <b class="featlist__mark"></b>`;
       frag.append(li);
       this.featRows.set(feat.id, { feat, li, mark: li.querySelector('.featlist__mark') });
@@ -648,17 +770,18 @@ export class UI {
     const locked = !state.isUnlocked(branch, index, ranksOf);
 
     const say = SKILLS[kind] ? describeGatherNode : describeNode;
-    const now = ranks > 0 ? `now: ${say(node, ranks)}` : 'no points yet';
+    const now = ranks > 0 ? t('now: {0}', say(node, ranks)) : t('no points yet');
     let line;
     if (locked) {
-      line = `<b>${node.name}</b> is locked: invest in <b>${branch.nodes[index - 1].name}</b> first.`;
+      line = t('<b>{0}</b> is locked: invest in <b>{1}</b> first.', node.name, branch.nodes[index - 1].name);
     } else if (ranks >= node.max) {
-      line = `<b>${node.name}</b> is maxed. ${say(node, ranks)}.`;
+      line = t('<b>{0}</b> is maxed. {1}.', node.name, say(node, ranks));
     } else {
-      const price = kind === 'relic' ? `${relicCost(node, ranks)} relic(s)`
-        : kind === 'soul' ? `${soulCost(node, ranks)} soul(s)`
-        : '1 point';
-      line = `<b>${node.name}</b> (${ranks}/${node.max}), ${now}. Next point: <b>${say(node, ranks + 1)}</b> for ${price}.`;
+      const price = kind === 'relic' ? t('{0} relic(s)', relicCost(node, ranks))
+        : kind === 'soul' ? t('{0} soul(s)', soulCost(node, ranks))
+        : t('1 point');
+      line = t('<b>{0}</b> ({1}/{2}), {3}. Next point: <b>{4}</b> for {5}.',
+        node.name, ranks, node.max, now, say(node, ranks + 1), price);
     }
     setHtml(SKILLS[kind] ? this.el.skillDetail : this.el.treeDetail, line);
   }
@@ -695,7 +818,7 @@ export class UI {
       el.stageName.classList.toggle('is-boss', encounter === 'boss');
       setText(el.stageSub, `room ${Math.min(battle.run.room, DUNGEON.rooms)} / ${DUNGEON.rooms}`);
     } else {
-      setText(el.stageName, `Stage ${state.stage}`);
+      setText(el.stageName, t('Stage {0}', state.stage));
       el.stageName.classList.toggle('is-boss', encounter === 'boss');
       setText(el.stageSub, state.bossHeld ? 'boss waiting' : {
         boss: 'boss',
@@ -735,7 +858,7 @@ export class UI {
     el.actBoss.hidden = inDungeon || !state.bossHeld;
     el.actLeave.hidden = !inDungeon;
     el.actEnter.hidden = inDungeon || state.bossHeld || !bestKey;
-    if (!el.actEnter.hidden) setText(el.actEnter, `Open the ${bestKey.name}`);
+    if (!el.actEnter.hidden) setText(el.actEnter, t('Open the {0}', bestKey.name));
     // The Bloodmoon needs the tier beaten once: a bet, not a first date.
     el.actBlood.hidden = el.actEnter.hidden || state.deepestKey < bestKey.tier;
     this._enterTier = bestKey ? bestKey.tier : null;
@@ -838,11 +961,11 @@ export class UI {
 
     this.refreshStatbar();
     if (affordable > 0) {
-      setText(el.shopHint, affordable === 1 ? '1 upgrade available' : `${affordable} upgrades available`);
+      setText(el.shopHint, t('{0} upgrade(s) available', affordable));
     } else if (isFinite(cheapest) && state.goldPerSec > 0) {
-      setText(el.shopHint, `Next one in ~${duration((cheapest - state.gold) / state.goldPerSec)}`);
+      setText(el.shopHint, t('Next one in ~{0}', duration((cheapest - state.gold) / state.goldPerSec)));
     } else {
-      setText(el.shopHint, 'Gather more gold');
+      setText(el.shopHint, t('Gather more gold'));
     }
   }
 
@@ -912,10 +1035,12 @@ export class UI {
     const worn = setRarity(state.gear);
     const bonus = worn != null ? SET_BONUS[worn] : null;
     setHtml(this.el.setStatus, bonus
-      ? `Set bonus, all ${RARITIES[worn].name}+: <b>+${Math.round(bonus.dmgMul * 100)}% damage and health${bonus.goldMul ? `, +${Math.round(bonus.goldMul * 100)}% gold` : ''}</b>.`
+      ? t('Set bonus, all {0}+: ', t(RARITIES[worn].name))
+        + `<b>${t('+{0}% damage and health', Math.round(bonus.dmgMul * 100))}`
+        + `${bonus.goldMul ? t(', +{0}% gold', Math.round(bonus.goldMul * 100)) : ''}</b>.`
       : worn != null
-        ? 'Set bonus: raise every slot past Common to start it.'
-        : 'Set bonus: fill every slot to start it.');
+        ? t('Set bonus: raise every slot past Common to start it.')
+        : t('Set bonus: fill every slot to start it.'));
   }
 
   /**
@@ -1009,7 +1134,7 @@ export class UI {
       row.dataset.key = String(key.tier);
       row.innerHTML = `
         <span class="ore__name">${key.name}</span>
-        <span class="key__what">stage ${key.level}, ${DUNGEON.rooms} rooms</span>
+        <span class="key__what">${t('stage {0}, {1} rooms', key.level, DUNGEON.rooms)}</span>
         <span class="ore__have"><b>0</b></span>
         <span class="ore__smelt">forge</span>`;
       this.el.keys.append(row);
@@ -1032,7 +1157,7 @@ export class UI {
       row.style.setProperty('--ore', potion.accent);
       row.innerHTML = `
         <span class="ore__name"><i class="ico ico--sm ico--${potion.icon}"></i> ${potion.name}</span>
-        <span class="key__what">${potion.blurb}</span>
+        <span class="key__what">${t(potion.blurb)}</span>
         <span class="ore__have"><b></b></span>
         <span class="ore__smelt">brew</span>`;
       this.el.cauldron.append(row);
@@ -1052,17 +1177,17 @@ export class UI {
       const can = state.canBrew(potion.id);
       const icon = cost.dust ? 'dust' : (potion.line === 'mining' ? 'bar' : 'plank');
       const have = cost.dust ? state.dust : (state.refined[cost.res.id] ?? 0);
-      setHtml(what, `${potion.blurb} &middot; `
+      setHtml(what, `${t(potion.blurb)} &middot; `
         + `<i class="ico ico--sm ico--${icon}"></i>${fmt(have)}/${fmt(cost.amount)}`);
       const secs = state.potions[potion.id] ?? 0;
       setText(left, secs > 0 ? duration(secs) : '');
       // Three honest reasons to say no, each with its own word: banked to
       // the cap, the forge not built yet (dust exists before it does), or
       // simply short on the pile.
-      const label = can ? 'brew'
-        : state.brewCapped(potion.id) ? 'full'
-        : cost.dust && !state.forgeUnlocked ? 'forge'
-        : 'need';
+      const label = can ? t('brew')
+        : state.brewCapped(potion.id) ? t('full')
+        : cost.dust && !state.forgeUnlocked ? t('forge')
+        : t('need');
       setText(action, label);
       row.disabled = !can;
       row.classList.toggle('can-smelt', can);
@@ -1089,7 +1214,7 @@ export class UI {
     el.skillXpFill.style.width = `${Math.min(100, (level.xp / need) * 100).toFixed(1)}%`;
     setText(el.skillXpText, `${fmt(level.xp)} / ${fmt(need)}`);
     setHtml(el.skillPoints,
-      `Lv <b>${level.level}</b>, <b>${state.skillFree(id)}</b> pt`);
+      t('Lv <b>{0}</b>, <b>{1}</b> pt', level.level, state.skillFree(id)));
 
     // The equip button IS the tradeoff, so it says which state it is in
     // rather than only what it would do.
@@ -1169,10 +1294,10 @@ export class UI {
       const cost = state.keyCost(tier);
       const can = state.canForgeKey(tier);
       setText(entry.have, String(state.keys[tier] ?? 0));
-      setHtml(entry.what, `stage ${entry.key.level} &middot; `
+      setHtml(entry.what, `${t('stage {0}', entry.key.level)} &middot; `
         + `<i class="ico ico--sm ico--bar"></i>${fmt(state.refined[cost.ore] ?? 0)}/${cost.bars} `
         + `<i class="ico ico--sm ico--plank"></i>${fmt(state.refined[cost.log] ?? 0)}/${cost.planks}`);
-      setText(entry.action, can ? 'forge' : 'need');
+      setText(entry.action, can ? t('forge') : t('need'));
       entry.row.disabled = !can;
       entry.row.classList.toggle('can-smelt', can);
     }
@@ -1210,9 +1335,9 @@ export class UI {
     // pays for a point and how that price reads on the node.
     const KIND = { talents: 'talent', relics: 'relic', souls: 'soul' }[this.tree];
     const purse = {
-      talent: `<b>${state.freePoints}</b> free point(s)`,
-      relic: `<i class="ico ico--sm ico--relic"></i> <b>${fmt(state.relics)}</b> relics`,
-      soul: `<i class="ico ico--sm ico--orb"></i> <b>${fmt(state.souls)}</b> souls`,
+      talent: t('<b>{0}</b> free point(s)', state.freePoints),
+      relic: `<i class="ico ico--sm ico--relic"></i> ` + t('<b>{0}</b> relics', fmt(state.relics)),
+      soul: `<i class="ico ico--sm ico--orb"></i> ` + t('<b>{0}</b> souls', fmt(state.souls)),
     }[KIND];
     setHtml(el.treePoints, purse);
 
@@ -1238,7 +1363,7 @@ export class UI {
         const price = entry.kind === 'soul'
           ? `${soulCost(entry.node, ranks)}s`
           : `${relicCost(entry.node, ranks)}r`;
-        setText(entry.cost, full ? 'max' : price);
+        setText(entry.cost, full ? t('max') : price);
       }
       if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
     }
@@ -1257,20 +1382,20 @@ export class UI {
         // The objective is the row: what it does, and how to earn it.
         const u = pet.unlock;
         const progress = u.now ? ` (${fmt(u.now(state))}/${u.need})` : '';
-        setText(lvl, 'locked');
-        setHtml(effect, `${pet.blurb}. Tame: <b>${u.desc}</b>${progress}.`);
+        setText(lvl, t('locked'));
+        setHtml(effect, `${t(pet.blurb)}. ${t('Tame: ')}<b>${t(u.desc)}</b>${progress}.`);
         feed.hidden = true;
         continue;
       }
 
       const { fish, cost } = state.petFood(pet.id);
-      setText(lvl, `Lv ${level}`);
+      setText(lvl, t('Lv {0}', level));
       // Today's buff, then what the next meal buys: the whole decision.
-      setHtml(effect, `${describeNode(pet, level)} &middot; next: <b>${describeNode(pet, level + 1)}</b>`);
+      setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>`);
 
       feed.hidden = false;
       feed.disabled = !state.canFeedPet(pet.id);
-      setHtml(feed, `Feed &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
+      setHtml(feed, `${t('Feed')} &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
       feed.classList.toggle('can-buy', !feed.disabled);
     }
   }
@@ -1287,15 +1412,15 @@ export class UI {
     // rather than what was collected, otherwise someone on stage 38 with 3
     // pending relics would read "stage 25", which is long gone.
     const next = nextRelicStage(relicsEarnedAt(state.maxStage));
-    setText(el.presNext, isFinite(next) ? `stage ${next}` : 'n/a');
+    setText(el.presNext, isFinite(next) ? t('stage {0}', next) : t('n/a'));
 
     el.presGainBox.classList.toggle('is-empty', gain <= 0);
     this.refreshPerks();
 
     el.presGo.disabled = gain <= 0;
     setText(el.presGo, gain > 0
-      ? `Rebirth for ${gain} relic(s)`
-      : `Reach stage ${isFinite(next) ? next : PRESTIGE.minStage}`);
+      ? t('Rebirth for {0} relic(s)', gain)
+      : t('Reach stage {0}', isFinite(next) ? next : PRESTIGE.minStage));
 
     // The soul purse only appears once awakening has entered the game.
     el.ascSouls.hidden = state.souls <= 0 && state.awakens <= 0;
@@ -1318,14 +1443,14 @@ export class UI {
 
     // Measured from what the cycle is already worth, like the relic readout.
     const next = nextSoulRelics(soulsEarnedAt(earned));
-    setText(el.awkNext, isFinite(next) ? `${next} relics` : 'n/a');
+    setText(el.awkNext, isFinite(next) ? t('{0} relics', next) : t('n/a'));
 
     el.awkGainBox.classList.toggle('is-empty', gain <= 0);
     el.pipAwaken.hidden = gain <= 0;
     el.awkGo.disabled = gain <= 0;
     setText(el.awkGo, gain > 0
-      ? `Awaken for ${gain} soul(s)`
-      : `Earn ${isFinite(next) ? next : AWAKEN.minRelics} relics first`);
+      ? t('Awaken for {0} soul(s)', gain)
+      : t('Earn {0} relics first', isFinite(next) ? next : AWAKEN.minRelics));
   }
 
   /** Lists what the relic tree already grants; hides itself when empty. */
@@ -1349,15 +1474,16 @@ export class UI {
   /** What a dungeon run paid. Shown on the way out, win or lose. */
   showReward({ relics, dust, gold, won, cleared }) {
     const parts = [];
-    if (relics > 0) parts.push(`+${relics} relic(s)`);
-    if (dust > 0) parts.push(`+${fmt(dust)} dust`);
-    if (gold > 0) parts.push(`+${fmt(gold)} gold`);
+    if (relics > 0) parts.push(t('+{0} relic(s)', relics));
+    if (dust > 0) parts.push(t('+{0} dust', fmt(dust)));
+    if (gold > 0) parts.push(t('+{0} gold', fmt(gold)));
     if (!parts.length) return;
-    this.toast({ text: `${won ? 'CLEARED' : `${cleared} rooms`}: ${parts.join(', ')}`, bad: !won });
+    const head = won ? t('CLEARED') : t('{0} rooms', cleared);
+    this.toast({ text: `${head}: ${parts.join(', ')}`, bad: !won });
   }
 
   showOffline({ seconds, gold }) {
-    this.toast({ text: `+${fmt(gold)} gold over ${duration(seconds)}` });
+    this.toast({ text: t('+{0} gold over {1}', fmt(gold), duration(seconds)) });
   }
 
   /**
@@ -1371,9 +1497,9 @@ export class UI {
     // Gold can end up lower than it started: Herald spends it while you are
     // away. Reporting a negative would read as a bug, so only what grew
     // makes the line.
-    if (gold > 0) parts.push(`+${fmt(gold)} gold`);
-    if (stages > 0) parts.push(`+${stages} stage${stages > 1 ? 's' : ''}`);
-    if (levels > 0) parts.push(`+${levels} level${levels > 1 ? 's' : ''}`);
+    if (gold > 0) parts.push(t('+{0} gold', fmt(gold)));
+    if (stages > 0) parts.push(t('+{0} stages', stages));
+    if (levels > 0) parts.push(t('+{0} levels', levels));
     if (!parts.length) return;
     this.toast({ text: `${parts.join(', ')} over ${duration(seconds)}` });
   }
