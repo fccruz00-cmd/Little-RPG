@@ -10,6 +10,8 @@ import {
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
+import { PETS, PET_BY_ID } from '../data/pets.js';
+import { SPRITES, FRAME } from '../data/sprites.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
   describeGatherNode,
@@ -95,6 +97,8 @@ export class UI {
       awkGainBox: document.querySelector('#asc-awaken .prestige__gain'),
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
+      tabPets: $('tab-pets'), pipPets: $('pip-pets'),
+      petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       reset: $('btn-reset'),
@@ -122,6 +126,7 @@ export class UI {
     this.buildStock();
     this.buildKeys();
     this.buildForge();
+    this.buildPets();
     this.bind();
 
     battle.on('toast', (t) => this.toast(t));
@@ -158,6 +163,60 @@ export class UI {
       frag.append(li);
     }
     this.el.shop.append(frag);
+  }
+
+  /**
+   * Builds the pets list: one board per pet, all five present from the
+   * start so the locked ones read as a roadmap ("reach stage 70").
+   * Thumbnails are the sprite's own idle frame, cropped to its body box and
+   * drawn pixelated, because a pet that does not look like the thing
+   * following you is just a stat row.
+   */
+  buildPets() {
+    const frag = document.createDocumentFragment();
+    this.petRows = new Map();
+    for (const pet of PETS) {
+      const row = document.createElement('div');
+      row.className = 'pet';
+      row.dataset.pet = pet.id;
+      row.style.setProperty('--accent', pet.accent);
+      row.innerHTML = `
+        <canvas class="pet__thumb" width="26" height="26"></canvas>
+        <span class="pet__body">
+          <span class="pet__name">${pet.name} <em class="pet__lvl"></em></span>
+          <span class="pet__effect"></span>
+        </span>
+        <span class="pet__buttons">
+          <button class="equip pet__follow" type="button">Follow</button>
+          <button class="equip pet__feed" type="button">Feed</button>
+        </span>`;
+      this.drawPetThumb(row.querySelector('canvas'), pet.sprite);
+      frag.append(row);
+      this.petRows.set(pet.id, {
+        pet, row,
+        lvl: row.querySelector('.pet__lvl'),
+        effect: row.querySelector('.pet__effect'),
+        follow: row.querySelector('.pet__follow'),
+        feed: row.querySelector('.pet__feed'),
+      });
+    }
+    this.el.petsList.append(frag);
+  }
+
+  /** Crops the body box out of the idle sheet's first frame, pixel-scaled. */
+  drawPetThumb(canvas, spriteId) {
+    const sheet = this.battle.sheets[spriteId]?.idle;
+    const box = SPRITES[spriteId];
+    if (!sheet || !box) return;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const w = box.right - box.left;
+    const h = box.bottom - box.top + 1;
+    const scale = Math.min(canvas.width / w, canvas.height / h);
+    const dw = Math.round(w * scale);
+    const dh = Math.round(h * scale);
+    ctx.drawImage(sheet.image, box.left, box.top, w, h,
+      Math.floor((canvas.width - dw) / 2), canvas.height - dh, dw, dh);
   }
 
   /** Builds the forge: one row per slot plus the odds table below. */
@@ -336,6 +395,25 @@ export class UI {
       if (button) this.doForge(button.dataset.slot);
     });
 
+    el.petsList.addEventListener('click', (e) => {
+      const row = e.target.closest('.pet');
+      if (!row) return;
+      const id = row.dataset.pet;
+      if (e.target.closest('.pet__feed')) {
+        if (!state.feedPet(id)) return;
+        state.save();
+        this.refreshPets();
+        return;
+      }
+      if (e.target.closest('.pet__follow')) {
+        if (!state.equipPet(id)) return;
+        battle.syncPet();
+        state.save();
+        this.toast({ text: `${PET_BY_ID[id].name.toUpperCase()} AT YOUR HEEL` });
+        this.refreshPets();
+      }
+    });
+
     el.autoCraft.checked = state.autoCraftOn !== false;
     el.autoCraft.addEventListener('change', () => {
       state.autoCraftOn = el.autoCraft.checked;
@@ -416,6 +494,7 @@ export class UI {
     if (name === 'talents') this.refreshTrees(true);
     if (name === 'skills') this.refreshSkills();
     if (name === 'forge') this.refreshForge();
+    if (name === 'pets') this.refreshPets();
     if (name === 'prestige') this.refreshPrestige();
   }
 
@@ -560,6 +639,9 @@ export class UI {
     el.tabForge.hidden = !state.forgeUnlocked;
     el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
     el.pipForge.classList.add('pip--gold');
+    el.tabPets.hidden = !state.anyPets;
+    el.pipPets.hidden = !PETS.some((p) => state.canFeedPet(p.id));
+    el.pipPets.classList.add('pip--gold');
 
     this.tickAutomation(dt);
 
@@ -571,6 +653,7 @@ export class UI {
     else if (this.tab === 'talents') this.refreshTrees();
     else if (this.tab === 'skills') this.refreshSkills();
     else if (this.tab === 'forge') this.refreshForge();
+    else if (this.tab === 'pets') this.refreshPets();
     else this.refreshPrestige();
   }
 
@@ -986,6 +1069,41 @@ export class UI {
         setText(entry.cost, full ? 'max' : price);
       }
       if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
+    }
+  }
+
+  refreshPets() {
+    const { state, el } = this;
+    setText(el.petsCount, String(Object.keys(state.pets).length));
+
+    for (const { pet, row, lvl, effect, follow, feed } of this.petRows.values()) {
+      const level = state.pets[pet.id] ?? 0;
+      const tamed = level > 0;
+      row.classList.toggle('is-locked', !tamed);
+      row.classList.toggle('is-on', state.pet === pet.id);
+
+      if (!tamed) {
+        setText(lvl, '');
+        setText(effect, `reach stage ${pet.tameStage} to tame, ${pet.blurb}`);
+        follow.hidden = true;
+        feed.hidden = true;
+        continue;
+      }
+
+      const { fish, cost } = state.petFood(pet.id);
+      setText(lvl, `Lv ${level}`);
+      // Today's buff, then what the next meal buys: the whole decision.
+      setHtml(effect, `${describeNode(pet, level)} &middot; next: <b>${describeNode(pet, level + 1)}</b>`);
+
+      follow.hidden = false;
+      feed.hidden = false;
+      const following = state.pet === pet.id;
+      follow.disabled = following;
+      setText(follow, following ? 'With you' : 'Follow');
+      follow.classList.toggle('is-on', following);
+      feed.disabled = !state.canFeedPet(pet.id);
+      setHtml(feed, `Feed &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
+      feed.classList.toggle('can-buy', !feed.disabled);
     }
   }
 

@@ -5,8 +5,8 @@ straight line on its own, runs into monsters, kills them without input and
 clears stages. All you decide is where the gold goes.
 
 The layout follows the three bands from the original sketch: **UI** on top,
-**Fight** in the middle, and a tabbed panel below with **Upgrades**,
-**Talents**, **Skills**, **Forge** and **Ascend**.
+**Fight** in the middle, and a tabbed panel below with **Shop**,
+**Talents**, **Skills**, **Forge**, **Pets** and **Ascend**.
 
 ```
 +------------------------------+
@@ -118,9 +118,9 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The five tabs
+### The six tabs
 
-1. **Upgrades**: stats bought with **gold**, wiped on rebirth.
+1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three trees behind one switch at the top.
    - *Talents*, paid with **level points** (one per level). Wiped on rebirth,
      and you can respec at any time.
@@ -132,7 +132,8 @@ it.
      a point.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
-5. **Ascend**: the two reset layers behind one switch.
+5. **Pets**: appears with the first tame, at stage 15. See *Pets* below.
+6. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
@@ -163,6 +164,32 @@ made only of things the relic tree cannot reach. Three branches:
 A point costs `node cost + ranks already in it`, the same ramp as relics; the
 nodes are shallower instead, because souls arrive in ones and twos. The whole
 tree is about 226 souls, which is many awakenings deep on purpose.
+
+### Pets
+
+Five companions, tamed automatically the first time the line reaches their
+stage: 15, 40, 70, 100 and 140. Taming reads **bestStage**, so nothing you
+ever tamed can lock itself again, and a save that predates pets walks out of
+load with everything its depth already earned.
+
+**One follows you at a time and only its buff applies**, the same tradeoff
+the tool slot makes. The follower is drawn at the hero's heel in the arena,
+at pet scale, straight from the enemy roster's own sheets.
+
+| pet | tame | eats | buff per level |
+|---|---|---|---|
+| Pocket Slime   | stage 15  | Minnows   | +4% health |
+| Belfry Bat     | stage 40  | Carp      | +1.5% attack speed |
+| Hellpup        | stage 70  | Trout     | +4% damage |
+| Little Watcher | stage 100 | Salmon    | +0.4% crit chance |
+| Cinder Slime   | stage 140 | Sturgeon  | +5% gold |
+
+Levels are bought with **raw fish of the pet's own tier**. Meals always cook
+from the best fish first, so the lower tiers pile up as dead stock the moment
+a better pool opens; pets are what that surplus is for, and the geometric
+cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
+gathering economy touches, pets and their levels survive **rebirth and
+awakening both**.
 
 ### Skills: Mining, Chopping, Fishing and Smithing
 

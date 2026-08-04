@@ -465,7 +465,11 @@ body { display: flex; justify-content: center; }
    holding one line and growing to two on a 360px phone. */
 .tab .pip, .segmented button .pip {
   position: absolute;
-  top: 1px;
+  /* Up on the frame itself, clear of the text zone: six tabs squeeze the
+     label right up to the corner, and a pip inside the face would sit on
+     the last letter of "Talents" at 360px. Negative top only: sideways it
+     stays inside the box, or it would count as horizontal overflow. */
+  top: -4px;
   right: 1px;
   width: 4px;
   height: 4px;
@@ -1071,6 +1075,75 @@ body { display: flex; justify-content: center; }
 .mine-tools .slot__cost .ico { margin-right: 2px; }
 .mine-tools .slot__cost { display: flex; align-items: center; gap: 6px; font-size: 10px; }
 
+/* --- tab 5: pets --- */
+.pets {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+}
+/* A pet is a studded board like an ore row; the accent rail is its colour
+   and the thumbnail is the pack sprite itself, not an icon standing in. */
+.pet {
+  --accent: var(--stone);
+  --px: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px 5px 10px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.pet::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 3px;
+  background: var(--accent);
+}
+.pet.is-on::before { box-shadow: 0 0 6px -1px var(--accent); }
+.pet.is-locked { opacity: .55; }
+.pet.is-locked .pet__thumb { filter: grayscale(1) brightness(.6); }
+
+.pet__thumb { width: 26px; height: 26px; image-rendering: pixelated; }
+.pet__body { min-width: 0; }
+.pet__name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pet__name em { font-style: normal; font-size: 9px; color: var(--cream); margin-left: 4px; }
+.pet__effect {
+  display: block;
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--ink-dim);
+}
+.pet__effect b { color: var(--cream); }
+
+.pet__buttons { display: grid; gap: 3px; justify-items: stretch; }
+.pet__buttons .equip { justify-content: center; font-size: 9px; padding: 2px 6px 3px; }
+.pet__buttons .equip[hidden] { display: none; }
+.pet__buttons .equip:disabled { cursor: default; }
+.pet__fish { opacity: .8; }
+.pet__feed.can-buy { animation: nodeGlow 1.8s ease-in-out infinite; }
+
 /* --- tab 4: forge --- */
 .forge {
   flex: 1 1 auto;
@@ -1367,6 +1440,12 @@ body { display: flex; justify-content: center; }
 @media (min-height: 720px) {
   .arena { height: 30%; }
 }
+/* Six tabs at 320px leave ~38px of face per button; "Talents" needs the
+   whole of it. One step down keeps every label on one line. */
+@media (max-width: 355px) {
+  .tab { font-size: 8px; letter-spacing: -0.2px; }
+}
+
 @media (max-height: 600px) {
   .arena { height: 31%; min-height: 128px; }
   /* Its top margin is 4px the pane does not have to give down here. */

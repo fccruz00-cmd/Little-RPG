@@ -26,6 +26,7 @@ One entry in your browser's `localStorage`, under the key
 - Talent, relic and soul trees, relics, souls, rebirths and awakenings
 - Soul dust, forged gear, dungeon keys
 - Gathering skills: levels, trees, tools, raw and refined resources
+- Pets: which are tamed, their levels, and which one walks beside you
 - Settings: buy-max and auto-forge toggles
 - A timestamp of when you last had the game open, used only to work out
   offline earnings the next time you open it

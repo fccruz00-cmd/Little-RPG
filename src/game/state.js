@@ -11,6 +11,7 @@ import {
   MEAL, SMITH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
 } from '../data/gathering.js';
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
+import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -19,7 +20,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 9;
+const SAVE_VERSION = 10;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -69,6 +70,10 @@ function defaults() {
     fedTier: -1,      // tier of the meal being eaten, -1 when not fed
     fedTimer: 0,
 
+    // pets: tamed for good, fed on raw fish, all of it awaken-proof
+    pets: {},         // petId -> level (absent = not tamed yet)
+    pet: null,        // the one walking beside the hero
+
     // dungeons
     keys: {},         // key tier -> how many are held
     deepestKey: -1,   // deepest key tier fully cleared
@@ -111,7 +116,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 8) {
+  if (data.version >= 1 && data.version <= 9) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -120,6 +125,7 @@ function migrate(data) {
     // v7: before dungeon keys and the boss hold. Both start empty too.
     // v8: before awakening; souls, awakens and extraRelics start at zero via
     // defaults, so an old save simply begins its first ascension cycle here.
+    // v9: before pets; the constructor tames whatever bestStage has earned.
     const out = {
       ...defaults(),
       ...data,
@@ -162,6 +168,12 @@ export class GameState {
     this.raw = { ...(data.raw ?? {}) };
     this.refined = { ...(data.refined ?? {}) };
     this.keys = { ...(data.keys ?? {}) };
+    this.pets = { ...(data.pets ?? {}) };
+    if (!PET_BY_ID[this.pet] || !this.pets[this.pet]) this.pet = null;
+    // Taming reads bestStage, so a save from before pets existed walks out
+    // of load with everything its depth already earned. Silent on purpose:
+    // the battle announces tames that happen live, not the backlog.
+    this.tamePets();
     if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
     this._bonus = null;
@@ -208,6 +220,11 @@ export class GameState {
       else if (slot.mode === 'less') b[slot.key] *= Math.max(0.1, 1 - amount);
       else b[slot.key] += amount;
     }
+
+    // The pet walking beside the hero is one more node, with its level as
+    // the ranks. Only the equipped one counts: that is the whole choice.
+    const pet = PET_BY_ID[this.pet];
+    if (pet) apply(pet, this.pets[this.pet] ?? 0);
 
     this._bonus = b;
     return b;
@@ -454,6 +471,60 @@ export class GameState {
 
   get forgeDiscount() {
     return this.gatherBonus('smithing').forgeCostLess;
+  }
+
+  // --- pets -----------------------------------------------------------
+  /**
+   * Tames every pet bestStage has reached and does not own yet. Returns the
+   * newly tamed defs so the caller can announce them; the first pet ever
+   * tamed equips itself, because a pet nobody equips is a tab nobody finds.
+   */
+  tamePets() {
+    const tamed = [];
+    for (const pet of PETS) {
+      if (this.pets[pet.id] || this.bestStage < pet.tameStage) continue;
+      this.pets[pet.id] = 1;
+      tamed.push(pet);
+    }
+    if (!this.pet && tamed.length) {
+      this.pet = tamed[0].id;
+      this.invalidateBonus();
+    }
+    return tamed;
+  }
+
+  get anyPets() {
+    return Object.keys(this.pets).length > 0;
+  }
+
+  /** The fish this pet eats, and how many the next level costs. */
+  petFood(id) {
+    const pet = PET_BY_ID[id];
+    const fish = SKILLS.fishing.resources[pet.fishTier];
+    return { fish, cost: petFeedCost(this.pets[id] ?? 1) };
+  }
+
+  canFeedPet(id) {
+    if (!this.pets[id]) return false;
+    const { fish, cost } = this.petFood(id);
+    return (this.raw[fish.id] ?? 0) >= cost;
+  }
+
+  feedPet(id) {
+    if (!this.canFeedPet(id)) return false;
+    const { fish, cost } = this.petFood(id);
+    this.raw[fish.id] -= cost;
+    this.pets[id] += 1;
+    if (this.pet === id) this.invalidateBonus();
+    return true;
+  }
+
+  /** Puts a tamed pet at the hero's heel. Only its buff applies. */
+  equipPet(id) {
+    if (!this.pets[id] || this.pet === id) return false;
+    this.pet = id;
+    this.invalidateBonus();
+    return true;
   }
 
   // --- dungeon keys -------------------------------------------------
@@ -800,7 +871,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, pet,
       buyMax, goldPerSec,
     } = this;
     return {
@@ -810,7 +881,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, pet,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }

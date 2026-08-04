@@ -1,12 +1,13 @@
 import { Animator } from '../engine/anim.js';
 import { SPRITES, GROUND_LINE } from '../data/sprites.js';
 import {
-  HERO, mobsForStage, eliteForStage, isBossStage, bossForStage,
+  HERO, MOBS, mobsForStage, eliteForStage, isBossStage, bossForStage,
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
+import { PET_BY_ID } from '../data/pets.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
@@ -87,6 +88,11 @@ export class Battle {
     // to make in the fight itself.
     this.run = null;
 
+    // The equipped pet, walking at the hero's heel. Pure presence: it does
+    // not fight, its buff lives in state.bonus like any other node's.
+    this.petActor = null;
+    this.syncPet();
+
     // Loading a save keeps the kills already made: closing the game mid
     // stage does not send you back to its start.
     this.enterStage(state.stage, { silent: true, keepKills: true });
@@ -153,7 +159,37 @@ export class Battle {
     const next = this.state.stage + 1;
     this.state.maxStage = Math.max(this.state.maxStage, next);
     this.state.bestStage = Math.max(this.state.bestStage, next);
+    // New depth is what tames: announce anything the line just reached.
+    for (const pet of this.state.tamePets()) {
+      this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+      this.syncPet();
+    }
     this.enterStage(next);
+  }
+
+  /** Rebuilds the follower actor after an equip (or the first tame). */
+  syncPet() {
+    const pet = PET_BY_ID[this.state.pet];
+    if (!pet) { this.petActor = null; return; }
+    if (this.petActor?.def.petId === pet.id) return;
+    // The sprite is a roster mob; hover comes from its own def so the bat
+    // pet flies exactly as high as the bat it used to be.
+    const mob = MOBS.find((m) => m.id === pet.sprite);
+    const def = { id: pet.sprite, petId: pet.id, hover: mob?.hover ?? 0, reach: 0, speed: 0, hit: 0 };
+    this.petActor = new Actor(def, this.sheets[pet.sprite], {
+      x: this.hero.x - 16, facing: 1,
+    });
+    this.petActor.scale = 0.55;
+  }
+
+  /** Keeps the pet at the heel and its little legs honest. */
+  updatePet(dt) {
+    const pet = this.petActor;
+    if (!pet) return;
+    pet.x = this.hero.x - 16;
+    const walking = this.hero.anim.name === 'walk';
+    pet.anim.play(walking ? 'walk' : 'idle', { fps: walking ? 10 : 8 });
+    pet.anim.update(dt);
   }
 
   goToStage(stage) {
@@ -457,6 +493,7 @@ export class Battle {
     state.tickMeals(dt);
 
     this.updateEnemy(dt);
+    this.updatePet(dt);
     this.updateCorpses(dt);
     this.updateFloaters(dt);
 

@@ -61,7 +61,7 @@
   <!-- ===== TABBED PANEL ===== -->
   <section class="panel">
     <nav class="tabs" id="tabs" role="tablist">
-      <button class="tab is-on" data-tab="upgrades" type="button" role="tab">Upgrades</button>
+      <button class="tab is-on" data-tab="upgrades" type="button" role="tab">Shop</button>
       <button class="tab" data-tab="talents" type="button" role="tab">
         Talents<i class="pip" id="pip-talents" hidden></i>
       </button>
@@ -70,6 +70,9 @@
       </button>
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
+      </button>
+      <button class="tab" data-tab="pets" type="button" role="tab" id="tab-pets" hidden>
+        Pets<i class="pip" id="pip-pets" hidden></i>
       </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
         Ascend<i class="pip" id="pip-prestige" hidden></i>
@@ -190,7 +193,21 @@
         Dungeon <b>keys</b> are forged there too.</p>
     </div>
 
-    <!-- tab 5: ascension, the two reset layers -->
+    <!-- tab 5: pets (shows up with the first tame, stage 15) -->
+    <div class="pane" id="pane-pets">
+      <div class="pane__head">
+        <span class="pane__hint">One follows you; only its buff is on.</span>
+        <span class="pane__points"><i class="ico ico--sm ico--fish"></i> <b id="pets-count">0</b> pet(s)</span>
+      </div>
+      <p class="pane__detail" id="pet-detail">
+        Pets are tamed by <b>reaching stages</b> and levelled by <b>feeding
+        them raw fish</b> of their own water. Levels survive <b>everything</b>,
+        rebirth and awakening alike.
+      </p>
+      <div class="pets" id="pets-list"></div>
+    </div>
+
+    <!-- tab 6: ascension, the two reset layers -->
     <div class="pane" id="pane-prestige">
       <div class="pane__head">
         <div class="segmented" id="asc-switch">
