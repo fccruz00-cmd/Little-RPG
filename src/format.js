@@ -29,6 +29,18 @@ export function pct(value, digits = 1) {
   return (value * 100).toFixed(digits).replace(/\.0$/, '') + '%';
 }
 
+/**
+ * A percentage that keeps its meaning when it gets small. One decimal is
+ * plenty at 15.2%, but Mythic's 0.02% renders as "0.0%" that way, and a
+ * chase that reads as impossible is worse than no number at all.
+ */
+export function oddsPct(value) {
+  const n = value * 100;
+  if (n >= 1) return n.toFixed(1) + '%';
+  if (n >= 0.01) return n.toFixed(2) + '%';
+  return n > 0 ? '<0.01%' : '0%';
+}
+
 /** Short multiplier: `1.24` becomes `"x1.24"` */
 export function mult(value) {
   return 'x' + (value < 10 ? value.toFixed(2) : fmt(value));

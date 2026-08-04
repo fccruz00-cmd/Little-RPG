@@ -245,8 +245,8 @@ live DOM.
 - **Boss traits**: from stage 30 every boss fights with one named trick,
   from the Templar's Shield Wall to the Doom Herald's ramping damage.
 - **Forge set bonus**: wearing all seven slots at one rarity or better pays
-  a bonus keyed to the LOWEST slot, up to +30% damage and health plus
-  +15% gold for a full Legendary board.
+  a bonus keyed to the LOWEST slot, up to +50% damage and health plus
+  +25% gold for a full Mythic board.
 - **Soul tree**: five branches now; Menagerie amplifies pets and cheapens
   their feed, Harvest reaches every gathering line at once.
 
@@ -361,16 +361,27 @@ opening a wallet.
 |---|---:|---|
 | Coin Cache   | 20 | an hour of your best gold rate, paid now |
 | Hourglass    | 30 | two hours of fight, really simulated, in about half a second |
-| Gilded Chest | 45 | your weakest slot reforged at Epic or better |
+| Mythic Chest | 60 | your weakest slot reforged **Mythic**, guaranteed |
 
-Three rules hold this together, and `data/gems.js` exists to keep them:
+The game is **free**, and the shop is the only thing that ever asks for
+money. Three rules hold it together, and `data/gems.js` exists to keep them:
 
 1. **Every gem is earnable.** The dungeon table above is the whole faucet.
-2. **Nothing is permanent.** Every ware is a consumable that saves time, so a
-   wallet buys pace and never a ceiling. Relics, souls, feats and pets do not
-   accept gems and are not meant to.
-3. **Prices are fixed.** A price that climbs with what you have already bought
-   is how a shop starts hunting the people worst at leaving it alone.
+   Nothing is gem-only.
+2. **Nothing is exclusive.** The Mythic Chest is the one ware that hands over
+   power rather than pace, and the forge rolls Mythic too — rarely, and more
+   often the deeper Smithing goes. Gems buy the shortcut, never the
+   destination. Relics, souls, feats and pets do not accept gems at all.
+3. **Prices are fixed, and every ware says what it gives before you buy it.**
+   A price that climbs with what you have already bought, or a box that
+   *might* contain the good thing, is how a shop starts hunting the people
+   worst at leaving it alone.
+
+The chest also caps its own takings. It targets the **weakest** slot, so it
+walks a board up one slot at a time and then refuses: seven purchases is
+everything it will ever sell you. Awakening wipes gear, Mythic included —
+that is the same bargain the Ascend tab has always offered, and it is worth
+knowing before you spend.
 
 The Hourglass is the one that does real work: it is not a payout, it runs the
 actual battle loop, so it pays in kills, experience, dust, stages, gathering
@@ -419,10 +430,10 @@ Its tree does three things:
   any tier ever running past 100%, which a flat "+x% legendary" eventually
   would. Maxed, quality reaches 1.44:
 
-  | | Common | Uncommon | Rare | Epic | Legendary |
-  |---|---:|---:|---:|---:|---:|
-  | base       | 50.0% | 27.0% | 15.5% |  6.0% |  1.5% |
-  | quality 1.44 | 14.3% | 18.9% | 26.5% | 25.0% | 15.3% |
+  | | Common | Uncommon | Rare | Epic | Legendary | Mythic |
+  |---|---:|---:|---:|---:|---:|---:|
+  | base       | 50.0% | 27.0% | 15.5% |  6.0% |  1.5% | 0.02% |
+  | quality 1.44 | 14.3% | 18.9% | 26.4% | 25.0% | 15.2% | 0.49% |
 
   *Standards*, at the end of that branch, raises the **floor**: at three
   ranks the forge simply stops rolling anything below Epic.
@@ -451,12 +462,18 @@ randomness is which one comes out:
 | Rare (blue)        | 15.5% | x4.5 |
 | Epic (purple)      |  6.0% | x9 |
 | Legendary (orange) |  1.5% | x18 |
+| **Mythic (red)**   | 0.02% | **x36** |
+
+**Mythic** is the top of the ladder and the longest chase in the game: about
+1 in 5000 from a bare forge, 1 in 200 with Smithing maxed. The Mythic Chest
+in the gem shop sells the same item outright, which is the point — a
+shortcut is only worth anything while the long way round still exists.
 
 Better than what you wear and it swaps itself in; worse and it turns back into
 dust. There is no inventory, because with the value pinned to the rarity the
 comparison is trivial and choosing would just be list management. Forging a
-slot costs more the better its current item is (10, 20, 34, 55, 90, 150), so
-chasing a legendary is expensive on purpose.
+slot costs more the better its current item is (10, 20, 34, 55, 90, 150, 250),
+so chasing the top is expensive on purpose.
 
 The **Automation** branch buys upgrades for you (*Herald*) and forges for you
 (*Anvil*); the **Skills** branch adds double strikes, lifesteal, extra damage

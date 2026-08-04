@@ -8,9 +8,9 @@ Little RPG runs entirely on your device. We have no servers, the game sends
 us nothing, and it collects nothing about you. Your save lives in your own
 device's storage and never leaves it.
 
-Personal data changes hands in exactly one place: **paying**, whether that is
-buying the game or buying gems inside it. Both happen on the app store, not
-in the game. See *Purchases* below.
+The game is free. Personal data changes hands in exactly one place: **buying
+gems**, which is optional, and which happens on the app store rather than in
+the game. See *Purchases* below.
 
 You do not have to take this on faith. The game is readable source with no
 minification and no bundled tracker, and it is public. Search it for `fetch`,
@@ -70,9 +70,10 @@ where you paste it.
 
 ## Purchases
 
-Little RPG is a paid game. Payment is handled entirely by the store you buy
-it from. **We never see or receive your card number, billing address or
-payment credentials.**
+Little RPG is free to download and free to play. The only thing it ever sells
+is gems, and gems can also be earned by playing. Payment is handled entirely
+by the app store. **We never see or receive your card number, billing address
+or payment credentials.**
 
 ### Buying gems inside the game
 

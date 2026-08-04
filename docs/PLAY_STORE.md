@@ -52,6 +52,11 @@ products**, all **consumable**, with these exact IDs — they are the SKUs
 The gem counts are in `PACKS` in `src/store/billing.js`; change them there
 if you reprice, and keep the IDs in sync.
 
+For scale: a full Mythic board is seven Mythic Chests, 420 gems. So the chest
+pack covers it and the hoard covers it with room to spare — and a player who
+never pays gets there on dungeon clears instead. That is the ratio the whole
+thing turns on.
+
 **Never put a price in the code.** The store owns prices: it knows the
 country, the currency, the tax and any sale you are running. `billing.js`
 asks the store for a formatted price string and shows exactly that. A number
@@ -173,19 +178,25 @@ Fix it before you sell anything. In rough order of effort:
   exercise consumption or re-delivery, which are the parts that break.
 - **The fee.** Google takes 15% of the first $1M per year, 30% above it.
 
-## 7. Paid app *and* gem packs?
+## 7. Free, with gem packs
 
-The plan of record has been a paid game. Selling consumables inside a paid
-app is allowed and common, but it is the combination players are quickest to
-call out — the complaint is never "there is a shop", it is "I already paid".
+That is the plan, and it is the one everything in `data/gems.js` was written
+for. The store listing should say so plainly: **free, with optional gem
+purchases, and every gem earnable by playing.** That last clause is true, it
+is unusual enough to be worth saying, and it is the thing a review will check.
 
-Two shapes work; picking one is a business call, not a technical one.
+The faucet is what makes the shop optional, so the faucet is the part to
+protect. If a change ever makes gems harder to earn, it has made the shop
+less optional, whatever it did to revenue that week.
 
-- **Free, with gem packs.** The shop pays for the game. Everything in
-  `data/gems.js` is written for this, and the widest audience meets it.
-- **Paid, with a generous purse.** Charge once, hand the buyer a large gem
-  grant up front, and keep the packs for people who want to skip more. The
-  packs then look like a convenience rather than a second toll.
+Two lines to hold in the listing and in any update:
 
-What does not work is a full price *and* a stingy faucet. The faucet is the
-thing that makes the shop optional, and optional is the whole argument.
+- Nothing in the shop is exclusive. The Mythic Chest sells the best item in
+  the game, and the forge rolls Mythic too — rarely, and more often the
+  deeper Smithing goes. Gems buy the shortcut, never the destination.
+- Nothing is a gamble. Every ware states exactly what it hands over before
+  the money moves. No loot boxes, so no odds disclosure, no gambling-adjacent
+  policy surface, and nothing to explain to a reviewer.
+
+Google's own **Data safety** and **Ads** declarations stay simple as a
+result: purchases yes, ads no, analytics no, data collection none.

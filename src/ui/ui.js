@@ -20,7 +20,7 @@ import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
   describeGatherNode,
 } from '../data/gathering.js';
-import { fmt, pct, mult, duration } from '../format.js';
+import { fmt, pct, mult, duration, oddsPct } from '../format.js';
 import { SFX } from '../engine/sfx.js';
 import { t, lang, setLang } from '../i18n.js';
 import { Music } from '../engine/music.js';
@@ -1049,7 +1049,7 @@ export class UI {
     const odds = rarityOdds(this.state.forgeQuality);
     setHtml(this.el.odds, RARITIES.map((r, i) =>
       `<div style="--rar:${r.color}"><dt style="color:${r.color}">${r.name}</dt>`
-      + `<dd style="color:${r.color}">${(odds[i] * 100).toFixed(1)}%</dd></div>`).join(''));
+      + `<dd style="color:${r.color}">${oddsPct(odds[i])}</dd></div>`).join(''));
   }
 
   refreshForge() {
@@ -1281,8 +1281,8 @@ export class UI {
       } else if (ware.id === 'chest') {
         const slot = state.weakestSlot();
         line = offer.why === 'forge' ? t('the forge opens on your first rebirth')
-          : offer.why === 'full' ? t('every slot is already Epic or better')
-          : t('reforges your {0} at Epic or better', t(SLOTS.find((s) => s.id === slot).name));
+          : offer.why === 'full' ? t('every slot is already Mythic')
+          : t('reforges your {0} to Mythic', t(SLOTS.find((s) => s.id === slot).name));
       } else if (inRun) {
         // Two hours inside eight rooms would end the run and spend the rest
         // of the span back on the line, which is not what the button says.
@@ -1482,7 +1482,7 @@ export class UI {
     const floor = Math.min(state.forgeFloor, RARITIES.length - 1);
     setHtml(el.smithOdds, RARITIES.map((r, i) =>
       `<div><dt style="color:${r.color}">${r.name}</dt>`
-      + `<dd style="color:${r.color}">${(odds[i] * 100).toFixed(1)}%</dd></div>`).join(''));
+      + `<dd style="color:${r.color}">${oddsPct(odds[i])}</dd></div>`).join(''));
     setText(el.smithCost, mult(state.forgeDiscount));
     setText(el.smithRefine, mult(state.gatherBonus('smithing').refineAll));
     const back = Math.min(0.95, 0.3 + state.gatherBonus('smithing').scrapBack);

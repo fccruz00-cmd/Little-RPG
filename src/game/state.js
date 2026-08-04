@@ -5,7 +5,9 @@ import { LEVELS, xpToNext } from '../data/levels.js';
 import { TALENT_TREE, RELIC_TREE, SOUL_TREE, BONUS_KEYS, relicCost, soulCost } from '../data/talents.js';
 import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
-import { SLOTS, RARITIES, DUST, SET_BONUS, setRarity, craftCost, rollRarity, gearValue } from '../data/gear.js';
+import {
+  SLOTS, RARITIES, LEGENDARY, DUST, SET_BONUS, setRarity, craftCost, rollRarity, gearValue,
+} from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
   MEAL, SMITH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
@@ -814,7 +816,10 @@ export class GameState {
 
     const rolled = rollRarity(this.forgeQuality, this.forgeFloor);
     this.stats.forges += 1;
-    if (rolled === RARITIES.length - 1) this.stats.legendaries += 1;
+    // Legendary OR BETTER. Keyed on the id, not on the top of the ladder:
+    // when Mythic was added, `=== RARITIES.length - 1` silently stopped
+    // counting the Legendaries the Golden Touch feat asks for.
+    if (rolled >= LEGENDARY) this.stats.legendaries += 1;
     const current = this.gear[slotId];
     const better = current == null || rolled > current;
 
@@ -901,10 +906,15 @@ export class GameState {
     if (id === 'skip') return { id, seconds: SKIP_SECONDS };
 
     const slotId = this.weakestSlot();
-    const rolled = Math.max(CHEST_FLOOR, rollRarity(this.forgeQuality, this.forgeFloor));
+    // Guaranteed, not rolled. The player saw "Mythic" on the button and that
+    // is what the button has to hand over, every time.
+    const rolled = Math.min(CHEST_FLOOR, RARITIES.length - 1);
     this.gear[slotId] = rolled;
     this.stats.forges += 1;
-    if (rolled === RARITIES.length - 1) this.stats.legendaries += 1;
+    // Legendary OR BETTER. Keyed on the id, not on the top of the ladder:
+    // when Mythic was added, `=== RARITIES.length - 1` silently stopped
+    // counting the Legendaries the Golden Touch feat asks for.
+    if (rolled >= LEGENDARY) this.stats.legendaries += 1;
     this.invalidateBonus();
     return { id, slotId, rolled };
   }

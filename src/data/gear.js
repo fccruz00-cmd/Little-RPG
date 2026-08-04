@@ -11,16 +11,31 @@ import { t } from '../i18n.js';
 
 // Colours are pulled toward the Mini Medieval ramp so the rarity tint sits
 // next to the pack's frames instead of fighting them.
+// The ladder doubles at every step, which is what makes "orange always beats
+// purple" true without anyone having to read a number.
 export const RARITIES = [
   { id: 'white',  name: 'Common',    color: '#dacea4', mul: 1 },
   { id: 'green',  name: 'Uncommon',  color: '#6dba79', mul: 2.2 },
   { id: 'blue',   name: 'Rare',      color: '#5aa9c9', mul: 4.5 },
   { id: 'purple', name: 'Epic',      color: '#b072c9', mul: 9 },
   { id: 'orange', name: 'Legendary', color: '#ebb85b', mul: 18 },
+  { id: 'red',    name: 'Mythic',    color: '#e5493f', mul: 36 },
 ];
 
-/** Roll weights, same order as the rarities. They add up to 1. */
-export const RARITY_ODDS = [0.50, 0.27, 0.155, 0.06, 0.015];
+/** Legendary's index, for anything that means "the old top". */
+export const LEGENDARY = RARITIES.findIndex((r) => r.id === 'orange');
+
+/**
+ * Roll weights, same order as the rarities. They add up to 1.
+ *
+ * Mythic sits at 1 in 5000 from a forge with no Smithing behind it, and
+ * about 1 in 200 with the tree maxed, because `rarityOdds` moves mass up the
+ * ladder geometrically and Mythic is the rung that gains most from it. That
+ * is deliberately a long chase rather than an impossible one: the Mythic
+ * Chest sells the same item for gems, and a shortcut is only worth buying
+ * while the long way round still exists.
+ */
+export const RARITY_ODDS = [0.50, 0.27, 0.155, 0.0598, 0.0150, 0.0002];
 
 // One slot, one stat. `per` is the value at Common; the other rarities
 // multiply it by `RARITIES[i].mul`.
@@ -42,7 +57,8 @@ export const SET_BONUS = [
   { dmgMul: 0.05, hpMul: 0.05 },                 // all Uncommon+
   { dmgMul: 0.10, hpMul: 0.10 },                 // all Rare+
   { dmgMul: 0.18, hpMul: 0.18 },                 // all Epic+
-  { dmgMul: 0.30, hpMul: 0.30, goldMul: 0.15 },  // all Legendary
+  { dmgMul: 0.30, hpMul: 0.30, goldMul: 0.15 },  // all Legendary+
+  { dmgMul: 0.50, hpMul: 0.50, goldMul: 0.25 },  // all Mythic
 ];
 
 /** Lowest rarity worn, or null while any slot is empty. */
@@ -65,8 +81,11 @@ export const DUST = {
   scrapRefund: 0.3,  // returned when the roll is worse than what you wear
 };
 
+// One more rung than there are rarities to replace, so a Mythic slot still
+// has a price if anything ever asks for one. Nothing should: it is the top,
+// and `cheapestForgeable` skips a slot already there.
 /** Dust cost to forge a slot, based on what is already equipped. */
-const COST_BY_RARITY = [20, 34, 55, 90, 150];
+const COST_BY_RARITY = [20, 34, 55, 90, 150, 250];
 export const EMPTY_COST = 10;
 
 export function craftCost(rarityIndex, discount = 1) {

@@ -11,11 +11,15 @@
  *
  * 1. Every gem is earnable. The faucet below is the whole faucet; a purchase
  *    tops the same purse up and unlocks nothing a clear cannot.
- * 2. Nothing here is permanent. Every ware is a consumable that saves time,
- *    so a wallet buys pace and never a ceiling. The permanent tracks (relics,
- *    souls, feats, pets) do not accept gems and are not meant to.
- * 3. Prices are fixed. A price that climbs with what you have already bought
- *    is how a shop starts hunting the people worst at leaving it alone.
+ * 2. Nothing here is exclusive. The Mythic Chest is the one ware that hands
+ *    over power rather than pace, and the forge rolls Mythic too -- rarely,
+ *    and more often the deeper Smithing goes. Gems buy the shortcut, never
+ *    the destination. The permanent tracks (relics, souls, feats, pets) do
+ *    not accept gems at all and are not meant to.
+ * 3. Prices are fixed, and every ware says what it gives before you buy it.
+ *    A price that climbs with what you have already bought, or a box that
+ *    MIGHT contain the good thing, is how a shop starts hunting the people
+ *    worst at leaving it alone.
  */
 
 /**
@@ -42,7 +46,7 @@ export const GEM_FIRST = [10, 15, 25, 40, 60];
 
 export const CACHE_SECONDS = 3600;  // Coin Cache: an hour of your best rate
 export const SKIP_SECONDS = 7200;   // Hourglass: two hours of real fighting
-export const CHEST_FLOOR = 3;       // Gilded Chest: Epic, index into RARITIES
+export const CHEST_FLOOR = 5;       // Mythic Chest: Mythic, index into RARITIES
 
 export const GEM_WARES = [
   {
@@ -60,11 +64,16 @@ export const GEM_WARES = [
     // offline half.
   },
   {
-    id: 'chest', name: 'Gilded Chest', icon: 'it_chest', cost: 45,
-    blurb: 'your weakest slot, reforged at Epic or better',
-    // Aimed at the weakest slot on purpose. The set bonus keys off the
-    // LOWEST rarity worn, so this is the one purchase that can move a whole
-    // board up a tier, and it is useless to anyone already wearing Epic.
+    id: 'chest', name: 'Mythic Chest', icon: 'it_chest', cost: 60,
+    blurb: 'your weakest slot, reforged Mythic',
+    // Guaranteed, never a roll. A box that MIGHT contain the good thing is
+    // the mechanic this shop exists to avoid; you can see what 60 gems buys
+    // before you spend them, every time.
+    //
+    // Aimed at the weakest slot on purpose, and that is also the spending
+    // cap: the set bonus keys off the LOWEST rarity worn, so the chest walks
+    // a board up one slot at a time and then refuses. Seven purchases is
+    // everything it will ever sell you.
   },
 ];
 

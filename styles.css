@@ -1286,7 +1286,10 @@ body { display: flex; justify-content: center; }
 .odds {
   flex: none;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* One row of however many rarities there are. It was `repeat(5, 1fr)`,
+     which wrapped the moment Mythic joined the ladder. */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   padding: 3px 4px 4px;
   gap: 3px;
   background-color: var(--wood);
@@ -1581,6 +1584,9 @@ body { display: flex; justify-content: center; }
    whole of it. One step down keeps every label on one line. */
 @media (max-width: 355px) {
   .tab { font-size: 8px; letter-spacing: -0.2px; }
+  /* Six rarities across 304px leaves ~47px a column, and "Legendary" at 8px
+     needs 43 of them before padding. One step down keeps the row intact. */
+  .odds dt { font-size: 7px; }
 }
 
 @media (max-height: 600px) {
