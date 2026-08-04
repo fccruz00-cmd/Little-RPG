@@ -515,6 +515,22 @@ portrait numbers the game was balanced against (117x88 at scale 3, against
 portrait's 130x84 at 3), and the space left under it is where the action
 buttons live: off the game world, and low enough to reach one-handed.
 
+**With height to spare, the arena becomes a band instead.** From a 640px-tall
+viewport up — tablets, desktop — the two columns give way to the shape the
+game is drawn for: a full-width strip of world across the top, big sky and a
+blood moon, the enemy walking in from a long way off, with the panel spread
+underneath in three columns.
+
+That threshold is not a taste call. The band is `38vh` tall and the zoom is
+`round(height / 92)`, so the zoom holds at 3 only while `38vh >= 230px` —
+which is exactly 640. One pixel under, the zoom drops to 2, the visible road
+doubles, and the hero is an ant in a field. Measured across the switch:
+`639px -> 139 world units @3`, `640px -> 333 @3`. The framing changes; the
+sprite size does not.
+
+A phone in landscape is 375-430px tall, so it always gets the columns — a
+band there would be a 140px strip with one row of shop under it.
+
 The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 `orientation: landscape`, which fires on a 600x500 desktop window that has no
 room for two columns. Pane internals switch on a **container query** against

@@ -1782,6 +1782,53 @@ body { display: flex; justify-content: center; }
   .rotate__phone { animation: none; transform: rotate(-90deg); }
 }
 
+/* ============================================================
+   Landscape with height to spare: the arena becomes a BAND
+
+   Two columns exist because a phone turned sideways is 390px tall and a
+   full-width arena there is a 140px strip: the zoom falls to its floor, the
+   844px of width become 422 units of road, and the hero is an ant in a field
+   while the panel is left with one row.
+
+   Give the screen real height and that reverses. The band gets 240px+, the
+   zoom holds at 3, and the arena becomes the wide vista this game is drawn
+   for -- big sky, a blood moon, the enemy walking in from a long way off --
+   with the panel spread full width underneath in three columns.
+
+   THE THRESHOLD IS NOT A GUESS. The band's height is 38vh and the zoom is
+   round(height / 92), so the zoom holds at 3 only while 38vh >= 230px, i.e.
+   from a 640px-tall viewport up. One pixel under that, the zoom drops to 2,
+   the visible road doubles, and the band is the wrong answer again.
+   ============================================================ */
+@media (min-width: 560px) and (min-aspect-ratio: 1/1) and (min-height: 640px) {
+  #app {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+  }
+  .stage-col {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    border-right: 0;
+  }
+  .arena {
+    flex: none;
+    height: clamp(240px, 38vh, 380px);
+    border-bottom: 2px solid #000;
+  }
+  /* Fills the band: no aspect clamp needed once the height is real. */
+  #stage {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    max-height: none;
+  }
+  .statbar { border-right: 0; border-bottom: 2px solid #000; }
+  .panel { flex: 1 1 auto; min-height: 0; }
+}
+
 </style>
 </head>
 <body>
