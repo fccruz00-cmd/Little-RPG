@@ -96,9 +96,6 @@ It contains no name, no email and no payment details, and the last fifty are
 kept. It is never transmitted anywhere; the game only ever hands it back to
 the same store that issued it, to mark the purchase as delivered.
 
-The store is an independent controller of your purchase data under its own
-privacy policy. See *Purchases* above.
-
 The store is the party that collects and controls your purchase data. What it
 collects, how long it keeps it, and what rights you have over it are governed
 by **that store's privacy policy**, not this one. Please read it.
