@@ -379,9 +379,13 @@ money. Three rules hold it together, and `data/gems.js` exists to keep them:
 
 The chest also caps its own takings. It targets the **weakest** slot, so it
 walks a board up one slot at a time and then refuses: seven purchases is
-everything it will ever sell you. Awakening wipes gear, Mythic included —
-that is the same bargain the Ascend tab has always offered, and it is worth
-knowing before you spend.
+everything it will ever sell you.
+
+Awakening wipes gear, Mythic included — the same bargain the Ascend tab has
+always offered. Since a Mythic slot may have been paid for, the awaken
+confirmation now counts them and says so before the button, and the
+erase-everything confirmation names the gem purse outright. Neither changes
+what happens; they change whether you found out first.
 
 The Hourglass is the one that does real work: it is not a payout, it runs the
 actual battle loop, so it pays in kills, experience, dust, stages, gathering

@@ -919,9 +919,14 @@ export class GameState {
     return { id, slotId, rolled };
   }
 
+  /** Slots currently wearing the top rarity. Awakening is about to take them. */
+  get mythicWorn() {
+    return SLOTS.filter((slot) => this.gear[slot.id] === RARITIES.length - 1).length;
+  }
+
   /**
-   * The slot the Gilded Chest would reforge: the lowest rarity worn, empty
-   * slots first, and null when every slot already sits at Epic or above.
+   * The slot the Mythic Chest would reforge: the lowest rarity worn, empty
+   * slots first, and null when every slot already sits at Mythic.
    */
   weakestSlot() {
     if (!this.forgeUnlocked) return null;

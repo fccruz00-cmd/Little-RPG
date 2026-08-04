@@ -267,9 +267,13 @@ const PT = {
   'Replace the CURRENT save with the pasted one?': 'Substituir o save ATUAL pelo colado?',
   'Rebirth now pays {0} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?':
     'Renascer agora paga {0} relíquia(s).\n\nVocê perde fase, ouro, upgrades, nível e pontos de talento. Confirmar?',
-  'Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive. Confirm?':
-    'Despertar paga {0} alma(s).\n\nVocê perde tudo que o Renascer leva, MAIS relíquias, a árvore de relíquias, renascimentos, pó e equipamento. Almas e a aba Ofícios sobrevivem. Confirmar?',
-  'Erase EVERYTHING, souls, relics and prestige included?': 'Apagar TUDO, incluindo almas, relíquias e prestígio?',
+  'Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive.':
+    'Despertar paga {0} alma(s).\n\nVocê perde tudo que o Renascer leva, MAIS relíquias, a árvore de relíquias, renascimentos, pó e equipamento. Almas e a aba Ofícios sobrevivem.',
+  'That includes {0} Mythic item(s) — gems spent on Mythic Chests do not come back.':
+    'Isso inclui {0} item(ns) Mítico(s) — gemas gastas em Baús Míticos não voltam.',
+  'Confirm?': 'Confirmar?',
+  'Erase EVERYTHING, souls, relics, prestige and your gems included? Gems do not come back, whether you cleared for them or paid for them.':
+    'Apagar TUDO, incluindo almas, relíquias, prestígio e suas gemas? Gemas não voltam, tendo você limpado masmorra por elas ou pago por elas.',
   'Refund every skill point so you can respend them?': 'Devolver todos os pontos para redistribuir?',
   'Refund every {0} point so you can respend them?': 'Devolver todos os pontos de {0} para redistribuir?',
 

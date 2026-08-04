@@ -622,7 +622,20 @@ export class UI {
     el.awkGo.addEventListener('click', () => {
       const gain = state.pendingSouls;
       if (gain <= 0) return;
-      if (!confirm(t('Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive. Confirm?', gain))) return;
+      const lines = [
+        t('Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive.', gain),
+      ];
+      // Gear has always gone with an awakening and still does. What changed
+      // is that a Mythic slot may have been paid for, and nobody should meet
+      // that fact on the far side of the button. It counts Mythics rather
+      // than purchases because the forge rolls them too, and claiming the
+      // player bought something they earned would be its own small lie.
+      const mythic = state.mythicWorn;
+      if (mythic > 0) {
+        lines.push(t('That includes {0} Mythic item(s) — gems spent on Mythic Chests do not come back.', mythic));
+      }
+      lines.push(t('Confirm?'));
+      if (!confirm(lines.join('\n\n'))) return;
       battle.forfeitDungeon();
       state.awaken();
       battle.enterStage(state.startStage, { silent: true });
@@ -724,7 +737,9 @@ export class UI {
     });
 
     el.reset.addEventListener('click', () => {
-      if (!confirm(t('Erase EVERYTHING, souls, relics and prestige included?'))) return;
+      // The one button that takes the gem purse with it, bought gems and all,
+      // and the only place in the game where that is true. Say so.
+      if (!confirm(t('Erase EVERYTHING, souls, relics, prestige and your gems included? Gems do not come back, whether you cleared for them or paid for them.'))) return;
       GameState.wipe();
       location.reload();
     });
