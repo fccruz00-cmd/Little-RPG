@@ -12,6 +12,7 @@ import {
 } from '../data/gathering.js';
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
 import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
+import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -20,7 +21,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 11;
+const SAVE_VERSION = 12;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -74,6 +75,9 @@ function defaults() {
     // Every tamed pet's buff is on; the collection is the progression.
     pets: {},         // petId -> level (absent = not tamed yet)
 
+    // cauldron: potion id -> seconds of effect remaining
+    potions: {},
+
     // dungeons
     keys: {},         // key tier -> how many are held
     deepestKey: -1,   // deepest key tier fully cleared
@@ -116,7 +120,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 10) {
+  if (data.version >= 1 && data.version <= 11) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -128,6 +132,7 @@ function migrate(data) {
     // v9: before pets; the constructor tames whatever the save has earned.
     // v10: pets followed one at a time; the equipped-pet field goes, since
     // every tamed pet is active now.
+    // v11: before the cauldron; potion timers start empty via defaults.
     const out = {
       ...defaults(),
       ...data,
@@ -171,6 +176,7 @@ export class GameState {
     this.refined = { ...(data.refined ?? {}) };
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
+    this.potions = { ...(data.potions ?? {}) };
     // Unlocks read live state, so a save from before pets existed walks out
     // of load with everything it already earned, the slime included. Silent
     // on purpose: the battle announces tames that happen live, not backlog.
@@ -264,13 +270,13 @@ export class GameState {
   }
 
   // --- derived stats ------------------------------------------------
-  get damage()     { return statValue('damage', this.levels.damage) * this.bonus.dmgMul; }
+  get damage()     { return statValue('damage', this.levels.damage) * this.bonus.dmgMul * this.potionMul('fury'); }
   get attackRate() { return statValue('attackRate', this.levels.attackRate) * this.bonus.atkSpeedMul; }
   get critChance() { return Math.min(0.95, statValue('critChance', this.levels.critChance) + this.bonus.critAdd); }
   get critPower()  { return statValue('critPower', this.levels.critPower) + this.bonus.critPowerAdd; }
   get maxHp()      { return statValue('maxHp', this.levels.maxHp) * this.bonus.hpMul; }
   get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul * this.fedRegenMul; }
-  get goldGain()   { return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul; }
+  get goldGain()   { return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul * this.potionMul('lucky'); }
   get moveSpeed()  { return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul; }
   get xpGain()     { return this.bonus.xpMul; }
   get damageTaken(){ return this.bonus.damageTaken * this.fedArmor; }
@@ -513,6 +519,71 @@ export class GameState {
     this.pets[id] += 1;
     this.invalidateBonus();
     return true;
+  }
+
+  // --- cauldron -------------------------------------------------------
+  // Potion effects live on the timers, not in the cached bonus fold: the
+  // clock moves every frame, and a cache you invalidate every frame is not
+  // a cache. Two multiplications on hot getters is the cheaper trade.
+
+  /** Deepest material band the save has seen, 0..4. Brews price off it. */
+  get brewBand() {
+    let band = 0;
+    for (let t = 0; t < ORES.length; t++) {
+      if (this.bestStage >= ORES[t].minStage) band = t;
+    }
+    return band;
+  }
+
+  /** What one bottle costs right now: `{dust, amount}` or `{res, amount}`. */
+  potionCost(id) {
+    const potion = POTION_BY_ID[id];
+    const band = this.brewBand;
+    const amount = POTION_COSTS[id][band];
+    if (potion.resource === 'dust') return { dust: true, amount };
+    const res = (potion.line === 'mining' ? ORES : LOGS)[band];
+    return { res, amount };
+  }
+
+  canBrew(id) {
+    const cost = this.potionCost(id);
+    if (cost.dust) return this.forgeUnlocked && this.dust >= cost.amount;
+    return (this.refined[cost.res.id] ?? 0) >= cost.amount;
+  }
+
+  brew(id) {
+    if (!this.canBrew(id)) return false;
+    const cost = this.potionCost(id);
+    if (cost.dust) this.dust -= cost.amount;
+    else this.refined[cost.res.id] -= cost.amount;
+    // Brewing ahead banks up to three bottles' worth, no more: an effect
+    // you can stockpile for a week is a stat with extra steps.
+    const potion = POTION_BY_ID[id];
+    this.potions[id] = Math.min((this.potions[id] ?? 0) + potion.duration, potion.duration * 3);
+    return true;
+  }
+
+  potionActive(id) {
+    return (this.potions[id] ?? 0) > 0;
+  }
+
+  potionMul(id) {
+    return this.potionActive(id) ? 1 + POTION_BY_ID[id].amount : 1;
+  }
+
+  /** Seconds the Time Draught adds to a boss clock set right now. */
+  get potionBossTime() {
+    return this.potionActive('time') ? POTION_BY_ID.time.amount : 0;
+  }
+
+  get activePotions() {
+    return POTIONS.filter((p) => this.potionActive(p.id)).length;
+  }
+
+  tickPotions(dt) {
+    for (const id in this.potions) {
+      if (this.potions[id] > 0) this.potions[id] = Math.max(0, this.potions[id] - dt);
+    }
   }
 
   // --- dungeon keys -------------------------------------------------
@@ -859,7 +930,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions,
       buyMax, goldPerSec,
     } = this;
     return {
@@ -869,7 +940,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents,
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions,
       buyMax, goldPerSec, lastSeen: Date.now(),
     };
   }

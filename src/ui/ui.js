@@ -11,6 +11,7 @@ import { AUTO_BUY_BASE } from '../data/talents.js';
 import { SLOTS, RARITIES, describeGear, rarityOdds } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
+import { POTIONS } from '../data/potions.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
@@ -81,7 +82,8 @@ export class UI {
       trees: Object.fromEntries(SKILL_IDS.map((id) => [id, $(`tree-${id}`)])),
       pipSkills: $('pip-skills'), fed: $('fed'), fedTime: $('fed-time'),
       workshop: $('workshop'), smithOdds: $('smith-odds'), toolWrap: $('tool-wrap'),
-      keys: $('keys'), arenaAct: $('arena-act'), actBoss: $('act-boss'),
+      keys: $('keys'), cauldron: $('cauldron'), brews: $('brews'), brewsN: $('brews-n'),
+      arenaAct: $('arena-act'), actBoss: $('act-boss'),
       actEnter: $('act-enter'), actLeave: $('act-leave'),
       smithCost: $('smith-cost'), smithRefine: $('smith-refine'),
       smithScrap: $('smith-scrap'), smithFloor: $('smith-floor'),
@@ -125,6 +127,7 @@ export class UI {
     for (const id of SKILL_IDS) this.buildTree(this.el.trees[id], SKILL_TREES[id], id);
     this.buildStock();
     this.buildKeys();
+    this.buildCauldron();
     this.buildForge();
     this.buildPets();
     this.bind();
@@ -347,6 +350,14 @@ export class UI {
       if (!made) return;
       state.save();
       this.toast({ text: `+${fmt(made)} ${entry.resource.name} ${SKILLS[entry.skill].refinedName}(s)` });
+      this.refreshSkills();
+    });
+
+    el.cauldron.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-potion]');
+      if (!row || !state.brew(row.dataset.potion)) return;
+      state.save();
+      this.toast({ text: `${row.dataset.potion.toUpperCase()} BREWED` });
       this.refreshSkills();
     });
 
@@ -620,6 +631,9 @@ export class UI {
     // Well Fed is a live combat state, so it lives in the HUD, not the tab.
     el.fed.hidden = !state.fed;
     if (state.fed) setText(el.fedTime, String(Math.ceil(state.fedTimer)));
+    const brews = state.activePotions;
+    el.brews.hidden = brews === 0;
+    if (brews) setText(el.brewsN, String(brews));
     el.pipPrestige.hidden = state.pendingRelics <= 0 && state.pendingSouls <= 0;
     el.pipPrestige.classList.add('pip--gold');
     el.tabForge.hidden = !state.forgeUnlocked;
@@ -884,6 +898,46 @@ export class UI {
     }
   }
 
+  buildCauldron() {
+    this.brewRows = new Map();
+    for (const potion of POTIONS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key';
+      row.dataset.potion = potion.id;
+      row.style.setProperty('--ore', potion.accent);
+      row.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${potion.icon}"></i> ${potion.name}</span>
+        <span class="key__what">${potion.blurb}</span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt">brew</span>`;
+      this.el.cauldron.append(row);
+      this.brewRows.set(potion.id, {
+        potion, row,
+        what: row.querySelector('.key__what'),
+        left: row.querySelector('b'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+  }
+
+  refreshCauldron() {
+    const { state } = this;
+    for (const { potion, row, what, left, action } of this.brewRows.values()) {
+      const cost = state.potionCost(potion.id);
+      const can = state.canBrew(potion.id);
+      const icon = cost.dust ? 'dust' : (potion.line === 'mining' ? 'bar' : 'plank');
+      const have = cost.dust ? state.dust : (state.refined[cost.res.id] ?? 0);
+      setHtml(what, `${potion.blurb} &middot; `
+        + `<i class="ico ico--sm ico--${icon}"></i>${fmt(have)}/${fmt(cost.amount)}`);
+      const secs = state.potions[potion.id] ?? 0;
+      setText(left, secs > 0 ? duration(secs) : '');
+      setText(action, can ? 'brew' : 'need');
+      row.disabled = !can;
+      row.classList.toggle('can-smelt', can);
+    }
+  }
+
   showSkill(id) {
     this.skill = id;
     for (const button of this.el.skillSwitch.querySelectorAll('button')) {
@@ -974,6 +1028,8 @@ export class UI {
     const back = Math.min(0.95, 0.3 + state.gatherBonus('smithing').scrapBack);
     setText(el.smithScrap, pct(back, 0));
     setText(el.smithFloor, RARITIES[floor].name);
+
+    this.refreshCauldron();
 
     const known = new Set(state.knownKeys().map((k) => k.tier));
     for (const [tier, entry] of this.keyRows) {

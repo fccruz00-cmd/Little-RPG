@@ -360,7 +360,12 @@ export class Battle {
 
     this.enemy = actor;
     // The boss timer only starts running once it walks on screen.
-    if (actor.isBoss) this.bossTimer = (this.run ? DUNGEON.bossTime : BOSS_TIME) + this.state.bonus.bossTime;
+    if (actor.isBoss) {
+      // The Time Draught reads at the moment the clock is set, so a bottle
+      // drunk mid-fight pays on the NEXT attempt, not this one.
+      this.bossTimer = (this.run ? DUNGEON.bossTime : BOSS_TIME)
+        + this.state.bonus.bossTime + this.state.potionBossTime;
+    }
     if (actor.isElite && !this.run) this.emit('toast', { text: `MINI BOSS: ${def.name}` });
     if (actor.isBoss) this.emit('toast', { text: `BOSS: ${def.name}`, bad: true });
     this.emit('spawn', actor);
@@ -501,6 +506,7 @@ export class Battle {
     this.updateNodes(dt);
     this.updateAutoSwitch(dt);
     state.tickMeals(dt);
+    state.tickPotions(dt);
 
     this.updateEnemy(dt);
     this.updatePets(dt);
