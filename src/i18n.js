@@ -272,6 +272,26 @@ const PT = {
   'Refund every skill point so you can respend them?': 'Devolver todos os pontos para redistribuir?',
   'Refund every {0} point so you can respend them?': 'Devolver todos os pontos de {0} para redistribuir?',
 
+  // --- gems ---
+  'Gem shop': 'Loja de gemas',
+  'Coin Cache': 'Bolsa de Moedas',
+  'Hourglass': 'Ampulheta',
+  'Gilded Chest': 'Baú Dourado',
+  'an hour of your best gold rate, paid now': 'uma hora do seu melhor ganho de ouro, na hora',
+  'the fight really runs two hours, in a few seconds': 'a luta corre duas horas de verdade, em poucos segundos',
+  'your weakest slot, reforged at Epic or better': 'seu pior slot, reforjado em Épico ou melhor',
+  '+{0} gold, an hour of your best rate': '+{0} de ouro, uma hora do seu melhor ganho',
+  'earn some gold first, so there is a rate to pay out': 'ganhe ouro antes, pra existir um ritmo a pagar',
+  // "slot de {0}" rather than "sua {0}": the slot names are a mix of genders
+  // (Elmo, Anel, Espada, Botas) and no single possessive agrees with them all.
+  'reforges your {0} at Epic or better': 'reforja seu slot de {0} em Épico ou melhor',
+  'the forge opens on your first rebirth': 'a forja abre no seu primeiro renascimento',
+  'every slot is already Epic or better': 'todo slot já está em Épico ou melhor',
+  'not while a key is running': 'não com uma chave em andamento',
+  '+{0} gem(s)': '+{0} gema(s)',
+  '+{0} GOLD': '+{0} DE OURO',
+  'DEEPEST YET': 'MAIS FUNDO QUE NUNCA',
+
   // --- options ---
   'Options': 'Opções',
   'options': 'opções',

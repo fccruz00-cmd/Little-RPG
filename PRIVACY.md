@@ -24,7 +24,7 @@ One entry in your browser's `localStorage`, under the key
 - Stage, deepest stage, gold, kills
 - Upgrade levels, character level and experience
 - Talent, relic and soul trees, relics, souls, rebirths and awakenings
-- Soul dust, forged gear, dungeon keys
+- Soul dust, forged gear, dungeon keys, gems and your best gold rate
 - Gathering skills: levels, trees, tools, raw and refined resources
 - Pets: which are tamed and their levels
 - Potion timers: seconds remaining on active brews
@@ -65,6 +65,12 @@ where you paste it.
 Little RPG is a paid game. Payment is handled entirely by the store you buy
 it from. **We never see or receive your card number, billing address or
 payment credentials.**
+
+The gems the game uses are earned by clearing dungeons and are spent in the
+game's own shop. The version you have makes no purchases of any kind: there
+is no store inside the game, no gem pack to buy and no request to any payment
+provider. If that ever changes, the section below on *Changes to this policy*
+applies, and this page will say so before that version ships.
 
 The store is the party that collects and controls your purchase data. What it
 collects, how long it keeps it, and what rights you have over it are governed

@@ -13,6 +13,7 @@ import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
+import { GEM_WARES, WARE_BY_ID } from '../data/gems.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, TOOL_TIERS, toolName, workTime,
@@ -60,6 +61,12 @@ export class UI {
   constructor(state, battle) {
     this.state = state;
     this.battle = battle;
+
+    // FIRST, before a single element is looked up. Some of the Portuguese
+    // rewrites below replace a whole block's innerHTML, which destroys the
+    // <b> inside it and builds a new one; anything that grabbed the old node
+    // first would hold a detached element and quietly stop updating.
+    this.applyStatic();
 
     this.el = {
       stageName: $('stage-name'), stageSub: $('stage-sub'),
@@ -110,6 +117,8 @@ export class UI {
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
+      gemPill: $('gem-pill'), gemCount: $('stat-gems'),
+      gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
       options: $('btn-options'), optionsModal: $('options'),
       optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
       langSwitch: $('lang-switch'), optionsClose: $('options-close'),
@@ -129,7 +138,6 @@ export class UI {
 
     this.slots = new Map();
 
-    this.applyStatic();
     this.buildShop();
     this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
@@ -141,9 +149,13 @@ export class UI {
     this.buildForge();
     this.buildPets();
     this.buildFeats();
+    this.buildWares();
     this.bind();
 
     battle.on('toast', (t) => this.toast(t));
+    // Every exit from a dungeon reports what it paid, however it ended: a
+    // clear, a death in room six, or walking out with the boss still up.
+    battle.on('reward', (out) => this.showReward(out));
 
     // The ear. Every play() checks quiet/mute/hidden itself, but quiet is
     // checked here too so a background catch-up does not queue a drumroll.
@@ -205,7 +217,7 @@ export class UI {
       ['#opt-float ~ span', 'Damage numbers'], ['#opt-lang', 'Language'],
       ['#opt-save-note', 'Back up or move your save between devices.'],
       ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
-      ['#options-close', 'Close'],
+      ['#options-close', 'Close'], ['#gemshop-close', 'Close'],
       ['.loading span', 'loading...'],
     ];
     for (const [sel, key] of TEXT) {
@@ -221,6 +233,7 @@ export class UI {
       ['#workshop .sect:nth-of-type(1)', 'Dungeon keys'],
       ['#workshop .sect:nth-of-type(2)', 'Cauldron'],
       ['#workshop .sect:nth-of-type(3)', 'What smithing gives you'],
+      ['#gem-title', 'Gem shop'],
     ];
     for (const [sel, key] of TAIL) {
       const el = document.querySelector(sel);
@@ -238,6 +251,7 @@ export class UI {
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
       ['#asc-feats .prestige__note', 'Feitos são marcas da vida inteira: os contadores nunca zeram, nem no despertar, e cada feito completo paga um <b>bônus permanente pequeno</b> para sempre.'],
+      ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
       ['.foot > span:first-child', `Fase <b id="stat-stage-foot">1</b>`],
       ['.foot__best', `Recorde: fase <b id="stat-best">1</b>`],
       ['#asc-rebirth .prestige__gain div', `<strong id="pres-gain">0</strong> relíquia(s)\n<small>${t('if you rebirth now')}</small>`],
@@ -516,8 +530,7 @@ export class UI {
       if (battle.enterDungeon(this._enterTier, { bloody: true })) state.save();
     });
     el.actLeave.addEventListener('click', () => {
-      const out = battle.leaveDungeon();
-      if (out) { state.save(); this.showReward(out); }
+      if (battle.leaveDungeon()) state.save();
     });
 
     el.toolBuy.addEventListener('click', () => {
@@ -611,6 +624,21 @@ export class UI {
       this.showTab('talents');
       this.showTree('souls');
       this.toast({ text: t('AWAKENED: +{0} SOUL(S)', gain) });
+    });
+
+    // --- gem shop ---
+    const openGems = (open) => {
+      el.gemShop.hidden = !open;
+      if (open) this.refreshWares();
+    };
+    el.gemPill.addEventListener('click', () => openGems(true));
+    el.gemClose.addEventListener('click', () => openGems(false));
+    el.gemShop.addEventListener('click', (e) => {
+      if (e.target === el.gemShop) openGems(false);
+    });
+    el.wares.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-ware]');
+      if (row && !row.disabled) this.buyWare(row.dataset.ware);
     });
 
     // --- options ---
@@ -829,6 +857,11 @@ export class UI {
     setText(el.best, String(state.bestStage));
     setText(el.stageFoot, String(state.stage));
 
+    // The purse appears the moment a dungeon has ever paid, and stays after
+    // it is spent: `deepestKey` is the record that a clear happened.
+    el.gemPill.hidden = state.gems <= 0 && (state.deepestKey ?? -1) < 0;
+    if (!el.gemPill.hidden) setText(el.gemCount, fmt(state.gems));
+
     el.progress.style.width = `${(battle.stageProgress * 100).toFixed(1)}%`;
     el.progress.classList.toggle('is-boss', encounter !== 'mob');
 
@@ -884,6 +917,9 @@ export class UI {
     this._timer = (this._timer ?? 0) + dt;
     if (this._timer < 0.15) return;
     this._timer = 0;
+
+    // The Coin Cache is priced off a live rate, so an open shop keeps up.
+    if (!el.gemShop.hidden) this.refreshWares();
 
     if (this.tab === 'upgrades') this.refreshShop();
     else if (this.tab === 'talents') this.refreshTrees();
@@ -1194,6 +1230,115 @@ export class UI {
     }
   }
 
+  // --- gem shop -------------------------------------------------------
+  buildWares() {
+    this.wareRows = new Map();
+    for (const ware of GEM_WARES) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ware';
+      row.dataset.ware = ware.id;
+      row.innerHTML = `
+        <i class="ico ico--lg ico--${ware.icon}"></i>
+        <span>
+          <span class="ware__name">${t(ware.name)}</span><br>
+          <span class="ware__what">${t(ware.blurb)}</span>
+        </span>
+        <span class="ware__cost">${ware.cost}<i class="ico ico--sm ico--gem"></i></span>`;
+      this.el.wares.append(row);
+      this.wareRows.set(ware.id, { ware, row, what: row.querySelector('.ware__what') });
+    }
+  }
+
+  /**
+   * Prices every ware against what it would actually hand over right now.
+   * A Coin Cache is worth whatever an hour of your best rate is worth, and
+   * that number belongs on the button, not in a tooltip.
+   */
+  refreshWares() {
+    const { state } = this;
+    for (const { ware, row, what } of this.wareRows.values()) {
+      const offer = state.gemOffer(ware.id);
+      const inRun = ware.id === 'skip' && this.battle.inDungeon;
+      let line = t(ware.blurb);
+      if (ware.id === 'coin') {
+        line = offer.why === 'earn'
+          ? t('earn some gold first, so there is a rate to pay out')
+          : t('+{0} gold, an hour of your best rate', fmt(offer.amount));
+      } else if (ware.id === 'chest') {
+        const slot = state.weakestSlot();
+        line = offer.why === 'forge' ? t('the forge opens on your first rebirth')
+          : offer.why === 'full' ? t('every slot is already Epic or better')
+          : t('reforges your {0} at Epic or better', t(SLOTS.find((s) => s.id === slot).name));
+      } else if (inRun) {
+        // Two hours inside eight rooms would end the run and spend the rest
+        // of the span back on the line, which is not what the button says.
+        line = t('not while a key is running');
+      }
+      setHtml(what, line);
+      row.disabled = !offer.ok || inRun;
+      row.classList.toggle('can-buy', offer.ok && !inRun);
+    }
+  }
+
+  /**
+   * Buys a ware. The Hourglass is the one the state cannot settle alone: it
+   * comes back as a span of seconds and the loop plays it out for real, so
+   * the payout is a fight that happened rather than a number handed over.
+   */
+  buyWare(id) {
+    const { state } = this;
+    if (id === 'skip' && this.battle.inDungeon) return;
+    const bought = state.buyGem(id);
+    if (!bought) return;
+
+    if (bought.id === 'coin') {
+      this.toast({ text: t('+{0} GOLD', fmt(bought.gold)) });
+      this.sfx.play('gold');
+      this.refreshShop(true);
+    } else if (bought.id === 'chest') {
+      const slot = SLOTS.find((s) => s.id === bought.slotId);
+      const rarity = RARITIES[bought.rolled];
+      this.toast({ text: `${t(rarity.name).toUpperCase()} ${t(slot.name).toUpperCase()}!` });
+      this.sfx.play('forge');
+      this.refreshForge();
+    } else {
+      this.runSkip(bought.seconds);
+    }
+    state.save();
+    this.refreshWares();
+  }
+
+  /**
+   * Runs the fight forward for real. `fastForward` is wired by main.js, which
+   * owns the loop; without it the purchase would be a no-op, so the gems are
+   * put back rather than swallowed.
+   */
+  runSkip(seconds) {
+    const { state } = this;
+    if (!this.fastForward) {
+      state.gems += WARE_BY_ID.skip.cost;
+      return;
+    }
+    const before = { gold: state.gold, stage: state.stage, level: state.level };
+    // Nobody can watch two hours go by in half a second, and every toast and
+    // sound along the way would land at once. Quiet for the span, then one
+    // line saying what it came to.
+    const wasQuiet = this.quiet;
+    this.quiet = true;
+    const done = this.fastForward(seconds);
+    this.quiet = wasQuiet;
+
+    this.showAway({
+      seconds: done,
+      gold: state.gold - before.gold,
+      stages: state.stage - before.stage,
+      levels: state.level - before.level,
+    });
+    this.sfx.play('jingle');
+    this.refreshShop(true);
+  }
+
   showSkill(id) {
     this.skill = id;
     for (const button of this.el.skillSwitch.querySelectorAll('button')) {
@@ -1472,13 +1617,16 @@ export class UI {
 
   /** Notice for gold banked while the game was closed. */
   /** What a dungeon run paid. Shown on the way out, win or lose. */
-  showReward({ relics, dust, gold, won, cleared }) {
+  showReward({ relics, gems, dust, gold, won, cleared, first }) {
     const parts = [];
     if (relics > 0) parts.push(t('+{0} relic(s)', relics));
+    if (gems > 0) parts.push(t('+{0} gem(s)', gems));
     if (dust > 0) parts.push(t('+{0} dust', fmt(dust)));
     if (gold > 0) parts.push(t('+{0} gold', fmt(gold)));
     if (!parts.length) return;
-    const head = won ? t('CLEARED') : t('{0} rooms', cleared);
+    // Deeper than the save has ever been is worth saying out loud: it is the
+    // bounty that pays for the first proper visit to the shop.
+    const head = !won ? t('{0} rooms', cleared) : first ? t('DEEPEST YET') : t('CLEARED');
     this.toast({ text: `${head}: ${parts.join(', ')}`, bad: !won });
   }
 

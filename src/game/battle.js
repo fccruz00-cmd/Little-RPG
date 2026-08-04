@@ -333,16 +333,22 @@ export class Battle {
   finishDungeon(won) {
     if (!this.run) return null;
     const { key, cleared, bloody } = this.run;
-    const reward = dungeonReward(key, cleared, won);
+    // Read BEFORE deepestKey moves below, or the bounty for going deeper than
+    // ever can never be true: the line that records the clear is the same
+    // line that would make this false.
+    const first = won && key.tier > (this.state.deepestKey ?? -1);
+    const reward = dungeonReward(key, cleared, won, first);
     // The double is the prize for FINISHING under the moon. Doubling the
     // partial share too made leave-at-room-seven pay 1.75x a normal full
     // clear with the boss fight skipped: a bet that could not lose.
     if (bloody && won) {
       reward.relics *= 2;
+      reward.gems *= 2;
       reward.dust *= 2;
       reward.goldMul *= 2;
     }
     this.state.relics += reward.relics;
+    this.state.gems += reward.gems;
     // Counted separately so awakening pays for them too: relicsEarned is the
     // stage curve's offset and cannot absorb relics the curve never granted.
     this.state.extraRelics += reward.relics;
@@ -367,7 +373,13 @@ export class Battle {
       ? { text: `${key.name.toUpperCase()} CLEARED` }
       : { text: `RUN ENDED, ROOM ${cleared + 1}`, bad: true });
     this.emit('dungeon', null);
-    return { ...reward, gold, won, cleared };
+    // Every way out of a run comes through here, so this is the one place the
+    // payout can be announced from. It follows the toast above deliberately:
+    // a run that cleared nothing has no numbers to show and leaves the plain
+    // line standing, and a run that has them replaces it with the better one.
+    const out = { ...reward, gold, won, cleared, first };
+    this.emit('reward', out);
+    return out;
   }
 
   /** Walk out early, keeping what the cleared rooms are worth. */
@@ -621,8 +633,7 @@ export class Battle {
         // the timer free and voided the Bloodmoon's entire stake.
         if (this.run) {
           this.emit('toast', { text: 'THE BOSS OUTLASTED YOU', bad: true });
-          const out = this.finishDungeon(false);
-          if (out) this.emit('reward', out);
+          this.finishDungeon(false);
         } else {
           this.failBoss('THE BOSS GOT AWAY');
         }

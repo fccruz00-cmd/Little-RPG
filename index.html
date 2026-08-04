@@ -31,6 +31,12 @@
     </div>
     <div class="hud__row hud__row--xp">
       <span class="hud__lvl">Lv.<b id="stat-level">1</b></span>
+      <!-- Row two, not beside the gold: the top row is already clipping its
+           own rate at 320px. Stays out of sight until a dungeon pays the
+           first one, so the shop introduces itself by handing you something. -->
+      <button class="fed gems" id="gem-pill" type="button" hidden>
+        <i class="ico ico--sm ico--gem"></i><b id="stat-gems">0</b>
+      </button>
       <span class="fed" id="fed" hidden><i class="ico ico--sm ico--regen"></i><b id="fed-time">0</b>s</span>
       <span class="fed" id="brews" hidden><i class="ico ico--sm ico--bolt"></i><b id="brews-n">0</b></span>
       <div class="xpbar" role="progressbar" aria-label="Experience">
@@ -340,6 +346,22 @@
       </div>
     </div>
     <button class="act-btn" id="options-close" type="button">Close</button>
+  </div>
+</div>
+
+<!-- The gem shop. Opened from the HUD purse, so it costs no tab. -->
+<div class="modal" id="gemshop" hidden>
+  <div class="modal__box">
+    <h3 class="sect" id="gem-title"><i class="ico ico--sm ico--gem"></i> Gem shop</h3>
+    <div class="modal__scroll">
+      <p class="opt-note" id="gem-note">
+        Gems come out of <b>dungeon clears</b>, and going deeper than you ever
+        have pays a bounty. Everything here is a <b>consumable</b>: gems buy
+        pace, never a ceiling.
+      </p>
+      <div class="wares" id="wares"></div>
+    </div>
+    <button class="act-btn" id="gemshop-close" type="button">Close</button>
   </div>
 </div>
 

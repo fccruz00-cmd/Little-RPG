@@ -14,6 +14,8 @@
  * last. The cost curve is the governor of the whole system.
  */
 
+import { GEM_DROP, GEM_FIRST } from './gems.js';
+
 export const DUNGEON = {
   rooms: 8,        // seven fights and then the boss
   bossTime: 40,    // a little more room than the line's boss
@@ -42,6 +44,8 @@ export const DUNGEON = {
 // Gold is deliberately the small part of the payout, and priced off YOUR
 // stage rather than the key's: gold is the one thing here you can already
 // farm, so the reason to run a deeper key is relics and dust.
+// `gems` and `firstGems` come from data/gems.js, which owns the whole gem
+// economy; they are folded in below so a key stays one readable row.
 export const KEYS = [
   { tier: 0, name: 'Copper Key',  level: 26, cost: { bars: 40,  planks: 30 },
     relics: 1,  dust: 120,  goldMul: 30 },
@@ -53,7 +57,7 @@ export const KEYS = [
     relics: 7,  dust: 2200, goldMul: 65 },
   { tier: 4, name: 'Mithril Key', level: 112, cost: { bars: 1300, planks: 980 },
     relics: 12, dust: 5600, goldMul: 85 },
-];
+].map((key) => ({ ...key, gems: GEM_DROP[key.tier], firstGems: GEM_FIRST[key.tier] }));
 
 export const KEY_BY_TIER = Object.fromEntries(KEYS.map((k) => [k.tier, k]));
 
@@ -63,14 +67,19 @@ export const KEY_BY_TIER = Object.fromEntries(KEYS.map((k) => [k.tier, k]));
  * spent either way, and a total loss on an idle game you were not watching
  * is a bad trade for the player.
  *
- * Relics are the exception and only pay on a full clear. They are the
- * permanent currency, and rounding a partial run into them would let a key
- * farm relics off rooms the build cannot actually finish.
+ * Relics and gems are the exception and only pay on a full clear. They are the
+ * currencies that outlive the run, and rounding a partial into them would let
+ * a key farm them off rooms the build cannot actually finish.
+ *
+ * `first` is the one-off bounty for going deeper than the save ever has. The
+ * caller decides whether it applies, because only it knows what `deepestKey`
+ * said before this run touched it.
  */
-export function dungeonReward(key, cleared, won) {
+export function dungeonReward(key, cleared, won, first = false) {
   const share = Math.min(1, cleared / DUNGEON.rooms);
   return {
     relics: won ? key.relics : 0,
+    gems: won ? key.gems + (first ? key.firstGems : 0) : 0,
     dust: Math.round(key.dust * share),
     goldMul: key.goldMul * share,
   };

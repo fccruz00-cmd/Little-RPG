@@ -23,6 +23,7 @@ const BG_PERIOD = 1000;      // ms between background ticks, before throttling
 const BG_MAX_CATCHUP = 600;  // seconds of fight simulated in one wake
 const BG_BUDGET_MS = 120;    // and no longer than this, whatever that costs
 const BUDGET_CHECK = 240;    // steps between clock reads inside the loop
+const SKIP_BUDGET_MS = 4000; // wall clock a bought Hourglass may spend
 
 async function boot() {
   const loading = document.getElementById('loading');
@@ -81,6 +82,27 @@ async function boot() {
     }
     return seconds - left;
   }
+
+  /**
+   * The Hourglass. Only the loop can run the fight, so the gem shop asks for
+   * a span and this plays it out at full rate: kills, experience, dust,
+   * stages, gathering and every drop along the way.
+   *
+   * The budget is generous because this one is not a recovery from a frozen
+   * tab, it is a thing the player just paid for and is watching happen.
+   * Measured at roughly 0.07 ms per simulated second, two hours costs about
+   * half a second, and `advance` returns what it actually covered so the
+   * summary reports the truth rather than the ask.
+   */
+  ui.fastForward = (seconds) => {
+    const done = advance(seconds, SKIP_BUDGET_MS);
+    ui.tickAutomation(done);
+    state.refreshGoldRate();
+    state.save();
+    last = performance.now();   // the frame after this one is not a 500ms gap
+    accumulator = 0;
+    return done;
+  };
 
   function frame(now) {
     const raw = Math.max(0, (now - last) / 1000);

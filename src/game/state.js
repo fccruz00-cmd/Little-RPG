@@ -13,6 +13,9 @@ import {
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
 import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
 import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
+import {
+  WARE_BY_ID, GEM_FIRST, CACHE_SECONDS, SKIP_SECONDS, CHEST_FLOOR,
+} from '../data/gems.js';
 import { FEATS, featDone, emptyStats } from '../data/feats.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
@@ -22,7 +25,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 12;
+const SAVE_VERSION = 13;
 const SAVE_EVERY = 5; // seconds
 
 function emptyLevels() {
@@ -87,6 +90,15 @@ function defaults() {
     deepestKey: -1,   // deepest key tier fully cleared
     bossHeld: false,  // the boss beat you; it waits for the button
 
+    // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
+    // rebirth and not awakening, because a purse you can also be sold must
+    // never be emptied by a button the game asks you to press.
+    gems: 0,
+    // The best gold/s this save has ever held. It is what the Coin Cache is
+    // priced off: the live rate is zero for the hour after a rebirth, which
+    // is precisely the hour the ware exists for.
+    bestGps: 0,
+
     buyMax: false,
     muted: false,
     musicOff: false,
@@ -128,7 +140,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 11) {
+  if (data.version >= 1 && data.version <= 12) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -141,6 +153,8 @@ function migrate(data) {
     // v10: pets followed one at a time; the equipped-pet field goes, since
     // every tamed pet is active now.
     // v11: before the cauldron; potion timers start empty via defaults.
+    // v12: before gems. A zero best-rate is correct for a save that never
+    // tracked one, and the purse is back-paid for clears already made, below.
     const out = {
       ...defaults(),
       ...data,
@@ -150,6 +164,16 @@ function migrate(data) {
       relicTalents: renameKeys(data.relicTalents),
       gear: renameKeys(data.gear),
     };
+    // The first-clear bounty is paid for having gone that deep, and a save
+    // that arrives here already has. Without this the most invested player
+    // is the one who can never collect it: someone who had cleared every
+    // tier before gems existed would start on zero and stay behind a fresh
+    // save forever. `deepestKey` is monotone, so this can only run once.
+    const deepest = data.deepestKey ?? -1;
+    if (deepest >= 0) {
+      out.gems = (data.gems ?? 0)
+        + GEM_FIRST.slice(0, deepest + 1).reduce((sum, n) => sum + n, 0);
+    }
     // Every v5 mining node id survived the generalisation, so the ranks move
     // across untouched; only the shape around them changed.
     if (data.version === 5) {
@@ -811,6 +835,105 @@ export class GameState {
     return best;
   }
 
+  // --- gems -----------------------------------------------------------
+  // The shop. Three wares, all consumable, all priced flat. See data/gems.js
+  // for why none of them is permanent and why none of them gets pricier.
+
+  /**
+   * What a ware would hand over if bought right now, and whether it can be.
+   * The UI shows this number rather than a promise, because "an hour of your
+   * best rate" means nothing until you can see what your best rate was.
+   *
+   * @returns {{amount: number, ok: boolean, why: string}}
+   *   `why` is the reason a ware is greyed out, or '' when it is buyable.
+   */
+  gemOffer(id) {
+    const ware = WARE_BY_ID[id];
+    if (!ware) return { amount: 0, ok: false, why: 'unknown' };
+    const paid = this.gems >= ware.cost;
+    if (id === 'coin') {
+      const amount = this.bestGold * CACHE_SECONDS;
+      return { amount, ok: paid && amount > 0, why: amount > 0 ? '' : 'earn' };
+    }
+    if (id === 'skip') return { amount: SKIP_SECONDS, ok: paid, why: '' };
+    // The chest aims at the weakest slot, and there is nothing to aim at
+    // before the forge exists or once the whole board is already Epic.
+    const slot = this.weakestSlot();
+    return { amount: slot != null ? 1 : 0, ok: paid && slot != null,
+      why: !this.forgeUnlocked ? 'forge' : slot != null ? '' : 'full' };
+  }
+
+  /** The best gold/s the save has held, floored by the live rate. */
+  get bestGold() {
+    return Math.max(this.bestGps ?? 0, this.goldPerSec ?? 0);
+  }
+
+  canBuyGem(id) {
+    return this.gemOffer(id).ok;
+  }
+
+  /**
+   * Buys a ware. Everything the state can settle on its own is settled here;
+   * the Hourglass cannot be, because only the loop can run the fight, so it
+   * comes back as `{ id: 'skip', seconds }` for the caller to play out.
+   *
+   * @returns {object | null} what was bought, or null when it could not be.
+   */
+  buyGem(id) {
+    if (!this.canBuyGem(id)) return null;
+    const ware = WARE_BY_ID[id];
+    this.gems -= ware.cost;
+
+    if (id === 'coin') {
+      const gold = this.bestGold * CACHE_SECONDS;
+      // Straight onto the pile, deliberately NOT through earn(): this is not
+      // income, and letting it into the gold window would tell the offline
+      // payout the hero suddenly farms an hour a second.
+      this.gold += gold;
+      return { id, gold };
+    }
+    if (id === 'skip') return { id, seconds: SKIP_SECONDS };
+
+    const slotId = this.weakestSlot();
+    const rolled = Math.max(CHEST_FLOOR, rollRarity(this.forgeQuality, this.forgeFloor));
+    this.gear[slotId] = rolled;
+    this.stats.forges += 1;
+    if (rolled === RARITIES.length - 1) this.stats.legendaries += 1;
+    this.invalidateBonus();
+    return { id, slotId, rolled };
+  }
+
+  /**
+   * The slot the Gilded Chest would reforge: the lowest rarity worn, empty
+   * slots first, and null when every slot already sits at Epic or above.
+   */
+  weakestSlot() {
+    if (!this.forgeUnlocked) return null;
+    let worst = null;
+    let worstRarity = Infinity;
+    for (const slot of SLOTS) {
+      const rarity = this.gear[slot.id] ?? -1;
+      if (rarity >= CHEST_FLOOR || rarity >= worstRarity) continue;
+      worst = slot.id;
+      worstRarity = rarity;
+    }
+    return worst;
+  }
+
+  /**
+   * The one door money would come through. Nothing calls it today: the game
+   * ships with no network and no store, so every gem in the purse was cleared
+   * for. A store integration credits gems HERE and nowhere else, which is what
+   * keeps "buying gems" and "earning gems" the same thing downstream.
+   */
+  grantGems(amount) {
+    const n = Math.max(0, Math.floor(amount));
+    if (!n) return 0;
+    this.gems += n;
+    this.save();
+    return n;
+  }
+
   // --- prestige -----------------------------------------------------
   get pendingRelics() {
     return Math.max(0, relicsEarnedAt(this.maxStage) - this.relicsEarned);
@@ -967,6 +1090,10 @@ export class GameState {
     const total = this._goldWindow.reduce((sum, e) => sum + e.value, 0);
     const span = Math.max(1, this.clock - this._goldWindow[0].t);
     this.goldPerSec = total / span;
+    // The high-water mark the Coin Cache is priced off. It survives rebirth
+    // and awakening on purpose: a ware that got worse every time the game
+    // asked you to reset would be worth least exactly when you need it.
+    if (this.goldPerSec > this.bestGps) this.bestGps = this.goldPerSec;
   }
 
   // --- persistence --------------------------------------------------
@@ -978,6 +1105,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
+      gems, bestGps,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -988,6 +1116,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
+      gems, bestGps,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

@@ -149,6 +149,10 @@ it.
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**.
 
+The **gem shop** costs no tab: the purse sits in the HUD next to your level
+and opens the shop when tapped, and neither appears until a dungeon has paid
+you a gem. See *Gems* below.
+
 ### The soul tree
 
 Souls are roughly an order of magnitude scarcer than relics: one at 50 relics
@@ -315,19 +319,19 @@ each opens a fixed run of eight rooms. Every room is a mini boss and the last is
 difficulty set by the **key**, not by your stage, so a key is a challenge you
 choose rather than one the line hands you.
 
-| key | rooms at stage | costs | pays |
-|---|---:|---|---|
-| Copper  |  26 | 40 bars + 30 planks   | 1 relic, 120 dust |
-| Iron    |  44 | 95 + 70               | 2 relics, 320 dust |
-| Silver  |  64 | 230 + 170             | 4 relics, 850 dust |
-| Gold    |  86 | 550 + 410             | 7 relics, 2.2K dust |
-| Mithril | 112 | 1300 + 980            | 12 relics, 5.6K dust |
+| key | rooms at stage | costs | pays | gems |
+|---|---:|---|---|---:|
+| Copper  |  26 | 40 bars + 30 planks   | 1 relic, 120 dust | 2 (+10 first) |
+| Iron    |  44 | 95 + 70               | 2 relics, 320 dust | 3 (+15 first) |
+| Silver  |  64 | 230 + 170             | 4 relics, 850 dust | 5 (+25 first) |
+| Gold    |  86 | 550 + 410             | 7 relics, 2.2K dust | 8 (+40 first) |
+| Mithril | 112 | 1300 + 980            | 12 relics, 5.6K dust | 12 (+60 first) |
 
 Enter from the button in the arena. **Dying ends the run and the key is
 spent** — that is the stake, and without it a key would just be a slow
 guarantee. A partial run still pays its share of dust and gold, because
 wiping the whole reward on an idle game you were not watching is a bad
-trade; relics are the exception and only pay on a full clear.
+trade; relics and gems are the exception and only pay on a full clear.
 
 Measured from stage 25 against the Copper Key: damage level 30 and 45 die,
 60 and up clear, in fifteen to twenty seconds. Short, but a run is pass or
@@ -340,6 +344,51 @@ the loop is broken by the key cost: killing faster fills a key faster, but a
 key pays a fixed amount once and the next tier costs about 2.4x the last.
 Gold is priced off **your** stage rather than the key's level, since gold is
 the one thing here you can already farm.
+
+### Gems, and the shop they open
+
+Gems are the one currency that crosses the whole board: they come out of
+dungeon clears and go back in as gold, as time, or as gear. The purse and the
+shop behind it are hidden until a run pays the first one, so the shop
+introduces itself by handing you something.
+
+The faucet is full clears only, never partial runs, and the **first time a
+clear takes you deeper than the save ever has** pays a one-off bounty on top.
+Five tiers, 150 bounty gems: enough to meet the shop properly without ever
+opening a wallet.
+
+| ware | costs | gives |
+|---|---:|---|
+| Coin Cache   | 20 | an hour of your best gold rate, paid now |
+| Hourglass    | 30 | two hours of fight, really simulated, in about half a second |
+| Gilded Chest | 45 | your weakest slot reforged at Epic or better |
+
+Three rules hold this together, and `data/gems.js` exists to keep them:
+
+1. **Every gem is earnable.** The dungeon table above is the whole faucet.
+2. **Nothing is permanent.** Every ware is a consumable that saves time, so a
+   wallet buys pace and never a ceiling. Relics, souls, feats and pets do not
+   accept gems and are not meant to.
+3. **Prices are fixed.** A price that climbs with what you have already bought
+   is how a shop starts hunting the people worst at leaving it alone.
+
+The Hourglass is the one that does real work: it is not a payout, it runs the
+actual battle loop, so it pays in kills, experience, dust, stages, gathering
+and every drop along the way, at full rate rather than the offline half. It
+is refused inside a dungeon, where two hours would end the run and spend the
+rest of the span back on the line.
+
+The Coin Cache is priced off `bestGps`, the best gold/s the save has ever
+held, rather than the live rate. The hour after a rebirth is when the live
+rate is zero and the ware is most wanted, so pricing off the live rate would
+make it worthless exactly then. Bought gold is added straight to the pile and
+deliberately kept out of the income window, or the offline payout would come
+to believe the hero farms an hour a second.
+
+**On selling gems.** The game ships with no network and no store, so every
+gem in the purse today was cleared for. `GameState.grantGems()` is the single
+seam a purchase would credit through, and it is the only one — which is what
+keeps *buying* gems and *earning* gems the same thing everywhere downstream.
 
 ### Smithing, and a forge that finally progresses
 
@@ -420,6 +469,7 @@ src/
     balance.js      EVERY progression number, the file to rebalance
     gathering.js    the four skills: resources, tools, trees, Well Fed
     dungeon.js      keys, rooms and what a run pays
+    gems.js         the gem faucet, the shop, and the rules both obey
     enemies.js      roster, when each mob unlocks, bosses
     upgrades.js     what shows up in the shop
     levels.js       XP curve and gain per kill
