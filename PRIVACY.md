@@ -78,9 +78,10 @@ or payment credentials.**
 ### Buying gems inside the game
 
 Gems are earned by clearing dungeons. Some versions of the game also sell
-them, and if yours does, a **pouch button** appears at the top right, opening
-a store with prices in your own currency. If you do not see that button, your
-copy has no store attached and makes no purchases of any kind.
+them. The **pouch button** at the top right opens the store: if your copy has
+one attached, it lists gem packs with prices in your own currency, and if it
+does not, it says so — that copy sells nothing and makes no purchases of any
+kind.
 
 Where it does appear, the purchase is carried out **by the app store's own
 billing service**, not by the game. The game asks the store what the packs

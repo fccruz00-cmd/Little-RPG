@@ -32,7 +32,7 @@
            beside it and only exists when a real one answered: see
            src/store/billing.js. -->
       <span class="hud__tools">
-        <button class="hud__btn" id="btn-store" type="button" hidden
+        <button class="hud__btn" id="btn-store" type="button"
                 aria-label="Store"><i class="ico ico--shop"></i></button>
         <button class="hud__btn" id="btn-options" type="button"
                 aria-label="Options"><i class="ico ico--gear"></i></button>
@@ -394,6 +394,14 @@
         store; the game never sees your payment details.
       </p>
       <div class="wares" id="packs"></div>
+      <!-- No app store answered. Say so plainly rather than showing a shelf
+           of things that cannot be bought. -->
+      <p class="opt-note" id="store-empty" hidden>
+        <b>This copy of the game sells nothing.</b> There is no app store
+        attached to it, so there is nothing here to buy and no way for it to
+        take your money. Every gem in the game comes out of a dungeon — forge
+        a key on the Skills tab and go spend it.
+      </p>
     </div>
     <button class="act-btn" id="store-close" type="button">Close</button>
   </div>

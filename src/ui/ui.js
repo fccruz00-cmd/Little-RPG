@@ -120,7 +120,7 @@ export class UI {
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
       gemPill: $('gem-pill'), gemCount: $('stat-gems'),
       gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
-      packs: $('packs'), gemMore: $('gem-more'),
+      packs: $('packs'), gemMore: $('gem-more'), storeEmpty: $('store-empty'),
       store: $('btn-store'), storeModal: $('store'), storeClose: $('store-close'),
       options: $('btn-options'), optionsModal: $('options'),
       optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
@@ -185,7 +185,8 @@ export class UI {
     // The till. Finds nothing in a browser, which is the normal case, and
     // then the shop simply never grows a "More gems" section.
     this.billing = new Billing(state, (gems) => this.onGemsBought(gems));
-    this.billing.connect().then((ok) => { if (ok) this.refreshPacks(); });
+    // Called either way: the store has something to say when it is empty.
+    this.billing.connect().then(() => this.refreshPacks());
 
     this.music = new Music(this.sfx, () => !this.state.musicOff);
     const moodFor = (stage) => (stage >= 150 ? 2 : stage >= 64 ? 1 : 0);
@@ -273,6 +274,7 @@ export class UI {
       ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
       ['#store-note', 'Gemas compram ritmo, nunca um teto, e <b>toda gema daqui também pode ser ganha</b> limpando masmorras. As compras são feitas pela loja do aparelho; o jogo nunca vê seus dados de pagamento.'],
       ['#gem-more', 'Sem gemas? Limpe uma masmorra, ou toque na bolsa lá em cima.'],
+      ['#store-empty', '<b>Esta cópia do jogo não vende nada.</b> Não há loja de aplicativos conectada a ela, então não há nada aqui para comprar e nenhum jeito de ela cobrar seu dinheiro. Toda gema do jogo sai de uma masmorra — forje uma chave na aba Ofícios e vá gastá-la.'],
       ['.foot > span:first-child', `Fase <b id="stat-stage-foot">1</b>`],
       ['.foot__best', `Recorde: fase <b id="stat-best">1</b>`],
       ['#asc-rebirth .prestige__gain div', `<strong id="pres-gain">0</strong> relíquia(s)\n<small>${t('if you rebirth now')}</small>`],
@@ -1347,12 +1349,15 @@ export class UI {
   refreshPacks() {
     const { el } = this;
     const catalogue = this.billing.catalogue();
-    // No store answered, no button. A shop front that cannot sell anything is
-    // worse than no shop front, and in a browser that is every launch.
+    // The button is always there -- it is where money lives, and a control
+    // that exists only on some builds is one nobody learns. What changes is
+    // what it opens: a shelf when a store answered, and a plain "this copy
+    // sells nothing" when none did, which is the honest thing to tell
+    // somebody who just tapped a shop.
     const has = catalogue.length > 0;
-    el.store.hidden = !has;
+    el.storeEmpty.hidden = has;
     el.gemMore.hidden = !has;
-    if (!has) return;
+    if (!has) { el.packs.replaceChildren(); return; }
     el.packs.replaceChildren(...catalogue.map((pack) => {
       const row = document.createElement('button');
       row.type = 'button';

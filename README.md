@@ -157,10 +157,12 @@ Three things live outside the tabs entirely, all in the HUD:
 - The **gem purse**, beside your level. Tapping it opens the gem shop, where
   gems are *spent*. Neither the purse nor the shop appears until a dungeon
   has paid you a gem. See *Gems* below.
-- The **pouch**, top right. The one place in the game that asks for money,
-  and it only exists when a real app store answered — in a browser, and in
-  the single file you can open from disk, the button is not there at all. A
-  shop front that cannot sell anything is worse than none.
+- The **pouch**, top right. The one place in the game that asks for money.
+  It is always there — a control that exists only on some builds is one
+  nobody learns — and what it opens depends: a shelf of gem packs when a real
+  app store answered, and a plain *this copy sells nothing* when none did,
+  which is exactly what a browser build should say to somebody who tapped a
+  shop.
 - The **gear**, beside it. Options: sound, music, damage numbers, language,
   export and import.
 
