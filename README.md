@@ -198,6 +198,11 @@ awakening both**.
 - **Sound** is synthesized in WebAudio: no samples, no files, no licences.
   Hits, crits, coins, jingles, the boss horn, all of it oscillators. The
   toggle lives in the footer and rapid effects are throttled per name.
+- **Music** is generative, not a loop: a slow chord pad wandering a small
+  progression under sparse pentatonic notes at loose random intervals, so
+  it never repeats exactly. The key follows the descent (A minor in the
+  overworld, D minor over hell, cold near-drones in the depths), it pauses
+  in hidden tabs, and its own footer toggle rides a fade, not a cut.
 - **Champions**: one mob in ~40 arrives tinted and named. GILDED pays 5x
   gold, SOULBOUND always drops dust (only spawns once the forge exists),
   FLEET is frail, fast and worth three kills of experience.

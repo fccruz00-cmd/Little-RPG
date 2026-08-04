@@ -20,6 +20,7 @@ import {
 } from '../data/gathering.js';
 import { fmt, pct, mult, duration } from '../format.js';
 import { SFX } from '../engine/sfx.js';
+import { Music } from '../engine/music.js';
 
 const AUTO_FORGE_EVERY = 1.5;   // seconds between Anvil forges
 const AUTOMATION_CATCHUP = 200; // most actions one tickAutomation may replay
@@ -108,7 +109,7 @@ export class UI {
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
-      mute: $('btn-mute'),
+      mute: $('btn-mute'), music: $('btn-music'),
     };
 
     this.tab = 'upgrades';
@@ -158,6 +159,13 @@ export class UI {
     });
     battle.on('chest', () => { if (!this.quiet) this.sfx.play('chest'); });
     battle.on('shrine', () => { if (!this.quiet) this.sfx.play('brew'); });
+
+    // The band. Generative, so it never repeats; the key follows the
+    // descent, so stage 70 broods and stage 160 barely breathes.
+    this.music = new Music(this.sfx, () => !this.state.musicOff);
+    const moodFor = (stage) => (stage >= 150 ? 2 : stage >= 64 ? 1 : 0);
+    this.music.setMood(moodFor(state.stage));
+    battle.on('stage', (stage) => this.music.setMood(moodFor(stage)));
   }
 
   // --- building -----------------------------------------------------
@@ -513,6 +521,14 @@ export class UI {
       state.save();
       muteLabel();
       if (!state.muted) this.sfx.play('buy');   // one tick so the ear knows
+    });
+
+    const musicLabel = () => setText(el.music, state.musicOff ? 'music: off' : 'music: on');
+    musicLabel();
+    el.music.addEventListener('click', () => {
+      state.musicOff = !state.musicOff;
+      state.save();
+      musicLabel();
     });
 
     el.exportSave.addEventListener('click', async () => {

@@ -89,6 +89,7 @@ function defaults() {
 
     buyMax: false,
     muted: false,
+    musicOff: false,
     goldPerSec: 0,
     lastSeen: Date.now(),
   };
@@ -975,7 +976,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      buyMax, muted, goldPerSec,
+      buyMax, muted, musicOff, goldPerSec,
     } = this;
     return {
       version: SAVE_VERSION,
@@ -985,7 +986,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      buyMax, muted, goldPerSec, lastSeen: Date.now(),
+      buyMax, muted, musicOff, goldPerSec, lastSeen: Date.now(),
     };
   }
 
