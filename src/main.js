@@ -173,6 +173,7 @@ async function boot() {
   }
 
   document.addEventListener('visibilitychange', () => {
+    if (ui._skipUnloadSave) return;
     if (document.hidden) {
       cancelAnimationFrame(rafId);
       rafId = 0;
@@ -181,7 +182,7 @@ async function boot() {
       goForeground();
     }
   });
-  addEventListener('pagehide', () => { state.save(); });
+  addEventListener('pagehide', () => { if (!ui._skipUnloadSave) state.save(); });
 
   loading.classList.add('is-done');
   rafId = requestAnimationFrame(frame);

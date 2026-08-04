@@ -19,6 +19,7 @@ import {
   describeGatherNode,
 } from '../data/gathering.js';
 import { fmt, pct, mult, duration } from '../format.js';
+import { SFX } from '../engine/sfx.js';
 
 const AUTO_FORGE_EVERY = 1.5;   // seconds between Anvil forges
 const AUTOMATION_CATCHUP = 200; // most actions one tickAutomation may replay
@@ -106,7 +107,8 @@ export class UI {
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
-      reset: $('btn-reset'),
+      reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
+      mute: $('btn-mute'),
     };
 
     this.tab = 'upgrades';
@@ -137,6 +139,25 @@ export class UI {
     this.bind();
 
     battle.on('toast', (t) => this.toast(t));
+
+    // The ear. Every play() checks quiet/mute/hidden itself, but quiet is
+    // checked here too so a background catch-up does not queue a drumroll.
+    this.sfx = new SFX(() => this.state.muted);
+    battle.on('hit', ({ crit }) => { if (!this.quiet) this.sfx.play(crit ? 'crit' : 'hit'); });
+    battle.on('heroHurt', ({ killed }) => { if (!this.quiet) this.sfx.play(killed ? 'down' : 'hurt'); });
+    battle.on('spawn', (actor) => { if (!this.quiet && actor.isBoss) this.sfx.play('boss'); });
+    battle.on('gather', () => { if (!this.quiet) this.sfx.play('gather'); });
+    battle.on('kill', ({ target, levelsUp }) => {
+      if (this.quiet) return;
+      this.sfx.play(target.isBoss ? 'bossdown' : 'gold');
+      if (levelsUp) this.sfx.play('level');
+    });
+    battle.on('toast', ({ text }) => {
+      if (this.quiet) return;
+      if (text.endsWith('TAMED!') || text.startsWith('FEAT:')) this.sfx.play('jingle');
+    });
+    battle.on('chest', () => { if (!this.quiet) this.sfx.play('chest'); });
+    battle.on('shrine', () => { if (!this.quiet) this.sfx.play('brew'); });
   }
 
   // --- building -----------------------------------------------------
@@ -310,6 +331,7 @@ export class UI {
       if (!button) return;
       if (!state.buy(button.dataset.key)) return;
       state.save();
+      this.sfx.play('buy');
       this.refreshShop(true);
       button.classList.remove('is-bought');
       void button.offsetWidth;
@@ -361,6 +383,7 @@ export class UI {
       const row = e.target.closest('[data-potion]');
       if (!row || !state.brew(row.dataset.potion)) return;
       state.save();
+      this.sfx.play('brew');
       this.toast({ text: `${row.dataset.potion.toUpperCase()} BREWED` });
       this.refreshSkills();
     });
@@ -371,6 +394,7 @@ export class UI {
       const tier = Number(row.dataset.key);
       if (!state.forgeKey(tier)) return;
       state.save();
+      this.sfx.play('jingle');
       this.toast({ text: `${KEYS[tier].name.toUpperCase()} FORGED` });
       this.refreshSkills();
     });
@@ -416,6 +440,7 @@ export class UI {
       if (!row || !e.target.closest('.pet__feed')) return;
       if (!state.feedPet(row.dataset.pet)) return;
       state.save();
+      this.sfx.play('buy');
       this.refreshPets();
     });
 
@@ -479,6 +504,44 @@ export class UI {
       this.showTab('talents');
       this.showTree('souls');
       this.toast({ text: `AWAKENED: +${gain} SOUL(S)` });
+    });
+
+    const muteLabel = () => setText(el.mute, state.muted ? 'sound: off' : 'sound: on');
+    muteLabel();
+    el.mute.addEventListener('click', () => {
+      state.muted = !state.muted;
+      state.save();
+      muteLabel();
+      if (!state.muted) this.sfx.play('buy');   // one tick so the ear knows
+    });
+
+    el.exportSave.addEventListener('click', async () => {
+      const text = state.exportSave();
+      // Clipboard needs a secure context; the single file opened from disk
+      // may not have one, so the prompt fallback keeps the export usable
+      // everywhere the game runs.
+      try {
+        await navigator.clipboard.writeText(text);
+        this.toast({ text: 'SAVE COPIED TO CLIPBOARD' });
+      } catch {
+        window.prompt('Copy your save:', text);
+      }
+    });
+
+    el.importSave.addEventListener('click', () => {
+      const text = window.prompt('Paste your save:');
+      if (text === null || text.trim() === '') return;
+      // Confirm BEFORE anything is written: a cancel must leave the current
+      // save exactly as it was.
+      if (!confirm('Replace the CURRENT save with the pasted one?')) return;
+      if (!GameState.importSave(text)) {
+        this.toast({ text: 'THAT DID NOT READ AS A SAVE', bad: true });
+        return;
+      }
+      // Reloading boots from the imported save. The pagehide save would
+      // clobber it with the old state, so it is the one save reload skips.
+      this._skipUnloadSave = true;
+      location.reload();
     });
 
     el.reset.addEventListener('click', () => {
@@ -775,6 +838,7 @@ export class UI {
     this.state.save();
 
     if (this.quiet) return result;
+    if (!quiet) this.sfx.play('forge');
 
     const entry = this.slots.get(slotId);
     const rarity = RARITIES[result.rolled];

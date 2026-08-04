@@ -193,6 +193,21 @@ cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
 gathering economy touches, pets and their levels survive **rebirth and
 awakening both**.
 
+### Sound, champions and the road
+
+- **Sound** is synthesized in WebAudio: no samples, no files, no licences.
+  Hits, crits, coins, jingles, the boss horn, all of it oscillators. The
+  toggle lives in the footer and rapid effects are throttled per name.
+- **Champions**: one mob in ~40 arrives tinted and named. GILDED pays 5x
+  gold, SOULBOUND always drops dust (only spawns once the forge exists),
+  FLEET is frail, fast and worth three kills of experience.
+- **The road**: some stages carry a chest (a pile of gold, sometimes dust)
+  or a shrine (90 free seconds of a random brew). Rolled on genuine stage
+  entry only, never on reload.
+- **Export/Import save** (Ascend tab): the whole save as one line of text,
+  for backups and moving between browsers. Garbage and future versions are
+  rejected on import.
+
 ### The cauldron, feats and Bloodmoons
 
 - **Cauldron** (Smithing workshop): three potions, each drinking one line's

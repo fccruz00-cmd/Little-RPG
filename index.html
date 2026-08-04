@@ -256,6 +256,13 @@
           <h3>Permanent bonuses</h3>
           <ul id="perks-list"></ul>
         </section>
+
+        <!-- The save lives only on this device; these are the player's keys. -->
+        <div class="savebar">
+          <button class="link" id="btn-export" type="button">Export save</button>
+          <span class="savebar__dot">&middot;</span>
+          <button class="link" id="btn-import" type="button">Import save</button>
+        </div>
       </div>
 
       <!-- feats: lifetime marks, each worth a small permanent bonus -->
@@ -301,6 +308,7 @@
 
     <footer class="foot">
       <span>Stage <b id="stat-stage-foot">1</b></span>
+      <button class="link" id="btn-mute" type="button">sound: on</button>
       <span class="foot__best">Best: stage <b id="stat-best">1</b></span>
     </footer>
   </section>

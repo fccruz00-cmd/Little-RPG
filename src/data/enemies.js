@@ -75,6 +75,19 @@ export const BOSSES = [
     trait: { kind: 'ramp',      power: 0.04, label: 'Gathering Doom' } },  // +4% damage per second
 ];
 
+// Champions: one mob in ~40 walks in as a named variant, tinted its own
+// colour and paying its own way. Variance for the minute-to-minute: the
+// line stays readable because a champion is louder, not different.
+export const CHAMPION_CHANCE = 1 / 40;
+export const CHAMPIONS = [
+  // 5x gold, a little sturdier so the payday is seen before it is spent.
+  { id: 'gilded',    name: 'GILDED',    color: '#ffd75e', hp: 1.5, gold: 5 },
+  // Guaranteed dust. Only spawns once the forge exists to want it.
+  { id: 'soulbound', name: 'SOULBOUND', color: '#c79ae8', hp: 1.5, dust: 4, needsForge: true },
+  // Frail, fast, and worth three kills of experience.
+  { id: 'fleet',     name: 'FLEET',     color: '#8fd4ff', hp: 0.8, speed: 1.6, xp: 3 },
+];
+
 // The Soldier is the only character in the pack shipping with a shadow baked
 // into the sprite, even in the "no shadows" folder, and it clashed with the
 // shadow the game draws. Swapping the model fixes it; the Knight is clean.

@@ -88,6 +88,7 @@ function defaults() {
     bossHeld: false,  // the boss beat you; it waits for the button
 
     buyMax: false,
+    muted: false,
     goldPerSec: 0,
     lastSeen: Date.now(),
   };
@@ -974,7 +975,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      buyMax, goldPerSec,
+      buyMax, muted, goldPerSec,
     } = this;
     return {
       version: SAVE_VERSION,
@@ -984,7 +985,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      buyMax, goldPerSec, lastSeen: Date.now(),
+      buyMax, muted, goldPerSec, lastSeen: Date.now(),
     };
   }
 
@@ -1043,6 +1044,33 @@ export class GameState {
     const gold = this.goldPerSec * seconds * OFFLINE.rate;
     this.gold += gold;
     return { seconds, gold };
+  }
+
+  // --- save portability -----------------------------------------------
+  // The save is the player's, and it lives only on their device: these two
+  // are the keys that make that real. Base64 keeps clipboards and chat apps
+  // from mangling the JSON; the prefix names the format so a paste of the
+  // wrong thing fails loud instead of half-loading.
+
+  exportSave() {
+    this.save();
+    return 'LRPG1.' + btoa(unescape(encodeURIComponent(JSON.stringify(this))));
+  }
+
+  /** Validates and stores a pasted save. Returns true when it took. */
+  static importSave(text) {
+    try {
+      const raw = String(text ?? '').trim();
+      if (!raw.startsWith('LRPG1.')) return false;
+      const data = JSON.parse(decodeURIComponent(escape(atob(raw.slice(6)))));
+      if (!data || typeof data !== 'object') return false;
+      if (!Number.isInteger(data.version) || data.version < 1 || data.version > SAVE_VERSION) return false;
+      if (migrate(data) === null) return false;
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   static wipe() {

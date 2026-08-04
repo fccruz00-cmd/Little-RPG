@@ -2,12 +2,14 @@ import { Animator } from '../engine/anim.js';
 import { SPRITES, GROUND_LINE } from '../data/sprites.js';
 import {
   HERO, MOBS, mobsForStage, eliteForStage, isBossStage, bossForStage, TRAIT_FROM,
+  CHAMPIONS, CHAMPION_CHANCE,
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
+import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
 
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
@@ -81,6 +83,9 @@ export class Battle {
     // ore is time not on wood.
     this.nodes = [];
     this.nextNodeX = this.hero.x + GATHER.spacing;
+    // Roadside props: a chest or a shrine some stages, picked up by walking
+    // over them. Rolled on genuine stage entry only, never on reload.
+    this.props = [];
     this.working = null;   // the node being worked, with its progress
     this.switchTimer = 0;
 
@@ -153,6 +158,17 @@ export class Battle {
     this.nextNodeX = this.hero.x + GATHER.spacing * 0.5;
     this.spawnTimer = 0.4;
     this.bossTimer = 0;
+    this.props.length = 0;
+    // The road sometimes has something on it. keepKills marks a reload, and
+    // a reload must not re-roll the dice: that is a slot machine with F5.
+    if (!keepKills && !this.run) {
+      const roll = Math.random();
+      if (roll < 0.12) {
+        this.props.push({ kind: 'chest', x: this.hero.x + 60 + Math.random() * 140 });
+      } else if (roll < 0.20) {
+        this.props.push({ kind: 'shrine', x: this.hero.x + 60 + Math.random() * 140 });
+      }
+    }
     this.emit('stage', this.state.stage);
     if (!silent) {
       this.emit('toast', this.isBoss
@@ -166,6 +182,35 @@ export class Battle {
     this.state.maxStage = Math.max(this.state.maxStage, next);
     this.state.bestStage = Math.max(this.state.bestStage, next);
     this.enterStage(next);
+  }
+
+  /** Walking over a prop opens it. The hero only ever moves forward. */
+  updateProps() {
+    const { state, hero } = this;
+    for (let i = this.props.length - 1; i >= 0; i--) {
+      const prop = this.props[i];
+      if (hero.x < prop.x - 2) continue;
+      this.props.splice(i, 1);
+      if (prop.kind === 'chest') {
+        // Ten mobs' worth of gold, scaled to the stage under your feet.
+        const gold = state.earn(enemyGold(this.level, 1) * 10 * (1 + Math.random() * 0.5));
+        this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, gold, 'gold');
+        if (state.forgeUnlocked && Math.random() < 0.35) {
+          const dust = Math.max(1, Math.round(3 * state.bonus.dustMul));
+          state.dust += dust;
+          this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, dust, 'dust');
+          this.emit('dust', dust);
+        }
+        this.emit('chest', prop);
+      } else {
+        // A shrine pours a free minute and a half of one of the cauldron's
+        // brews: a taste of the bench for whoever has not found it yet.
+        const potion = POTIONS[(Math.random() * POTIONS.length) | 0];
+        state.potions[potion.id] = Math.max(state.potions[potion.id] ?? 0, 90);
+        this.emit('toast', { text: `SHRINE: ${potion.name.toUpperCase()}, 90S` });
+        this.emit('shrine', prop);
+      }
+    }
   }
 
   /** Rebuilds the parade when the tamed set changes. */
@@ -389,6 +434,17 @@ export class Battle {
     actor.period = stats.period;
     actor.attackTimer = actor.period * 0.6;
 
+    // One mob in ~40 walks in as a champion: louder colour, its own prize.
+    if (kind === 'mob' && Math.random() < CHAMPION_CHANCE) {
+      const pool = CHAMPIONS.filter((c) => !c.needsForge || this.state.forgeUnlocked);
+      const champ = pool[(Math.random() * pool.length) | 0];
+      actor.champion = champ;
+      actor.maxHp *= champ.hp;
+      actor.hp = actor.maxHp;
+      if (champ.gold) actor.gold *= champ.gold;
+      this.pushFloater(actor, champ.name, 'champ', champ.color);
+    }
+
     this.enemy = actor;
     // The boss timer only starts running once it walks on screen.
     if (actor.isBoss) {
@@ -551,6 +607,7 @@ export class Battle {
     state.tickPotions(dt);
 
     this.updateEnemy(dt);
+    this.updateProps();
     this.updatePets(dt);
     this.updateCorpses(dt);
     this.updateFloaters(dt);
@@ -705,14 +762,19 @@ export class Battle {
     const gold = state.earn(target.gold);
     this.pushFloater(target, gold, 'gold');
 
-    const dust = state.rollDust(target.kind);
+    let dust = state.rollDust(target.kind);
+    if (target.champion?.dust) {
+      dust += Math.max(1, Math.round(target.champion.dust * state.bonus.dustMul));
+    }
     if (dust > 0) {
       state.dust += dust;
       this.pushFloater(target, dust, 'dust');
       this.emit('dust', dust);
     }
 
-    const xpMul = target.isBoss ? LEVELS.bossXp : target.isElite ? LEVELS.eliteXp : 1;
+    const xpMul = target.isBoss ? LEVELS.bossXp
+      : target.isElite ? LEVELS.eliteXp
+      : (target.champion?.xp ?? 1);
     const levelsUp = state.gainXp(killXp(this.level, xpMul));
     if (levelsUp) this.emit('toast', { text: `LEVEL ${state.level}!` });
     this.emit('kill', { target, gold, levelsUp });
@@ -745,7 +807,7 @@ export class Battle {
     const inRange = gap <= HERO.reach + enemy.def.reach;
 
     if (hero.dead || !inRange) {
-      if (!hero.dead) enemy.x -= enemy.def.speed * dt;
+      if (!hero.dead) enemy.x -= enemy.def.speed * (enemy.champion?.speed ?? 1) * dt;
       enemy.anim.play('walk', { fps: 10 });
       return;
     }
@@ -791,6 +853,7 @@ export class Battle {
     }
     const taken = enemy.damage * power * this.state.damageTaken;
     const killed = hero.hurt(taken);
+    this.emit('heroHurt', { killed });
     this.pushFloater(hero, taken, 'player');
     if (trait?.kind === 'leech' && !enemy.dead) {
       enemy.hp = Math.min(enemy.maxHp, enemy.hp + taken * trait.power);
@@ -824,7 +887,7 @@ export class Battle {
 
   /** The number comes off the head of whoever got hit rather than a fixed
    *  height, otherwise it cuts through the mini boss health bar. */
-  pushFloater(actor, value, kind) {
+  pushFloater(actor, value, kind, color = null) {
     this.floaters.push({
       x: actor.x + (Math.random() * 10 - 5),
       base: Battle.topOf(actor) + 8,
@@ -832,6 +895,7 @@ export class Battle {
       life: 0,
       value,
       kind,
+      color,
     });
     if (this.floaters.length > 28) this.floaters.shift();
   }

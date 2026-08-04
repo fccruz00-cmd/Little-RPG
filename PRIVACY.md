@@ -30,7 +30,7 @@ One entry in your browser's `localStorage`, under the key
 - Potion timers: seconds remaining on active brews
 - Lifetime counters used by feats: kills, bosses, deaths, forges, refines,
   feeds, brews, dungeon clears
-- Settings: buy-max and auto-forge toggles
+- Settings: buy-max, auto-forge and sound toggles
 - A timestamp of when you last had the game open, used only to work out
   offline earnings the next time you open it
 
@@ -41,7 +41,13 @@ never transmitted anywhere.
 The game reads exactly two things from your browser beyond that save:
 `window.devicePixelRatio`, so the pixel art renders sharply on your screen,
 and `document.hidden`, so the fight keeps running while the tab is in the
-background. Neither is stored and neither is sent anywhere.
+background. Neither is stored and neither is sent anywhere. Sound is
+synthesized on your device as it plays; there are no audio files and
+nothing is recorded.
+
+Export save shows you the exact data leaving with you: it is the same
+record described above, encoded as one line of text, and it only goes
+where you paste it.
 
 ## What the game does not do
 
@@ -94,8 +100,10 @@ Because the save never leaves your device, you control it completely.
   *Erase everything and start over*. This removes the save entry outright.
 - **Delete it from the browser:** clear site data or local storage for
   wherever the game is running.
-- **Back it up or move it:** copy the value of `little-rpg.save.v1` from your
-  browser's developer tools and paste it in elsewhere.
+- **Back it up or move it:** *Ascend* tab, *Export save* copies your whole
+  save as one line of text; *Import save* pastes it back in anywhere. The
+  same value is also visible as `little-rpg.save.v1` in your browser's
+  developer tools.
 
 Note that saves are per-browser and per-origin. The downloaded single file
 opened from your disk and a hosted copy on the web keep separate saves, and

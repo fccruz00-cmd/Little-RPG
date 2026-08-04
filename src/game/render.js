@@ -116,6 +116,7 @@ export class Renderer {
     ctx.imageSmoothingEnabled = false;
 
     this.drawBackground(camX, biome, tier, time);
+    this.drawProps(battle, camX, time);
     this.drawNodes(battle, camX);
 
     for (const corpse of battle.corpses) this.drawActor(corpse, camX, { fade: corpse.corpseTimer });
@@ -250,6 +251,37 @@ export class Renderer {
    * work yet keeps its shape but goes grey and gets a marker over it, so
    * "come back with a better tool" is legible at a glance.
    */
+  /** Roadside chests and shrines, tiny and hand-pixelled like the nodes. */
+  drawProps(battle, camX, time) {
+    const { ctx, groundY } = this;
+    for (const prop of battle.props) {
+      const x = Math.round(prop.x - camX);
+      if (x < -16 || x > this.width + 16) continue;
+      if (prop.kind === 'chest') {
+        // a squat box with a gold band and a keyhole glint
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(x - 4, groundY - 6, 9, 6);
+        ctx.fillStyle = '#7a4f2c';
+        ctx.fillRect(x - 4, groundY - 6, 9, 2);
+        ctx.fillStyle = '#ebb85b';
+        ctx.fillRect(x - 4, groundY - 4, 9, 1);
+        ctx.fillStyle = '#ffe9ae';
+        ctx.fillRect(x, groundY - 4, 1, 1);
+      } else {
+        // an obelisk with a breathing light on top
+        ctx.fillStyle = '#3b3b4a';
+        ctx.fillRect(x - 1, groundY - 12, 3, 12);
+        ctx.fillStyle = '#565669';
+        ctx.fillRect(x - 2, groundY - 2, 5, 2);
+        const pulse = 0.55 + Math.sin(time * 3) * 0.35;
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#8fd4ff';
+        ctx.fillRect(x - 1, groundY - 14, 3, 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
   drawNodes(battle, camX) {
     const { ctx, groundY } = this;
     for (const node of battle.nodes) {
@@ -371,6 +403,9 @@ export class Renderer {
     }
     ctx.restore();
 
+    if (actor.champion) {
+      this.drawTint(sheet.image, sx, dx, dy, actor.facing, actor.champion.color, 0.32, scale);
+    }
     if (actor.flash > 0) {
       this.drawHitFlash(sheet.image, sx, dx, dy, actor.facing, actor.flash, scale);
     }
@@ -404,6 +439,33 @@ export class Renderer {
   }
 
   /** White silhouette over the sprite at the moment of impact. */
+  /** The champion tint: the sprite re-drawn in its colour at low alpha. */
+  drawTint(image, sx, dx, dy, facing, color, alpha, scale = 1) {
+    const { scratchCtx: s, ctx } = this;
+    s.clearRect(0, 0, FRAME, FRAME);
+    s.globalCompositeOperation = 'source-over';
+    s.drawImage(image, sx, 0, FRAME, FRAME, 0, 0, FRAME, FRAME);
+    s.globalCompositeOperation = 'source-atop';
+    s.fillStyle = color;
+    s.fillRect(0, 0, FRAME, FRAME);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (scale !== 1) {
+      ctx.translate(dx + FRAME / 2, this.groundY);
+      ctx.scale(scale, scale);
+      ctx.translate(-(dx + FRAME / 2), -this.groundY);
+    }
+    if (facing < 0) {
+      ctx.translate(dx + FRAME, dy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(this.scratch, 0, 0);
+    } else {
+      ctx.drawImage(this.scratch, dx, dy);
+    }
+    ctx.restore();
+  }
+
   drawHitFlash(image, sx, dx, dy, facing, amount, scale = 1) {
     const { scratchCtx: s, ctx } = this;
     s.clearRect(0, 0, FRAME, FRAME);
@@ -502,9 +564,9 @@ export class Renderer {
       ctx.font = `700 ${Math.round(size)}px ui-monospace, Menlo, monospace`;
       ctx.lineWidth = Math.max(2, S * 0.6);
       ctx.strokeStyle = '#000000cc';
-      const text = style.prefix + fmt(f.value);
+      const text = typeof f.value === 'string' ? f.value : style.prefix + fmt(f.value);
       ctx.strokeText(text, x, y);
-      ctx.fillStyle = style.color;
+      ctx.fillStyle = f.color ?? style.color;
       ctx.fillText(text, x, y);
     }
     ctx.globalAlpha = 1;
@@ -512,6 +574,7 @@ export class Renderer {
 }
 
 const FLOATER_STYLE = {
+  champ:  { color: '#ffd75e', size: 24, prefix: '' },
   hit:    { color: '#fff3d6', size: 22, prefix: '' },
   crit:   { color: '#ffd24a', size: 30, prefix: '' },
   gold:   { color: '#8bd450', size: 20, prefix: '+' },
