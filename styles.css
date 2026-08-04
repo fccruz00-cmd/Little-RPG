@@ -95,7 +95,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 38;
+  --n: 39;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -145,6 +145,7 @@ body { display: flex; justify-content: center; }
 .ico--plank         { --i: 35; }
 .ico--fish          { --i: 36; }
 .ico--gem           { --i: 37; }
+.ico--shop          { --i: 38; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
@@ -309,6 +310,25 @@ body { display: flex; justify-content: center; }
 .ware.can-buy .ware__cost { color: #ff9ed2; }
 .ware:disabled { cursor: default; opacity: .65; }
 .ware:not(:disabled):active { transform: translateY(1px); }
+
+/* Two icon buttons top right: the store, and the gear. Flat on the wood like
+   the gem purse -- a framed button up here would compete with the stage
+   steppers, and there are only so many things allowed to shout. */
+.hud__tools { display: flex; align-items: center; gap: 4px; flex: none; }
+.hud__btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #0006;
+  border-radius: 2px;
+  background: #0003;
+  cursor: pointer;
+}
+.hud__btn[hidden] { display: none; }
+.hud__btn:active { transform: translateY(1px); }
+.hud__btn .ico { opacity: .92; }
 
 /* experience bar */
 .hud__row--xp { gap: 6px; }

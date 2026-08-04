@@ -28,6 +28,15 @@
         <i class="ico ico--gold"></i><b class="purse__now" id="stat-gold">0</b>
         <span class="purse__rate"><b id="stat-gps">0</b>/s</span>
       </span>
+      <!-- Top right, where settings live everywhere else. The store sits
+           beside it and only exists when a real one answered: see
+           src/store/billing.js. -->
+      <span class="hud__tools">
+        <button class="hud__btn" id="btn-store" type="button" hidden
+                aria-label="Store"><i class="ico ico--shop"></i></button>
+        <button class="hud__btn" id="btn-options" type="button"
+                aria-label="Options"><i class="ico ico--gear"></i></button>
+      </span>
     </div>
     <div class="hud__row hud__row--xp">
       <span class="hud__lvl">Lv.<b id="stat-level">1</b></span>
@@ -314,7 +323,6 @@
 
     <footer class="foot">
       <span>Stage <b id="stat-stage-foot">1</b></span>
-      <button class="link" id="btn-options" type="button">options</button>
       <span class="foot__best">Best: stage <b id="stat-best">1</b></span>
     </footer>
   </section>
@@ -366,18 +374,28 @@
         pace, never a ceiling.
       </p>
       <div class="wares" id="wares"></div>
-      <!-- Only ever shown when a real store answered. In a browser, and in
-           the file you can open from disk, this stays empty and hidden. -->
-      <div id="packs-wrap" hidden>
-        <h3 class="sect" id="packs-title"><i class="ico ico--sm ico--gem"></i> More gems</h3>
-        <div class="wares" id="packs"></div>
-        <p class="opt-note" id="packs-note">
-          Every gem here can also be earned by clearing dungeons. Purchases
-          are handled by the store; the game never sees your payment details.
-        </p>
-      </div>
+      <p class="opt-note" id="gem-more" hidden>
+        Out of gems? Clear a dungeon, or tap the pouch up top.
+      </p>
     </div>
     <button class="act-btn" id="gemshop-close" type="button">Close</button>
+  </div>
+</div>
+
+<!-- The store. The ONLY place in the game that asks for money, and it only
+     exists when a real store answered -- see src/store/billing.js. -->
+<div class="modal" id="store" hidden>
+  <div class="modal__box">
+    <h3 class="sect" id="store-title"><i class="ico ico--sm ico--shop"></i> Store</h3>
+    <div class="modal__scroll">
+      <p class="opt-note" id="store-note">
+        Gems buy pace, never a ceiling, and <b>every gem here can also be
+        earned</b> by clearing dungeons. Purchases are handled by the app
+        store; the game never sees your payment details.
+      </p>
+      <div class="wares" id="packs"></div>
+    </div>
+    <button class="act-btn" id="store-close" type="button">Close</button>
   </div>
 </div>
 

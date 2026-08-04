@@ -152,9 +152,21 @@ it.
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**.
 
-The **gem shop** costs no tab: the purse sits in the HUD next to your level
-and opens the shop when tapped, and neither appears until a dungeon has paid
-you a gem. See *Gems* below.
+Three things live outside the tabs entirely, all in the HUD:
+
+- The **gem purse**, beside your level. Tapping it opens the gem shop, where
+  gems are *spent*. Neither the purse nor the shop appears until a dungeon
+  has paid you a gem. See *Gems* below.
+- The **pouch**, top right. The one place in the game that asks for money,
+  and it only exists when a real app store answered — in a browser, and in
+  the single file you can open from disk, the button is not there at all. A
+  shop front that cannot sell anything is worse than none.
+- The **gear**, beside it. Options: sound, music, damage numbers, language,
+  export and import.
+
+The two shops are deliberately separate. One spends a currency you earned;
+the other sells it. Putting them behind one button would have made the second
+look like part of the first.
 
 ### The soul tree
 
@@ -231,7 +243,7 @@ live DOM.
 - **The road**: some stages carry a chest (a pile of gold, sometimes dust)
   or a shrine (90 free seconds of a random brew). Rolled on genuine stage
   entry only, never on reload.
-- **Export/Import save** (Ascend tab): the whole save as one line of text,
+- **Export/Import save** (gear, top right): the whole save as one line of text,
   for backups and moving between browsers. Garbage and future versions are
   rejected on import.
 

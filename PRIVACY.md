@@ -78,9 +78,9 @@ or payment credentials.**
 ### Buying gems inside the game
 
 Gems are earned by clearing dungeons. Some versions of the game also sell
-them, and if yours does, a **More gems** section appears in the gem shop
-with prices in your own currency. If you do not see that section, your copy
-has no store attached and makes no purchases of any kind.
+them, and if yours does, a **pouch button** appears at the top right, opening
+a store with prices in your own currency. If you do not see that button, your
+copy has no store attached and makes no purchases of any kind.
 
 Where it does appear, the purchase is carried out **by the app store's own
 billing service**, not by the game. The game asks the store what the packs
@@ -135,9 +135,9 @@ Because the save never leaves your device, you control it completely.
   *Erase everything and start over*. This removes the save entry outright.
 - **Delete it from the browser:** clear site data or local storage for
   wherever the game is running.
-- **Back it up or move it:** the *options* link at the bottom of the screen,
-  then *Export save*, copies your whole save as one line of text; *Import
-  save* pastes it back in anywhere. The same value is also visible as
+- **Back it up or move it:** the *gear* button at the top right, then
+  *Export save*, copies your whole save as one line of text; *Import save*
+  pastes it back in anywhere. The same value is also visible as
   `little-rpg.save.v1` in your browser's developer tools.
 
 Note that saves are per-browser and per-origin. The downloaded single file

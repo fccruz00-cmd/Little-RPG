@@ -296,7 +296,7 @@ const PT = {
   '+{0} gem(s)': '+{0} gema(s)',
   '+{0} GEM(S)': '+{0} GEMA(S)',
   'skipping ahead... {0}%': 'avançando... {0}%',
-  'More gems': 'Mais gemas',
+  'Store': 'Lojinha',
   '{0} gems': '{0} gemas',
   'Pouch of gems': 'Bolsinha de gemas',
   'Sack of gems': 'Saco de gemas',

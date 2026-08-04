@@ -120,7 +120,8 @@ export class UI {
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
       gemPill: $('gem-pill'), gemCount: $('stat-gems'),
       gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
-      packsWrap: $('packs-wrap'), packs: $('packs'),
+      packs: $('packs'), gemMore: $('gem-more'),
+      store: $('btn-store'), storeModal: $('store'), storeClose: $('store-close'),
       options: $('btn-options'), optionsModal: $('options'),
       optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
       langSwitch: $('lang-switch'), optionsClose: $('options-close'),
@@ -153,6 +154,7 @@ export class UI {
     this.buildFeats();
     this.buildWares();
     this.bind();
+    this.labelTools();
 
     battle.on('toast', (t) => this.toast(t));
     // Every exit from a dungeon reports what it paid, however it ended: a
@@ -226,7 +228,7 @@ export class UI {
       ['#perks h3', 'Permanent bonuses'],
       ['#pres-go', 'Rebirth'], ['#awk-go', 'Awaken'],
       ['#btn-reset', 'Erase everything and start over'],
-      ['#btn-options', 'options'], ['#opt-title', 'Options'],
+      ['#opt-title', 'Options'], ['#store-close', 'Close'],
       ['#opt-sfx ~ span', 'Sound effects'], ['#opt-music ~ span', 'Music'],
       ['#opt-float ~ span', 'Damage numbers'], ['#opt-lang', 'Language'],
       ['#opt-save-note', 'Back up or move your save between devices.'],
@@ -250,7 +252,7 @@ export class UI {
       ['#workshop .sect:nth-of-type(2)', 'Cauldron'],
       ['#workshop .sect:nth-of-type(3)', 'What smithing gives you'],
       ['#gem-title', 'Gem shop'],
-      ['#packs-title', 'More gems'],
+      ['#store-title', 'Store'],
     ];
     for (const [sel, key] of TAIL) {
       const el = this.pick(sel);
@@ -269,7 +271,8 @@ export class UI {
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
       ['#asc-feats .prestige__note', 'Feitos são marcas da vida inteira: os contadores nunca zeram, nem no despertar, e cada feito completo paga um <b>bônus permanente pequeno</b> para sempre.'],
       ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
-      ['#packs-note', 'Toda gema daqui também pode ser ganha limpando masmorras. As compras são feitas pela loja; o jogo nunca vê seus dados de pagamento.'],
+      ['#store-note', 'Gemas compram ritmo, nunca um teto, e <b>toda gema daqui também pode ser ganha</b> limpando masmorras. As compras são feitas pela loja do aparelho; o jogo nunca vê seus dados de pagamento.'],
+      ['#gem-more', 'Sem gemas? Limpe uma masmorra, ou toque na bolsa lá em cima.'],
       ['.foot > span:first-child', `Fase <b id="stat-stage-foot">1</b>`],
       ['.foot__best', `Recorde: fase <b id="stat-best">1</b>`],
       ['#asc-rebirth .prestige__gain div', `<strong id="pres-gain">0</strong> relíquia(s)\n<small>${t('if you rebirth now')}</small>`],
@@ -680,6 +683,14 @@ export class UI {
     el.wares.addEventListener('click', (e) => {
       const row = e.target.closest('[data-ware]');
       if (row && !row.disabled) this.buyWare(row.dataset.ware);
+    });
+
+    // --- the store: the one door that asks for money ---
+    const openStore = (open) => { el.storeModal.hidden = !open; };
+    el.store.addEventListener('click', () => openStore(true));
+    el.storeClose.addEventListener('click', () => openStore(false));
+    el.storeModal.addEventListener('click', (e) => {
+      if (e.target === el.storeModal) openStore(false);
     });
     el.packs.addEventListener('click', (e) => {
       const row = e.target.closest('[data-pack]');
@@ -1336,8 +1347,12 @@ export class UI {
   refreshPacks() {
     const { el } = this;
     const catalogue = this.billing.catalogue();
-    el.packsWrap.hidden = catalogue.length === 0;
-    if (!catalogue.length) return;
+    // No store answered, no button. A shop front that cannot sell anything is
+    // worse than no shop front, and in a browser that is every launch.
+    const has = catalogue.length > 0;
+    el.store.hidden = !has;
+    el.gemMore.hidden = !has;
+    if (!has) return;
     el.packs.replaceChildren(...catalogue.map((pack) => {
       const row = document.createElement('button');
       row.type = 'button';
@@ -1360,6 +1375,12 @@ export class UI {
     this.toast({ text: t('+{0} GEM(S)', gems) });
     this.sfx.play('jingle');
     if (!this.el.gemShop.hidden) this.refreshWares();
+  }
+
+  /** Aria labels are the only text on the two HUD buttons. */
+  labelTools() {
+    this.el.store.setAttribute('aria-label', t('Store'));
+    this.el.options.setAttribute('aria-label', t('Options'));
   }
 
   async buyPack(sku) {
