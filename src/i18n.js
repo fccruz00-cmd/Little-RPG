@@ -295,6 +295,7 @@ const PT = {
   'not while a key is running': 'não com uma chave em andamento',
   '+{0} gem(s)': '+{0} gema(s)',
   '+{0} GEM(S)': '+{0} GEMA(S)',
+  'skipping ahead... {0}%': 'avançando... {0}%',
   'More gems': 'Mais gemas',
   '{0} gems': '{0} gemas',
   'Pouch of gems': 'Bolsinha de gemas',

@@ -1287,7 +1287,7 @@ export class UI {
     const { state } = this;
     for (const { ware, row, what } of this.wareRows.values()) {
       const offer = state.gemOffer(ware.id);
-      const inRun = ware.id === 'skip' && this.battle.inDungeon;
+      const inRun = ware.id === 'skip' && (this.battle.inDungeon || this._skipping);
       let line = t(ware.blurb);
       if (ware.id === 'coin') {
         line = offer.why === 'earn'
@@ -1360,9 +1360,11 @@ export class UI {
    * comes back as a span of seconds and the loop plays it out for real, so
    * the payout is a fight that happened rather than a number handed over.
    */
-  buyWare(id) {
+  async buyWare(id) {
     const { state } = this;
-    if (id === 'skip' && this.battle.inDungeon) return;
+    // One at a time: a second Hourglass mid-skip would interleave two slice
+    // loops over the same fight and bill for both.
+    if (id === 'skip' && (this.battle.inDungeon || this._skipping)) return;
     const bought = state.buyGem(id);
     if (!bought) return;
 
@@ -1377,7 +1379,9 @@ export class UI {
       this.sfx.play('forge');
       this.refreshForge();
     } else {
-      this.runSkip(bought.seconds);
+      // Awaited so a caller can know when the two hours have actually run.
+      // The click handler does not care; the tests very much do.
+      await this.runSkip(bought.seconds);
     }
     state.save();
     this.refreshWares();
@@ -1388,19 +1392,23 @@ export class UI {
    * owns the loop; without it the purchase would be a no-op, so the gems are
    * put back rather than swallowed.
    */
-  runSkip(seconds) {
+  async runSkip(seconds) {
     const { state } = this;
     if (!this.fastForward) {
       state.gems += WARE_BY_ID.skip.cost;
       return;
     }
     const before = { gold: state.gold, stage: state.stage, level: state.level };
-    // Nobody can watch two hours go by in half a second, and every toast and
-    // sound along the way would land at once. Quiet for the span, then one
-    // line saying what it came to.
+    // Nobody can watch two hours go by, and every toast and sound along the
+    // way would land at once. Quiet for the span, with a percentage in their
+    // place, then one line saying what it came to.
     const wasQuiet = this.quiet;
     this.quiet = true;
-    const done = this.fastForward(seconds);
+    this._skipping = true;
+    const done = await this.fastForward(seconds, (share) => {
+      this.progress(t('skipping ahead... {0}%', Math.round(share * 100)));
+    });
+    this._skipping = false;
     this.quiet = wasQuiet;
 
     this.showAway({
@@ -1411,6 +1419,21 @@ export class UI {
     });
     this.sfx.play('jingle');
     this.refreshShop(true);
+    this.refreshWares();
+  }
+
+  /**
+   * A toast that stays until something replaces it. The normal one hides
+   * itself after 900ms and refuses to speak while `quiet`, and progress has
+   * to do the opposite of both.
+   */
+  progress(text) {
+    const el = this.el.toast;
+    clearTimeout(this._toastTimer);
+    el.hidden = false;
+    el.classList.remove('is-bad');
+    el.style.animation = 'none';
+    el.textContent = text;
   }
 
   showSkill(id) {

@@ -23,7 +23,14 @@ const BG_PERIOD = 1000;      // ms between background ticks, before throttling
 const BG_MAX_CATCHUP = 600;  // seconds of fight simulated in one wake
 const BG_BUDGET_MS = 120;    // and no longer than this, whatever that costs
 const BUDGET_CHECK = 240;    // steps between clock reads inside the loop
-const SKIP_BUDGET_MS = 4000; // wall clock a bought Hourglass may spend
+// The Hourglass runs in slices instead of one blocking call. Two hours took
+// about a second on a desktop and would take several on a phone, and a
+// second of frozen tab after a purchase reads as a crash. A slice per frame
+// keeps the arena drawing and the progress honest, and it removes the worse
+// failure: a wall-clock cap silently delivering forty minutes of the two
+// hours somebody just paid for.
+const SKIP_CHUNK_S = 150;    // game seconds per frame
+const SKIP_CHUNK_MS = 40;    // and no more wall clock than this, whatever that costs
 
 async function boot() {
   const loading = document.getElementById('loading');
@@ -88,21 +95,33 @@ async function boot() {
    * a span and this plays it out at full rate: kills, experience, dust,
    * stages, gathering and every drop along the way.
    *
-   * The budget is generous because this one is not a recovery from a frozen
-   * tab, it is a thing the player just paid for and is watching happen.
-   * Measured at roughly 0.07 ms per simulated second, two hours costs about
-   * half a second, and `advance` returns what it actually covered so the
-   * summary reports the truth rather than the ask.
+   * One slice per frame, so the tab keeps painting and the player watches it
+   * happen instead of watching it hang. It always runs the WHOLE span: a
+   * slower device takes more frames, never a shorter skip, which matters
+   * because this is the one thing in the game somebody paid for.
+   *
+   * @returns {Promise<number>} seconds actually simulated.
    */
-  ui.fastForward = (seconds) => {
-    const done = advance(seconds, SKIP_BUDGET_MS);
-    ui.tickAutomation(done);
-    state.refreshGoldRate();
-    state.save();
-    last = performance.now();   // the frame after this one is not a 500ms gap
-    accumulator = 0;
-    return done;
-  };
+  ui.fastForward = (seconds, onProgress) => new Promise((resolve) => {
+    let left = seconds;
+    let covered = 0;
+    const slice = () => {
+      const ran = advance(Math.min(left, SKIP_CHUNK_S), SKIP_CHUNK_MS);
+      covered += ran;
+      left -= ran;
+      ui.tickAutomation(ran);
+      onProgress?.(covered / seconds);
+      // `ran` only comes back zero when what is left is under a single step,
+      // so this always terminates and always makes progress.
+      if (left >= STEP && ran > 0) { requestAnimationFrame(slice); return; }
+      state.refreshGoldRate();
+      state.save();
+      last = performance.now();
+      accumulator = 0;
+      resolve(covered);
+    };
+    requestAnimationFrame(slice);
+  });
 
   function frame(now) {
     const raw = Math.max(0, (now - last) / 1000);
