@@ -149,6 +149,36 @@ it.
      Souls and the soul tree survive every later awakening, as does the
      Skills tab.
 
+### The talent tree, and why it was rebuilt
+
+It used to be twelve nodes holding **80 points**, so it filled at level 81 —
+and a four-hour run reaches level 92 before the relic tree's +18 free points
+are even counted. The tree you touch most, once per level, was the one that
+ran out. Every level after that paid nothing.
+
+It now holds **176 across 21 nodes**, three branches of seven. The first four
+of each branch are the old percentages; the next two are effects the relic
+tree used to hoard (Rupture, Onslaught, Mending, Bulwark, Prospector, Vigil);
+and the last is a **keystone**.
+
+A keystone does not open until the node before it is **full**, not merely
+started — `needs: 'max'`. That is the whole point: it costs a committed
+branch rather than a spare point, and it buys something that changes how a
+fight goes instead of how big a number is.
+
+| branch | keystone | what it does |
+|---|---|---|
+| **Fury** | Frenzy | +attack speed per kill in a streak, up to 15 — and the streak dies with you |
+| **Guard** | Thorns | throws a share of the damage you take back at whatever hit you |
+| **Fortune** | Treasure | a chance for any kill to pay double gold |
+
+Frenzy is capped on purpose. An uncapped streak would hand you an unbounded
+multiplier for parking on a stage you had already outgrown, which is the
+opposite of a reward for pushing. Thorns is measured off the damage that
+*actually landed*, so armour and Carapace cut what comes back as well as what
+goes in — off the raw hit, the tankiest build would be paid most for being
+hit hardest, which is backwards.
+
 The relic tree has six branches: **Power**, **Wealth**, **Essence**,
 **Automation**, **Skills** and **Time**.
 
@@ -544,6 +574,19 @@ sprite size does not.
 
 A phone in landscape is 375-430px tall, so it always gets the columns — a
 band there would be a 140px strip with one row of shop under it.
+
+**The band cost something that was not obvious, and it had to be paid for.**
+An enemy spawns just off the right edge, so the hero walks the gap in front
+of him — and with `heroAnchor` a flat 0.3, that gap was a fixed *share* of
+the view. Invisible while every screen showed ~130 units of road. The moment
+a tablet showed 393, the walk tripled: **19 kills in two minutes against a
+phone's 38.** A camera setting had become a balance setting.
+
+So the gap is pinned in world units (`WALK_IN = 91`, measured off the
+portrait camera the game was balanced on) and the anchor is derived from it.
+A wide view now shows more of the road *behind* you — corpses, the pets, the
+scenery you came through — rather than more empty ground to cross. Measured
+after: 36-40 kills at every viewport.
 
 The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 `orientation: landscape`, which fires on a 600x500 desktop window that has no

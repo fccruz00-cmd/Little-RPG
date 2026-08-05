@@ -12,6 +12,11 @@ import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
 
+// World units between the hero and where the next enemy appears. Measured
+// off the portrait camera this game was balanced on: 130 units of view with
+// the hero 30% in leaves 91 in front of him.
+const WALK_IN = 91;
+
 const SPAWN_MARGIN = 12;   // world px past the right edge of the screen
 const RESPAWN_DELAY = 2.2; // seconds down after dying
 const CORPSE_TIME = 1.1;   // how long a corpse stays on screen
@@ -63,7 +68,7 @@ export class Battle {
     this.listeners = {};
 
     this.viewWidth = 200;           // logical arena width, set on resize
-    this.heroAnchor = 0.3;          // where the hero sits on screen (0..1)
+    // `heroAnchor` is derived now -- see the getter below.
 
     this.hero = new Actor(HERO, actorSheets[HERO.id], { x: 0, facing: 1 });
     this.hero.maxHp = state.maxHp;
@@ -135,6 +140,26 @@ export class Battle {
 
   get camX() {
     return this.hero.x - this.viewWidth * this.heroAnchor;
+  }
+
+  /**
+   * Where the hero sits on screen, 0..1 -- and therefore how far off the
+   * right edge the next enemy spawns.
+   *
+   * This used to be a flat 0.3, which made the walk-in a fixed SHARE of the
+   * view instead of a fixed distance. It was invisible while every screen
+   * showed about 130 units of road. The moment the arena became a wide band
+   * on a tablet it showed 393, the gap tripled, and tablet players earned
+   * HALF what a phone did for the same fight: 19 kills in two minutes
+   * against 38. A camera setting had quietly become a balance setting.
+   *
+   * So the gap is pinned in world units and the anchor follows from it. A
+   * wide view now shows more of the road BEHIND you -- corpses, the pets,
+   * the scenery you came through -- instead of more empty ground to cross.
+   */
+  get heroAnchor() {
+    const anchor = 1 - WALK_IN / this.viewWidth;
+    return Math.max(0.3, Math.min(0.78, anchor));
   }
 
   /**
@@ -762,6 +787,7 @@ export class Battle {
   killEnemy(target) {
     const { state } = this;
     state.stats.kills += 1;
+    state.streak += 1;   // Frenzy; reset wherever the hero goes down
     if (target.isBoss) state.stats.bossKills += 1;
     target.dead = true;
     target.corpseTimer = CORPSE_TIME;
@@ -770,7 +796,11 @@ export class Battle {
     this.enemy = null;
     this.spawnTimer = LOOT_PAUSE;
 
-    const gold = state.earn(target.gold);
+    // Treasure doubles the drop, not the rate: it goes through earn() like
+    // any other coin, so the offline payout and every gold multiplier see it
+    // exactly as they see a good stage.
+    const lucky = state.bonus.treasure > 0 && Math.random() < state.bonus.treasure;
+    const gold = state.earn(target.gold * (lucky ? 2 : 1));
     this.pushFloater(target, gold, 'gold');
 
     let dust = state.rollDust(target.kind);
@@ -869,8 +899,20 @@ export class Battle {
     if (trait?.kind === 'leech' && !enemy.dead) {
       enemy.hp = Math.min(enemy.maxHp, enemy.hp + taken * trait.power);
     }
+    // Thorns. Off the damage that actually landed, so armour and Carapace
+    // cut what comes back as well as what goes in -- the alternative pays
+    // the tankiest build the most for being hit hardest, which is backwards.
+    const thorns = this.state.bonus.thorns;
+    if (thorns > 0 && !enemy.dead && taken > 0) {
+      const back = taken * thorns;
+      if (enemy.hurt(back)) { this.pushFloater(enemy, back, 'hit'); this.killEnemy(enemy); }
+      else this.pushFloater(enemy, back, 'hit');
+    }
     if (killed) {
       this.state.stats.deaths += 1;
+      // Frenzy ends where the run ends. It counts a clean streak, and a
+      // death is the definition of that streak being over.
+      this.state.streak = 0;
       hero.dead = true;
       hero.anim.play('death', { fps: 8, loop: false, force: true });
       this.respawnTimer = RESPAWN_DELAY * this.state.respawnMul;

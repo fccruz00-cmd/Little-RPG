@@ -273,6 +273,16 @@ body { display: flex; justify-content: center; }
 }
 .gems:active { transform: translateY(1px); }
 
+/* A keystone: the node at the end of a branch that wanted the whole branch.
+   Gold rail and a lit frame, so it reads as a destination rather than one
+   more rung. */
+.node--key {
+  border-image-source: url(assets/ui/frame_lit.png);
+  box-shadow: 0 0 0 1px #ebb85b55, 0 0 10px #ebb85b22;
+}
+.node--key .node__name { color: var(--gold); }
+.node--key.is-locked { box-shadow: none; opacity: .55; }
+
 /* --- gem shop --- */
 .wares { display: grid; gap: 6px; }
 .ware {
@@ -831,6 +841,7 @@ body { display: flex; justify-content: center; }
 
 .tree {
   display: grid;
+  /* Narrow: three across whatever the tree holds, and the rest wraps. */
   grid-template-columns: repeat(3, 1fr);
   column-gap: 4px;
   row-gap: 12px;
@@ -1726,10 +1737,19 @@ body { display: flex; justify-content: center; }
    684px; a 667px phone gives it 367px. The viewport number is not the one
    that decides how many columns fit.
    ============================================================ */
-@container panel (min-width: 520px) {
+/* 470, not 520: an 844x390 phone gives the panel 490px, so a threshold of
+   520 missed the device this rework was for by thirty pixels and left it
+   showing one column of a list that had room for two. */
+@container panel (min-width: 470px) {
   .shop, .forge, .pets, .featlist { grid-template-columns: repeat(2, 1fr); }
-  /* Six relic branches in two rows of three becomes one row of six. */
-  .tree { grid-template-columns: repeat(6, 1fr); }
+  /* Every branch on one row -- six for relics, five for souls, three for
+     talents -- and capped so a 3-branch tree does not stretch its nodes
+     across a tablet. */
+  .tree {
+    grid-template-columns: repeat(var(--branches, 3), minmax(0, 1fr));
+    max-width: calc(var(--branches, 3) * 210px);
+    margin-inline: auto;
+  }
   .keys, #cauldron { grid-template-columns: repeat(2, 1fr); }
   .prestige { display: grid; grid-template-columns: repeat(2, 1fr); align-content: start; }
   .prestige__gain, .prestige__note, .big-btn, .perks, .featlist { grid-column: 1 / -1; }

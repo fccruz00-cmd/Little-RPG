@@ -307,6 +307,17 @@ const PT = {
   '+{0} GOLD': '+{0} DE OURO',
   'DEEPEST YET': 'MAIS FUNDO QUE NUNCA',
 
+  // --- talent keystones ---
+  // Node names are NOT here on purpose. Same rule as Soulfire and Hellpup at
+  // the top of this file: a talent's name is a name, not a sentence. What
+  // gets translated is what it DOES.
+  '+{0} attack speed per kill, up to {1} in a row':
+    '+{0} de vel. de ataque por abate, até {1} seguidos',
+  'throws {0} of the damage you take back': 'devolve {0} do dano que você sofre',
+  '+{0} chance a kill pays double gold': '+{0} de chance de um abate pagar ouro dobrado',
+  '<b>{0}</b> is a keystone: fill <b>{1}</b> to {2}/{2} first.':
+    '<b>{0}</b> é uma pedra-chave: encha <b>{1}</b> até {2}/{2} antes.',
+
   // --- landscape ---
   'Turn your phone sideways': 'Vire o celular de lado',
   'Little RPG is played in landscape.': 'Little RPG se joga na horizontal.',

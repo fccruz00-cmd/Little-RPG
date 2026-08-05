@@ -2,7 +2,9 @@ import {
   STATS, statValue, statCost, statCostBulk, statMaxLevel, affordableLevels, OFFLINE,
 } from '../data/balance.js';
 import { LEVELS, xpToNext } from '../data/levels.js';
-import { TALENT_TREE, RELIC_TREE, SOUL_TREE, BONUS_KEYS, relicCost, soulCost } from '../data/talents.js';
+import {
+  TALENT_TREE, RELIC_TREE, SOUL_TREE, BONUS_KEYS, FRENZY_CAP, relicCost, soulCost,
+} from '../data/talents.js';
 import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import {
@@ -225,6 +227,9 @@ export class GameState {
     if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
     this._bonus = null;
+    // Kills since the last death. Transient like `hp`: it belongs to the
+    // fight in progress, not to the save.
+    this.streak = 0;
     this.hp = this.maxHp;
     this._saveTimer = 0;
     this._goldWindow = [];
@@ -335,7 +340,19 @@ export class GameState {
 
   // --- derived stats ------------------------------------------------
   get damage()     { return statValue('damage', this.levels.damage) * this.bonus.dmgMul * this.potionMul('fury'); }
-  get attackRate() { return statValue('attackRate', this.levels.attackRate) * this.bonus.atkSpeedMul; }
+  get attackRate() {
+    return statValue('attackRate', this.levels.attackRate) * this.bonus.atkSpeedMul * this.frenzyMul;
+  }
+
+  /**
+   * Frenzy. The streak counts kills since the last time the hero went down,
+   * so it pays for a clean run rather than for time spent. Capped, because an
+   * uncapped multiplier would reward parking on a stage you outgrew.
+   */
+  get frenzyMul() {
+    if (!this.bonus.frenzy) return 1;
+    return 1 + Math.min(this.streak, FRENZY_CAP) * this.bonus.frenzy;
+  }
   get critChance() { return Math.min(0.95, statValue('critChance', this.levels.critChance) + this.bonus.critAdd); }
   get critPower()  { return statValue('critPower', this.levels.critPower) + this.bonus.critPowerAdd; }
   get maxHp()      { return statValue('maxHp', this.levels.maxHp) * this.bonus.hpMul; }
@@ -397,9 +414,16 @@ export class GameState {
   }
 
   // --- trees --------------------------------------------------------
-  /** A node opens once the previous one in the branch has 1+ point. */
+  /**
+   * A node opens once the previous one in the branch has 1+ point -- except a
+   * KEYSTONE, which wants the one before it FULL. That is the whole reason
+   * keystones feel earned: the cost is a committed branch, not a spare point.
+   */
   isUnlocked(branch, index, ranksOf) {
-    return index === 0 || (ranksOf[branch.nodes[index - 1].id] ?? 0) > 0;
+    if (index === 0) return true;
+    const prev = branch.nodes[index - 1];
+    const have = ranksOf[prev.id] ?? 0;
+    return branch.nodes[index].needs === 'max' ? have >= prev.max : have > 0;
   }
 
   canBuyTalent(branch, index) {

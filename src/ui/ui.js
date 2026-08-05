@@ -430,6 +430,11 @@ export class UI {
   buildTree(host, tree, kind) {
     const grid = document.createElement('div');
     grid.className = 'tree';
+    // The three trees have 3, 6 and 5 branches. CSS cannot count them, and
+    // `auto-fit` guesses from a min width instead of from what is actually
+    // there, which left a 3-branch tree huddled in the corner of a wide
+    // panel. Hand it the number.
+    grid.style.setProperty('--branches', tree.length);
 
     for (const branch of tree) {
       const col = document.createElement('div');
@@ -446,7 +451,9 @@ export class UI {
         }
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'node';
+        // A keystone should look like one before you find out the hard way
+        // that it wants a whole branch.
+        button.className = node.needs === 'max' ? 'node node--key' : 'node';
         button.innerHTML = `
           <i class="ico ico--lg ico--${node.icon}"></i>
           <span class="node__name">${node.name}</span>
@@ -861,7 +868,14 @@ export class UI {
     const now = ranks > 0 ? t('now: {0}', say(node, ranks)) : t('no points yet');
     let line;
     if (locked) {
-      line = t('<b>{0}</b> is locked: invest in <b>{1}</b> first.', node.name, branch.nodes[index - 1].name);
+      const prev = branch.nodes[index - 1];
+      // A keystone needs the branch FILLED, not merely started, and saying
+      // "invest in X first" to somebody who already has nine points in X
+      // reads as a bug rather than a requirement.
+      line = node.needs === 'max'
+        ? t('<b>{0}</b> is a keystone: fill <b>{1}</b> to {2}/{2} first.',
+            node.name, prev.name, prev.max)
+        : t('<b>{0}</b> is locked: invest in <b>{1}</b> first.', node.name, prev.name);
     } else if (ranks >= node.max) {
       line = t('<b>{0}</b> is maxed. {1}.', node.name, say(node, ranks));
     } else {

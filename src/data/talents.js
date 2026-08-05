@@ -18,6 +18,8 @@ export const BONUS_KEYS = [
   'dmgMul', 'atkSpeedMul', 'critAdd', 'critPowerAdd', 'hpMul', 'regenMul',
   'goldMul', 'xpMul', 'moveMul', 'damageTaken', 'respawnMul', 'killsLess',
   'startStage', 'extraPoints',
+  // keystones: the three that change how a fight goes, not how big a number is
+  'frenzy', 'thorns', 'treasure',
   // forge and automation
   'dustChance', 'dustMul', 'bossTime', 'autoBuy', 'autoCraft', 'autoSwitch',
   // combat skills
@@ -26,6 +28,13 @@ export const BONUS_KEYS = [
   'petPower', 'feedLess', 'yieldAll', 'workAll',
 ];
 
+/**
+ * How many kills a Frenzy streak counts before it stops growing. Without a
+ * ceiling an idle game hands you an unbounded multiplier for going AFK on a
+ * stage you have outgrown, which is the opposite of a reward for pushing.
+ */
+export const FRENZY_CAP = 15;
+
 /** Seconds between automatic purchases at the first rank of Herald. */
 export const AUTO_BUY_BASE = 6;
 
@@ -33,32 +42,52 @@ export const AUTO_BUY_BASE = 6;
 export const AUTO_SWITCH_EVERY = 60;
 
 // --- skill tree (level points) --------------------------------------
+//
+// THE PROBLEM THIS SHAPE SOLVES. The tree used to be twelve nodes holding
+// eighty points, so it filled at level 81 -- and a four-hour run reaches 92
+// before the relic tree's +18 free points are counted. Every level after
+// that paid nothing. The tree you touch most was the one that ran out.
+//
+// It now holds 176, which is a long climb rather than a wall, and the last
+// two nodes of every branch stop being percentages. A `needs: 'max'` node is
+// a KEYSTONE: it does not open until the node before it is FULL, so it costs
+// a commitment rather than a point, and what it buys changes how a fight
+// goes instead of how big a number is.
 export const TALENT_TREE = [
   {
     id: 'fury', name: 'Fury', accent: '#e67146',
     nodes: [
-      { id: 'edge',      name: 'Keen Edge',  icon: 'damage',       max: 10, key: 'dmgMul',       mode: 'mul',  per: 0.06 },
-      { id: 'haste',     name: 'Haste',      icon: 'attack_speed', max: 8,  key: 'atkSpeedMul',  mode: 'mul',  per: 0.04 },
-      { id: 'precision', name: 'Precision',  icon: 'crit',         max: 5,  key: 'critAdd',      mode: 'add',  per: 0.02 },
-      { id: 'carnage',   name: 'Carnage',    icon: 'crit_power',   max: 5,  key: 'critPowerAdd', mode: 'add',  per: 0.25 },
+      { id: 'edge',      name: 'Keen Edge',  icon: 'damage',       max: 15, key: 'dmgMul',       mode: 'mul',  per: 0.06 },
+      { id: 'haste',     name: 'Haste',      icon: 'attack_speed', max: 10, key: 'atkSpeedMul',  mode: 'mul',  per: 0.04 },
+      { id: 'precision', name: 'Precision',  icon: 'crit',         max: 8,  key: 'critAdd',      mode: 'add',  per: 0.02 },
+      { id: 'carnage',   name: 'Carnage',    icon: 'crit_power',   max: 8,  key: 'critPowerAdd', mode: 'add',  per: 0.25 },
+      { id: 'rupture',   name: 'Rupture',    icon: 'dagger',       max: 6,  key: 'executeMul',   mode: 'add',  per: 0.10 },
+      { id: 'onslaught', name: 'Onslaught',  icon: 'bolt',         max: 6,  key: 'doubleHit',    mode: 'add',  per: 0.02 },
+      { id: 'frenzy',    name: 'Frenzy',     icon: 'torch',        max: 10, key: 'frenzy',       mode: 'add',  per: 0.003, needs: 'max' },
     ],
   },
   {
     id: 'guard', name: 'Guard', accent: '#5aa9c9',
     nodes: [
-      { id: 'leather',   name: 'Tough Hide', icon: 'health', max: 10, key: 'hpMul',       mode: 'mul',  per: 0.08 },
-      { id: 'stamina',   name: 'Stamina',    icon: 'regen',  max: 8,  key: 'regenMul',    mode: 'mul',  per: 0.12 },
-      { id: 'carapace',  name: 'Carapace',   icon: 'shield', max: 5,  key: 'damageTaken', mode: 'less', per: 0.03 },
-      { id: 'rally',     name: 'Rally',      icon: 'orb',    max: 3,  key: 'respawnMul',  mode: 'less', per: 0.20 },
+      { id: 'leather',   name: 'Tough Hide', icon: 'health', max: 15, key: 'hpMul',       mode: 'mul',  per: 0.08 },
+      { id: 'stamina',   name: 'Stamina',    icon: 'regen',  max: 12, key: 'regenMul',    mode: 'mul',  per: 0.12 },
+      { id: 'carapace',  name: 'Carapace',   icon: 'shield', max: 8,  key: 'damageTaken', mode: 'less', per: 0.03 },
+      { id: 'rally',     name: 'Rally',      icon: 'orb',    max: 5,  key: 'respawnMul',  mode: 'less', per: 0.12 },
+      { id: 'mending',   name: 'Mending',    icon: 'regen',  max: 6,  key: 'lifesteal',   mode: 'add',  per: 0.005 },
+      { id: 'bulwark',   name: 'Bulwark',    icon: 'boss',   max: 5,  key: 'bossTime',    mode: 'add',  per: 2 },
+      { id: 'thorns',    name: 'Thorns',     icon: 'shield', max: 6,  key: 'thorns',      mode: 'add',  per: 0.05, needs: 'max' },
     ],
   },
   {
     id: 'fortune', name: 'Fortune', accent: '#ebb85b',
     nodes: [
-      { id: 'pockets', name: 'Deep Pockets', icon: 'gold',   max: 10, key: 'goldMul',   mode: 'mul', per: 0.08 },
-      { id: 'lore',    name: 'Lore',         icon: 'book',   max: 8,  key: 'xpMul',     mode: 'mul', per: 0.08 },
-      { id: 'stride',  name: 'Stride',       icon: 'stride', max: 5,  key: 'moveMul',   mode: 'mul', per: 0.06 },
-      { id: 'scout',   name: 'Scout',        icon: 'scout',  max: 3,  key: 'killsLess', mode: 'add', per: 1 },
+      { id: 'pockets',    name: 'Deep Pockets', icon: 'gold',   max: 15, key: 'goldMul',    mode: 'mul', per: 0.08 },
+      { id: 'lore',       name: 'Lore',         icon: 'book',   max: 12, key: 'xpMul',      mode: 'mul', per: 0.08 },
+      { id: 'stride',     name: 'Stride',       icon: 'stride', max: 8,  key: 'moveMul',    mode: 'mul', per: 0.06 },
+      { id: 'scout',      name: 'Scout',        icon: 'scout',  max: 3,  key: 'killsLess',  mode: 'add', per: 1 },
+      { id: 'prospector', name: 'Prospector',   icon: 'dust',   max: 6,  key: 'dustChance', mode: 'add', per: 0.02 },
+      { id: 'vigil',      name: 'Vigil',        icon: 'crit',   max: 6,  key: 'ambush',     mode: 'add', per: 0.08 },
+      { id: 'treasure',   name: 'Treasure',     icon: 'bag',    max: 6,  key: 'treasure',   mode: 'add', per: 0.03, needs: 'max' },
     ],
   },
 ];
@@ -199,6 +228,10 @@ export function describeNode(node, ranks) {
     case 'feedLess':     return t('pets eat {0} less fish', pct(total));
     case 'yieldAll':     return t('+{0} yield, every gathering skill', pct(total));
     case 'workAll':      return t('{0} faster work, every gathering skill', pct(total));
+    case 'frenzy':       return t('+{0} attack speed per kill, up to {1} in a row',
+      pct(total), FRENZY_CAP);
+    case 'thorns':       return t('throws {0} of the damage you take back', pct(total));
+    case 'treasure':     return t('+{0} chance a kill pays double gold', pct(total));
     default:             return `${mult(1 + total)} ${t(LABEL[node.key] ?? '')}`.trim();
   }
 }
@@ -213,6 +246,11 @@ const LABEL = {
   xpMul: 'XP',
   moveMul: 'stride',
 };
+
+/** A keystone: shut until the node before it is FULL, not merely started. */
+export function isKeystone(node) {
+  return node.needs === 'max';
+}
 
 /** Relic cost to take a node from `ranks` to `ranks + 1`. */
 export function relicCost(node, ranks) {
