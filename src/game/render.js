@@ -388,6 +388,7 @@ export class Renderer {
 
       if (node.kind === 'vein') this.drawVein(bx, groundY, node);
       else if (node.kind === 'tree') this.drawTreeNode(bx, groundY, node);
+      else if (node.kind === 'plot') this.drawPlot(bx, groundY, node);
       else this.drawPool(bx, groundY, node);
 
       if (node.locked) {
@@ -441,6 +442,29 @@ export class Renderer {
     ctx.closePath();
     ctx.fill();
     ctx.fillRect(bx + 1, groundY - 13, 9, 4);
+    ctx.globalAlpha = 1;
+  }
+
+  /** A plot is tilled rows with the crop poking out in its own colour. */
+  drawPlot(bx, groundY, node) {
+    const { ctx } = this;
+    // the tilled mound: two ridges of turned earth
+    ctx.fillStyle = node.locked ? '#3a3531' : '#4d3624';
+    ctx.fillRect(bx, groundY - 2, 11, 2);
+    ctx.fillStyle = node.locked ? '#453f39' : '#5f452e';
+    ctx.fillRect(bx + 1, groundY - 3, 4, 1);
+    ctx.fillRect(bx + 6, groundY - 3, 4, 1);
+    // the crop: three sprouts in the resource's colour
+    ctx.fillStyle = node.locked ? '#4a4842' : node.resource.color;
+    ctx.globalAlpha = node.locked ? 0.5 : 1;
+    ctx.fillRect(bx + 2, groundY - 6, 2, 3);
+    ctx.fillRect(bx + 5, groundY - 7, 2, 4);
+    ctx.fillRect(bx + 8, groundY - 6, 2, 3);
+    // green stems under the taller heads
+    if (!node.locked) {
+      ctx.fillStyle = '#6dba79';
+      ctx.fillRect(bx + 5, groundY - 4, 2, 1);
+    }
     ctx.globalAlpha = 1;
   }
 

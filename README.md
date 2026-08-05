@@ -196,8 +196,9 @@ it.
      an awakening takes it.
    - *Souls*, the awakening web, paid with **souls**. Survives everything.
      The switch only appears once an awakening has paid for it.
-3. **Skills**: the five skills behind one switch — Mining, Chopping and
-   Fishing on the line, Smithing at the workshop, Alchemy at the cauldron.
+3. **Skills**: the seven skills behind one switch — Mining, Chopping,
+   Fishing and Farming on the line; Smithing at the workshop, Alchemy at
+   the cauldron, Cooking at the kitchen.
 4. **Forge**: only appears after the first rebirth.
 5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
 6. **Ascend**: the two reset layers behind one switch.
@@ -269,8 +270,8 @@ hit hardest, which is backwards.
 
 ### Every tree is a web
 
-The same silhouette runs through all eight trees in the game — talents,
-relics, souls, and one per skill, Alchemy's included. `web.js` holds the machinery
+The same silhouette runs through all ten trees in the game — talents,
+relics, souls, and one per skill. `web.js` holds the machinery
 and `skilltree.js` holds nothing but topology; a node's data (`max`, `cost`,
 `key`, `mode`, `per`) stays in the file that owns its tree, so there is one
 place to change what a node *does*.
@@ -487,20 +488,40 @@ live DOM.
   their feed, Green Thumb and Quick Hands reach every gathering line at once.
   All four are crossings, so they cost a lane change to reach.
 
-### Skills: Mining, Chopping, Fishing, Smithing and Alchemy
+### Skills: seven of them, on one set of rails
 
 Nodes spawn on the same line the hero already walks. It stops, works them,
-and moves on, with no input from you. The three gathering skills run on
-identical rails, each with its own level, its own 84 point web and its own
-five resources gated by depth (stages 1, 8, 20, 36 and 55). **Smithing** is
-the fourth, and it has no line at all: see below.
+and moves on, with no input from you. The four gathering skills run on
+identical rails, each with its own level, its own ~84 point web and its own
+five resources gated by depth (stages 1, 8, 20, 36 and 55). The other three
+are benchbound — no line, no tool — and each brings its own furniture to
+the pane: Smithing the workshop, Alchemy the cauldron, Cooking the kitchen.
 
 | skill | raw | refined | pays in |
 |---|---|---|---|
-| Mining   | ore  | bars   | tool heads, and later dungeon keys |
-| Chopping | logs | planks | tool handles |
-| Fishing  | fish | meals  | **Well Fed**: regen and armour |
-| Smithing | none | none   | the forge: odds, cost and refining |
+| Mining   | ore   | bars   | tool heads, and later dungeon keys |
+| Chopping | logs  | planks | tool handles |
+| Fishing  | fish  | meals  | **Well Fed**: regen and armour |
+| Farming  | crops | crates | the kitchen's pantry |
+| Smithing | none  | none   | the forge: odds, cost and refining |
+| Alchemy  | none  | none   | the cauldron: potion strength, span, price |
+| Cooking  | none  | none   | **dishes**: timed yield/gold/XP/stride buffs |
+
+**Farming** is the fourth line: plots of tilled earth with the crop poking
+out in its own colour, worked in one stop (a crop you had to walk *back*
+to would never be harvested by a hero who only walks forward). Crops crate
+up the way ore smelts down, and crates are what the kitchen cooks.
+
+**Cooking** is Alchemy's twin at the other bench. A dish is a potion that
+grew in the ground — Harvest Stew (+25% yield), Golden Pie (+25% gold),
+Trail Rations (+20% stride), Scholar's Jam (+25% XP), ten minutes each,
+priced in crates of the deepest band seen. Every effect obeys the
+gathering balance rule: economy and pace, never damage. It levels from
+cooking, every meal Well Fed eats teaches it a little (the idle trickle
+every bench skill needs), and its Hearthfire node reaches across into Well
+Fed's regen the way Smithing's Hot Fire reaches every refinery. Icons for
+the farm and the kitchen were generated in PixelLab and appended to the
+game's icon strip.
 
 **The tool slot is the tradeoff.** You carry one tool, and only the equipped
 skill's nodes spawn. Slice 1 measured that stopping to swing costs zero stage
@@ -1005,6 +1026,11 @@ The game uses crops from four third-party packs:
 - **Mini Medieval User Interface v1.1** by [VEXED](https://v3x3d.itch.io/),
   buttons and frames
 - **Premium - Raven Fantasy Icons**, upgrade and item icons
+
+The eight farm-and-kitchen icons (seedling, hoe, crate, cookpot, stew, pie,
+rations, jam — cells 39–46 of the icon strip) were generated with
+[PixelLab](https://pixellab.ai) on this project's own account and carry no
+third-party redistribution question.
 
 None of the four ships a licence file. The icon pack in particular is sold as
 a paid product, and licences like that usually allow use in a game but

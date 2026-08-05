@@ -17,8 +17,10 @@ import {
 } from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
-  MEAL, SMITH, ALCH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
+  MEAL, SMITH, ALCH, COOK, TOOL_TIERS, ORES, LOGS, CROPS,
+  toolCost, gatherXpToNext, refineCost,
 } from '../data/gathering.js';
+import { DISHES, DISH_BY_ID, DISH_COSTS } from '../data/dishes.js';
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
 import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
 import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
@@ -99,6 +101,8 @@ function defaults() {
 
     // cauldron: potion id -> seconds of effect remaining
     potions: {},
+    // kitchen: dish id -> seconds of effect remaining
+    dishes: {},
 
     // lifetime counters, the raw material of feats. Nothing resets them.
     stats: emptyStats(),
@@ -260,6 +264,7 @@ export class GameState {
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
+    this.dishes = { ...(data.dishes ?? {}) };
     this.redeemed = Array.isArray(data.redeemed) ? [...data.redeemed] : [];
     this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
     this.quests = data.quests ?? null;
@@ -432,9 +437,18 @@ export class GameState {
       * (1 + statValue('might', this.levels.might));
   }
   get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul * this.fedRegenMul; }
-  get goldGain()   { return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul * this.potionMul('lucky'); }
-  get moveSpeed()  { return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul; }
-  get xpGain()     { return this.bonus.xpMul * statValue('insight', this.levels.insight); }
+  get goldGain()   {
+    return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul
+      * this.potionMul('lucky') * this.dishMul('pie');
+  }
+  get moveSpeed()  {
+    return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul
+      * this.dishMul('rations');
+  }
+  get xpGain()     {
+    return this.bonus.xpMul * statValue('insight', this.levels.insight)
+      * this.dishMul('jam');
+  }
   get damageTaken(){
     return this.bonus.damageTaken * this.fedArmor * (1 - statValue('armor', this.levels.armor));
   }
@@ -764,6 +778,66 @@ export class GameState {
     return true;
   }
 
+  // --- kitchen --------------------------------------------------------
+  // Cooking's dishes mirror the cauldron's brews on purpose: same timers,
+  // same band pricing, same tree levers -- a second bench you already know
+  // how to use. The one difference is the pantry: dishes eat CRATES, the
+  // refined form of Farming's crops.
+
+  /** What one plate costs right now: `{res, amount}` in crates. */
+  dishCost(id) {
+    const band = this.brewBand;
+    const amount = Math.max(1, Math.round(
+      DISH_COSTS[id][band] * this.gatherBonus('cooking').cookLess));
+    return { res: CROPS[band], amount };
+  }
+
+  /** Seconds one plate lasts, Pantry included. */
+  dishSpan(id) {
+    return DISH_BY_ID[id].duration * this.gatherBonus('cooking').dishTime;
+  }
+
+  dishCapped(id) {
+    return (this.dishes[id] ?? 0) > this.dishSpan(id) * 2;
+  }
+
+  canCook(id) {
+    if (this.dishCapped(id)) return false;
+    const cost = this.dishCost(id);
+    return (this.refined[cost.res.id] ?? 0) >= cost.amount;
+  }
+
+  cook(id) {
+    if (!this.canCook(id)) return false;
+    const cost = this.dishCost(id);
+    this.refined[cost.res.id] -= cost.amount;
+    const bonus = this.gatherBonus('cooking');
+    const span = this.dishSpan(id) * (Math.random() < bonus.doubleCook ? 2 : 1);
+    this.dishes[id] = Math.min((this.dishes[id] ?? 0) + span, this.dishSpan(id) * 3);
+    this.stats.cooks += 1;
+    this.gainGatherXp('cooking', COOK.cookXp[this.brewBand]);
+    return true;
+  }
+
+  dishActive(id) {
+    return (this.dishes[id] ?? 0) > 0;
+  }
+
+  dishMul(id) {
+    if (!this.dishActive(id)) return 1;
+    return 1 + DISH_BY_ID[id].amount * (1 + this.gatherBonus('cooking').dishPower);
+  }
+
+  get activeDishes() {
+    return DISHES.filter((d) => this.dishActive(d.id)).length;
+  }
+
+  tickDishes(dt) {
+    for (const id in this.dishes) {
+      if (this.dishes[id] > 0) this.dishes[id] = Math.max(0, this.dishes[id] - dt);
+    }
+  }
+
   potionActive(id) {
     return (this.potions[id] ?? 0) > 0;
   }
@@ -878,7 +952,9 @@ export class GameState {
   get fedRegenMul() {
     if (!this.fed) return 1;
     const b = this.gatherBonus('fishing');
-    return 1 + MEAL.regenPerTier * (this.fedTier + 1) * b.fedRegen;
+    // Hearthfire, from the Cooking tree: the one outside hand on Well Fed.
+    const hearth = 1 + this.gatherBonus('cooking').fedBoost;
+    return 1 + MEAL.regenPerTier * (this.fedTier + 1) * b.fedRegen * hearth;
   }
 
   get fedArmor() {
@@ -900,6 +976,9 @@ export class GameState {
       this.refined[fish.id] -= 1;
       this.fedTier = fish.tier;
       this.fedTimer = MEAL.time * this.gatherBonus('fishing').mealTime;
+      // Every meal eaten teaches the kitchen a little: Cooking's idle
+      // trickle, the way shrines are Alchemy's.
+      this.gainGatherXp('cooking', COOK.mealXp);
       return true;
     }
     this.fedTimer = 0;
@@ -1355,9 +1434,12 @@ export class GameState {
     const value = amount * this.goldGain;
     this.gold += value;
     // The window feeds goldPerSec, whose real job is pricing OFFLINE time.
-    // It tracks the rate without the Lucky Brew: a ten-minute bottle must
-    // not colour an eight-hour night at full strength.
-    this._goldWindow.push({ t: this.clock, value: value / this.potionMul('lucky') });
+    // It tracks the rate without the Lucky Brew or the Golden Pie: a
+    // ten-minute buff must not colour an eight-hour night at full strength.
+    this._goldWindow.push({
+      t: this.clock,
+      value: value / (this.potionMul('lucky') * this.dishMul('pie')),
+    });
     return value;
   }
 
@@ -1419,7 +1501,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
@@ -1430,7 +1512,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
@@ -1470,10 +1552,13 @@ export class GameState {
   collectOffline(lastSeen) {
     if (!lastSeen) return null;
     const away = (Date.now() - lastSeen) / 1000;
-    // A drink does not keep overnight. Without this, a bottle brewed before
-    // closing came back whole in the morning, every morning.
+    // A drink does not keep overnight, and neither does a plate. Without
+    // this, a buff banked before closing came back whole every morning.
     for (const id in this.potions) {
       if (this.potions[id] > 0) this.potions[id] = Math.max(0, this.potions[id] - away);
+    }
+    for (const id in this.dishes) {
+      if (this.dishes[id] > 0) this.dishes[id] = Math.max(0, this.dishes[id] - away);
     }
     return this.bankIdle(away);
   }

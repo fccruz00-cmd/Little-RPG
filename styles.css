@@ -95,7 +95,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 39;
+  --n: 47;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -146,6 +146,15 @@ body { display: flex; justify-content: center; }
 .ico--fish          { --i: 36; }
 .ico--gem           { --i: 37; }
 .ico--shop          { --i: 38; }
+/* the farm and the kitchen, generated in PixelLab and appended to the strip */
+.ico--seedling      { --i: 39; }
+.ico--hoe           { --i: 40; }
+.ico--crate         { --i: 41; }
+.ico--cookpot       { --i: 42; }
+.ico--stew          { --i: 43; }
+.ico--pie           { --i: 44; }
+.ico--rations       { --i: 45; }
+.ico--jam           { --i: 46; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
@@ -636,6 +645,8 @@ body { display: flex; justify-content: center; }
 .toggle input:checked { background-image: url(assets/ui/check_on.png); }
 
 .segmented { display: flex; gap: 3px; min-width: 0; }
+/* seven skills: the switch wraps to a second row where one will not hold */
+#skill-switch { flex-wrap: wrap; }
 /* The switches that carry three or four segments share the header with a
    points readout and a link, so they share the tighter button too. */
 #skill-switch, #tree-switch { flex: 1 1 auto; }

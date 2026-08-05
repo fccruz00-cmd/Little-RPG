@@ -16,6 +16,7 @@ import {
 import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
+import { DISHES } from '../data/dishes.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { PATHS, describePath } from '../data/paths.js';
@@ -118,6 +119,7 @@ export class UI {
       pipSkills: $('pip-skills'), fed: $('fed'), fedTime: $('fed-time'),
       workshop: $('workshop'), smithOdds: $('smith-odds'), toolWrap: $('tool-wrap'),
       keys: $('keys'), cauldron: $('cauldron'), cauldronWrap: $('cauldron-wrap'),
+      kitchen: $('kitchen'), kitchenWrap: $('kitchen-wrap'),
       brews: $('brews'), brewsN: $('brews-n'),
       speed: $('btn-speed'),
       arenaAct: $('arena-act'), actBoss: $('act-boss'),
@@ -181,6 +183,7 @@ export class UI {
     this.buildStock();
     this.buildKeys();
     this.buildCauldron();
+    this.buildKitchen();
     this.buildForge();
     this.buildPets();
     this.buildFeats();
@@ -249,6 +252,7 @@ export class UI {
       ['[data-skill="mining"]', 'Mining'], ['[data-skill="chopping"]', 'Chopping'],
       ['[data-skill="fishing"]', 'Fishing'], ['[data-skill="smithing"]', 'Smithing'],
       ['[data-skill="alchemy"]', 'Alchemy'],
+      ['[data-skill="farming"]', 'Farming'], ['[data-skill="cooking"]', 'Cooking'],
       ['[data-asc="rebirth"]', 'Rebirth'], ['[data-asc="awaken"]', 'Awaken'],
       ['[data-asc="feats"]', 'Feats'],
       ['#btn-respec', 'respec'], ['#btn-respec-skill', 'respec'],
@@ -285,6 +289,7 @@ export class UI {
       ['#workshop .sect:nth-of-type(1)', 'Dungeon keys'],
       ['#workshop .sect:nth-of-type(2)', 'What smithing gives you'],
       ['#cauldron-title', 'Cauldron'],
+      ['#kitchen-title', 'Kitchen'],
       ['#gem-title', 'Gem shop'],
       ['#store-title', 'Store'],
     ];
@@ -718,6 +723,20 @@ export class UI {
       this.toast({ text: t('{0} BREWED', row.dataset.potion.toUpperCase()) });
       if (state.skills.alchemy.level > before) {
         this.toast({ text: `ALCHEMY ${state.skills.alchemy.level}!` });
+      }
+      this.refreshSkills();
+    });
+
+    el.kitchen.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-dish]');
+      if (!row) return;
+      const before = state.skills.cooking.level;
+      if (!state.cook(row.dataset.dish)) return;
+      state.save();
+      this.sfx.play('brew');
+      this.toast({ text: t('{0} PLATED', row.dataset.dish.toUpperCase()) });
+      if (state.skills.cooking.level > before) {
+        this.toast({ text: `COOKING ${state.skills.cooking.level}!` });
       }
       this.refreshSkills();
     });
@@ -1212,7 +1231,8 @@ export class UI {
     el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0)
       && !GATHER_IDS.some((id) => state.canBuyTool(id))
       && !KEYS.some((k) => state.canForgeKey(k.tier))
-      && !POTIONS.some((p) => state.canBrew(p.id));
+      && !POTIONS.some((p) => state.canBrew(p.id))
+      && !DISHES.some((d) => state.canCook(d.id));
     el.pipSkills.classList.add('pip--gold');
 
     // Contextual action in the arena. A held boss outranks a key, because a
@@ -1233,7 +1253,9 @@ export class UI {
     // Well Fed is a live combat state, so it lives in the HUD, not the tab.
     el.fed.hidden = !state.fed;
     if (state.fed) setText(el.fedTime, String(Math.ceil(state.fedTimer)));
-    const brews = state.activePotions;
+    // One chip for everything on a timer: brews from the cauldron, dishes
+    // from the kitchen. They are the same kind of fact to the player.
+    const brews = state.activePotions + state.activeDishes;
     el.brews.hidden = brews === 0;
     if (brews) setText(el.brewsN, String(brews));
     el.pipPrestige.hidden = state.pendingRelics <= 0 && state.pendingSouls <= 0;
@@ -1568,6 +1590,46 @@ export class UI {
     }
   }
 
+  /** The kitchen: one row per dish, built like the cauldron's bench. */
+  buildKitchen() {
+    this.dishRows = new Map();
+    for (const dish of DISHES) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key';
+      row.dataset.dish = dish.id;
+      row.style.setProperty('--ore', dish.accent);
+      row.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${dish.icon}"></i> ${dish.name}</span>
+        <span class="key__what">${t(dish.blurb)}</span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt">${t('cook')}</span>`;
+      this.el.kitchen.append(row);
+      this.dishRows.set(dish.id, {
+        dish, row,
+        what: row.querySelector('.key__what'),
+        left: row.querySelector('b'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+  }
+
+  refreshKitchen() {
+    const { state } = this;
+    for (const { dish, row, what, left, action } of this.dishRows.values()) {
+      const cost = state.dishCost(dish.id);
+      const can = state.canCook(dish.id);
+      const have = state.refined[cost.res.id] ?? 0;
+      setHtml(what, `${t(dish.blurb)} &middot; `
+        + `<i class="ico ico--sm ico--crate"></i>${fmt(have)}/${fmt(cost.amount)}`);
+      const secs = state.dishes[dish.id] ?? 0;
+      setText(left, secs > 0 ? duration(secs) : '');
+      setText(action, can ? t('cook') : state.dishCapped(dish.id) ? t('full') : t('need'));
+      row.disabled = !can;
+      row.classList.toggle('can-smelt', can);
+    }
+  }
+
   refreshCauldron() {
     const { state } = this;
     for (const { potion, row, what, left, action } of this.brewRows.values()) {
@@ -1825,9 +1887,11 @@ export class UI {
     el.toolWrap.hidden = !gathers;
     el.workshop.hidden = id !== 'smithing';
     el.cauldronWrap.hidden = id !== 'alchemy';
+    el.kitchenWrap.hidden = id !== 'cooking';
     el.skillEquip.hidden = !gathers;
     if (id === 'smithing') { this.refreshWorkshop(); return this.refreshSkillTree(id); }
     if (id === 'alchemy') { this.refreshCauldron(); return this.refreshSkillTree(id); }
+    if (id === 'cooking') { this.refreshKitchen(); return this.refreshSkillTree(id); }
 
     const equipped = state.tool === id;
     el.equipIcon.className = `ico ico--lg ico--${skill.toolIcon}`;

@@ -34,6 +34,7 @@ export const DAILY_POOL = [
   { id: 'refines', stat: 'refines',     need: 40,  gems: 3, desc: 'refine 40 units' },
   { id: 'feeds',   stat: 'feeds',       need: 3,   gems: 3, desc: 'feed your pets 3 times' },
   { id: 'brews',   stat: 'brews',       need: 2,   gems: 4, desc: 'brew 2 potions' },
+  { id: 'cooks',   stat: 'cooks',       need: 2,   gems: 3, desc: 'cook 2 dishes' },
   { id: 'delve',   stat: 'dungeonWins', need: 1,   gems: 5, desc: 'clear a dungeon' },
 ];
 

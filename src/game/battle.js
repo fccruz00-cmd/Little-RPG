@@ -663,7 +663,10 @@ export class Battle {
     const skillId = node.skill;
     const bonus = state.gatherBonus(skillId);
     const double = Math.random() < bonus.yieldDouble ? 2 : 1;
-    const amount = nodeYield(node.resource, state.tools[skillId], bonus) * double;
+    // The Harvest Stew multiplies at the harvest site because the per-skill
+    // bonus fold is cached and a ten-minute dish must not invalidate it.
+    const amount = Math.max(1, Math.round(
+      nodeYield(node.resource, state.tools[skillId], bonus) * double * state.dishMul('stew')));
     state.addRaw(node.resource.id, amount);
     this.pushFloater({ x: node.x, sprite: null, scale: 1 }, amount, 'ore');
 
@@ -726,6 +729,7 @@ export class Battle {
     this.updateAutoSwitch(dt);
     state.tickMeals(dt);
     state.tickPotions(dt);
+    state.tickDishes(dt);
 
     this.updateEnemy(dt);
     this.updateProps();

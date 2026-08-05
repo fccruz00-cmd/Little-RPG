@@ -157,8 +157,10 @@
           <button class="is-on" data-skill="mining" type="button">Mining</button>
           <button data-skill="chopping" type="button">Chopping</button>
           <button data-skill="fishing" type="button">Fishing</button>
+          <button data-skill="farming" type="button">Farming</button>
           <button data-skill="smithing" type="button">Smithing</button>
           <button data-skill="alchemy" type="button">Alchemy</button>
+          <button data-skill="cooking" type="button">Cooking</button>
         </div>
         <button class="link" id="btn-respec-skill" type="button">respec</button>
       </div>
@@ -198,6 +200,12 @@
         <div class="keys" id="cauldron"></div>
       </div>
 
+      <!-- cooking's bench: dishes out of farming's crates -->
+      <div class="workshop" id="kitchen-wrap" hidden>
+        <h3 class="sect" id="kitchen-title"><i class="ico ico--sm ico--cookpot"></i> Kitchen</h3>
+        <div class="keys" id="kitchen"></div>
+      </div>
+
       <div class="mine-tools" id="tool-wrap">
         <button class="slot" id="tool-buy" type="button">
           <i class="ico ico--lg" id="tool-icon"></i>
@@ -215,6 +223,8 @@
       <div class="tree-scroll" id="tree-fishing" hidden></div>
       <div class="tree-scroll" id="tree-smithing" hidden></div>
       <div class="tree-scroll" id="tree-alchemy" hidden></div>
+      <div class="tree-scroll" id="tree-farming" hidden></div>
+      <div class="tree-scroll" id="tree-cooking" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->
