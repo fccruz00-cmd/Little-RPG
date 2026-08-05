@@ -18,7 +18,7 @@ const MIN_WORLD_W = 100;
 // walk-in is 91 units, and 91 of 480 is a fifth of the screen) with a
 // thousand pixels of empty ground behind. Past this the canvas zooms IN
 // rather than showing more ground nobody walks on.
-const MAX_WORLD_W = 240;
+const MAX_WORLD_W = 200;
 // The floor the zoom-in may not cross. The ground takes 16 and the far hills
 // stand up to 46 above it, so under this the parallax closes over the sky and
 // the blood moon has nowhere to hang.
@@ -98,6 +98,7 @@ export class Renderer {
     this.width = 200;
     this.height = 64;
     this.dpr = 1;
+    this.grid = 3;   // resize() owns this; a sane value until it first runs
 
     // scratch canvas for the white hit flash
     this.scratch = document.createElement('canvas');
@@ -126,7 +127,7 @@ export class Renderer {
       Math.ceil(cssW / MAX_WORLD_W),
       Math.floor(cssH / MIN_WORLD_H),
     );
-    this.scale = Math.min(10, Math.max(2, base, zoomIn));
+    this.scale = Math.min(16, Math.max(2, base, zoomIn));
 
     this.canvas.width = Math.round(cssW * this.dpr);
     this.canvas.height = Math.round(cssH * this.dpr);
@@ -135,7 +136,28 @@ export class Renderer {
     this.width = cssW / this.scale;
     this.height = cssH / this.scale;
     this.groundY = this.height - GROUND_FROM_BOTTOM;
+    // Device pixels per world unit: the grid everything that MOVES snaps to.
+    this.grid = this.dpr * this.scale;
     return this.width;
+  }
+
+  /**
+   * Snap a world coordinate to the screen's pixel grid, not the world's.
+   *
+   * Everything used to round to whole world units, which is invisible at
+   * zoom 3 -- a step is three screen pixels -- and awful at zoom 10, where
+   * the hero covers about half a unit per frame and therefore stands still
+   * for a frame and then jumps ten pixels. It reads as a dropped frame; it is
+   * not one. Rounding to DEVICE pixels instead makes the step one screen
+   * pixel at every zoom.
+   *
+   * It costs no sharpness. `grid` is dpr x scale, so a snapped sprite origin
+   * lands on a whole device pixel and each source pixel still covers exactly
+   * `grid` of them -- the art stays on the grid, only the camera gets to move
+   * between world pixels.
+   */
+  q(v) {
+    return Math.round(v * this.grid) / this.grid;
   }
 
   /** @param {import('./battle.js').Battle} battle */
@@ -190,7 +212,7 @@ export class Renderer {
         if (y < 0) y += field;
       }
       ctx.globalAlpha = 0.25 + hash(i + 77) * 0.5;
-      ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+      ctx.fillRect(this.q(x), this.q(y), 1, 1);
     }
     ctx.globalAlpha = 1;
 
@@ -220,7 +242,7 @@ export class Renderer {
     for (let k = first; k * step - camX < W + step; k++) {
       const r = hash(k * 31 + 5);
       if (r > 0.55) continue;
-      const x = Math.floor(k * step - camX + r * 4);
+      const x = this.q(k * step - camX + r * 4);
       ctx.fillRect(x, groundY + 4 + Math.floor(r * 8), 2 + Math.floor(r * 4), 1);
     }
 
@@ -229,10 +251,10 @@ export class Renderer {
     for (let k = Math.floor(camX / 11); k * 11 - camX < W + 11; k++) {
       const r = hash(k * 17 + 3);
       if (r > 0.45) continue;
-      const x = Math.floor(k * 11 - camX);
+      const x = this.q(k * 11 - camX);
       const h = 2 + Math.floor(r * 6);
       const sway = Math.sin(time * 1.6 + k) * 0.5;
-      ctx.fillRect(x + Math.round(sway), groundY - h + 1, 1, h);
+      ctx.fillRect(this.q(x + sway), groundY - h + 1, 1, h);
       ctx.fillRect(x + 1, groundY - h + 3, 1, h - 2);
     }
   }
@@ -270,7 +292,7 @@ export class Renderer {
     for (let k = Math.floor(offset / span) - 1; k * span - offset < W + span; k++) {
       const r = hash(k * 13 + 101);
       if (r > 0.6) continue;
-      const x = Math.round(k * span - offset + r * 12);
+      const x = this.q(k * span - offset + r * 12);
       const h = 12 + Math.round(r * 14);
       ctx.fillRect(x, baseY - h, 2, h);
       ctx.beginPath();
@@ -294,7 +316,7 @@ export class Renderer {
   drawProps(battle, camX, time) {
     const { ctx, groundY } = this;
     for (const prop of battle.props) {
-      const x = Math.round(prop.x - camX);
+      const x = this.q(prop.x - camX);
       if (x < -16 || x > this.width + 16) continue;
       if (prop.kind === 'chest') {
         // a squat box with a gold band and a keyhole glint
@@ -324,7 +346,7 @@ export class Renderer {
   drawNodes(battle, camX) {
     const { ctx, groundY } = this;
     for (const node of battle.nodes) {
-      const x = Math.round(node.x - camX);
+      const x = this.q(node.x - camX);
       if (x < -24 || x > this.width + 24) continue;
       const nudge = node.shake > 0 ? (Math.random() < 0.5 ? 1 : 0) : 0;
       const bx = x - 5 + nudge;
@@ -415,8 +437,8 @@ export class Renderer {
     const frame = actor.anim.frame;
     const sx = frame * FRAME;
     const hover = actor.hover ? Math.sin(performance.now() / 260 + actor.bob) * 1.5 - actor.hover : 0;
-    const dx = Math.round(actor.x - camX - FRAME / 2);
-    const dy = Math.round(this.groundY - GROUND_LINE + hover);
+    const dx = this.q(actor.x - camX - FRAME / 2);
+    const dy = this.q(this.groundY - GROUND_LINE + hover);
     const scale = actor.scale ?? 1;
 
     ctx.save();
@@ -568,8 +590,8 @@ export class Renderer {
    */
   bar(x, y, w, ratio, tones, rail = BAR_RAIL_DIM) {
     const { ctx } = this;
-    const px = Math.round(x);
-    const py = Math.round(y);
+    const px = this.q(x);
+    const py = this.q(y);
     const h = tones.length;             // one row per tone, 3 by default
     ctx.fillStyle = '#000000aa';
     ctx.fillRect(px - 1, py - 1, w + 2, h + 3);
