@@ -229,6 +229,21 @@ const PT = {
   'Tame: ': 'Domar: ',
   ' · next: ': ' · próximo: ',
 
+  // --- paths ---
+  'Path': 'Caminho',
+  'Berserker': 'Berserker',
+  'Sentinel': 'Sentinela',
+  'Plunderer': 'Saqueador',
+  'follow': 'seguir',
+  'yours': 'seu',
+  'THE {0} PATH': 'O CAMINHO: {0}',
+  'Pick a path: it is yours until your next awakening.':
+    'Escolha um caminho: ele é seu até o próximo despertar.',
+  'The choice comes back with your next awakening.':
+    'A escolha volta no seu próximo despertar.',
+  'thorns': 'espinhos',
+  'dust chance': 'chance de pó',
+
   // --- contracts ---
   'Contracts': 'Contratos',
   'Daily': 'Diária',
@@ -284,6 +299,8 @@ const PT = {
   'Amulet': 'Amuleto',
   'Ring': 'Anel',
   'empty': 'vazio',
+  'Enchants': 'Encantos',
+  'reroll': 'rolar',
   'Set bonus, all {0}+: ': 'Bônus de conjunto, tudo {0}+: ',
   '+{0}% damage and health': '+{0}% de dano e vida',
   ', +{0}% gold': ', +{0}% de ouro',
@@ -303,6 +320,9 @@ const PT = {
   'Awakenings': 'Despertares',
   'Souls spent': 'Almas gastas',
   'Next soul': 'Próxima alma',
+  'Best sprint': 'Melhor sprint',
+  'This run': 'Esta run',
+  'stage {0} in 30min': 'fase {0} em 30min',
   'n/a': 'n/d',
   'stage {0}': 'fase {0}',
   'Rebirth for {0} relic(s)': 'Renascer por {0} relíquia(s)',
@@ -333,6 +353,10 @@ const PT = {
   'Coin Cache': 'Bolsa de Moedas',
   'Hourglass': 'Ampulheta',
   'Mythic Chest': 'Baú Mítico',
+  'Gilded Idol': 'Ídolo Dourado',
+  'offline gold at the full rate, forever': 'ouro offline na taxa cheia, para sempre',
+  'yours already: the night pays in full': 'já é seu: a noite paga por inteiro',
+  'THE IDOL SHINES: OFFLINE PAYS IN FULL': 'O ÍDOLO BRILHA: OFFLINE PAGA POR INTEIRO',
   'an hour of your best gold rate, paid now': 'uma hora do seu melhor ganho de ouro, na hora',
   'the fight really runs two hours, in a few seconds': 'a luta corre duas horas de verdade, em poucos segundos',
   'your weakest slot, reforged Mythic': 'seu pior slot, reforjado em Mítico',

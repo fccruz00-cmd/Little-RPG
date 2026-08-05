@@ -330,6 +330,33 @@ export class Renderer {
         ctx.fillRect(x - 4, groundY - 4, 9, 1);
         ctx.fillStyle = '#ffe9ae';
         ctx.fillRect(x, groundY - 4, 1, 1);
+      } else if (prop.kind === 'merchant') {
+        // a hand cart under a striped awning
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(x - 5, groundY - 5, 10, 4);        // cart bed
+        ctx.fillStyle = '#3b3b4a';
+        ctx.fillRect(x - 3, groundY - 2, 2, 2);         // wheels
+        ctx.fillRect(x + 2, groundY - 2, 2, 2);
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(x - 5, groundY - 8, 1, 3);         // awning posts
+        ctx.fillRect(x + 4, groundY - 8, 1, 3);
+        ctx.fillStyle = '#b74132';
+        ctx.fillRect(x - 6, groundY - 10, 12, 2);       // awning
+        ctx.fillStyle = '#e6dccb';
+        ctx.fillRect(x - 5, groundY - 9, 2, 1);         // stripes
+        ctx.fillRect(x - 1, groundY - 9, 2, 1);
+        ctx.fillRect(x + 3, groundY - 9, 2, 1);
+      } else if (prop.kind === 'caravan') {
+        // a stranded covered wagon with a torn red rag
+        ctx.fillStyle = '#7a4f2c';
+        ctx.fillRect(x - 6, groundY - 6, 12, 5);        // wagon body
+        ctx.fillStyle = '#3b3b4a';
+        ctx.fillRect(x - 4, groundY - 2, 3, 2);         // wheels
+        ctx.fillRect(x + 2, groundY - 2, 3, 2);
+        ctx.fillStyle = '#dacea4';
+        ctx.fillRect(x - 5, groundY - 9, 10, 3);        // canvas cover
+        ctx.fillStyle = '#b74132';
+        ctx.fillRect(x + 3, groundY - 10, 2, 1);        // the rag
       } else {
         // an obelisk with a breathing light on top
         ctx.fillStyle = '#3b3b4a';

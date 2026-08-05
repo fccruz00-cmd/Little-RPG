@@ -10,12 +10,15 @@ import {
   nextSoulRelics, soulsEarnedAt, AWAKEN,
 } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
-import { SLOTS, RARITIES, SET_BONUS, setRarity, describeGear, rarityOdds } from '../data/gear.js';
+import {
+  SLOTS, RARITIES, SET_BONUS, setRarity, describeGear, rarityOdds, describeEnchant,
+} from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
+import { PATHS, describePath } from '../data/paths.js';
 import { GEM_WARES, WARE_BY_ID } from '../data/gems.js';
 import { Billing } from '../store/billing.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
@@ -122,6 +125,7 @@ export class UI {
       pipTalents: $('pip-talents'), pipPrestige: $('pip-prestige'),
       presGain: $('pres-gain'), presHave: $('pres-have'), presCount: $('pres-count'),
       presBest: $('pres-best'), presNext: $('pres-next'), presGo: $('pres-go'),
+      presSprint: $('pres-sprint'), presClock: $('pres-clock'),
       presGainBox: document.querySelector('#asc-rebirth .prestige__gain'),
       ascSwitch: $('asc-switch'), ascSouls: $('asc-souls'), soulsHave: $('souls-have'),
       ascRebirth: $('asc-rebirth'), ascAwaken: $('asc-awaken'), pipAwaken: $('pip-awaken'),
@@ -130,6 +134,8 @@ export class UI {
       awkSpent: $('awk-spent'), awkNext: $('awk-next'), awkGo: $('awk-go'),
       awkProgress: $('awk-progress'),
       awkGainBox: document.querySelector('#asc-awaken .prestige__gain'),
+      paths: $('paths'), pathsTitle: $('paths-title'),
+      pathList: $('path-list'), pathNote: $('path-note'),
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
       pipPets: $('pip-pets'),
@@ -137,6 +143,7 @@ export class UI {
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
+      enchWrap: $('ench-wrap'), enchTitle: $('ench-title'), enchList: $('ench-list'),
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
       gemPill: $('gem-pill'), gemCount: $('stat-gems'),
       gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
@@ -168,6 +175,7 @@ export class UI {
     this.buildWeb(this.el.treeRelics, RELIC_WEB, 'relic');
     this.buildWeb(this.el.treeSouls, SOUL_WEB, 'soul');
     for (const id of SKILL_IDS) this.buildWeb(this.el.trees[id], SKILL_WEBS[id], id);
+    this.buildPaths();
     this.buildStock();
     this.buildKeys();
     this.buildCauldron();
@@ -311,6 +319,8 @@ export class UI {
       ['#asc-rebirth .facts div:nth-child(2) dt', 'Rebirths'],
       ['#asc-rebirth .facts div:nth-child(3) dt', 'Deepest stage'],
       ['#asc-rebirth .facts div:nth-child(4) dt', 'Next relic'],
+      ['#asc-rebirth .facts div:nth-child(5) dt', 'Best sprint'],
+      ['#asc-rebirth .facts div:nth-child(6) dt', 'This run'],
       ['#asc-awaken .facts div:nth-child(1) dt', 'Souls to spend'],
       ['#asc-awaken .facts div:nth-child(2) dt', 'Awakenings'],
       ['#asc-awaken .facts div:nth-child(3) dt', 'Souls spent'],
@@ -509,6 +519,27 @@ export class UI {
     }
     this.el.forgeList.append(frag);
 
+    // Enchant rows: one per slot, shown only while that slot carries one.
+    setText(this.el.enchTitle, t('Enchants'));
+    this.enchRows = new Map();
+    for (const slot of SLOTS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key ench';
+      row.dataset.slot = slot.id;
+      row.innerHTML = `
+        <span class="ore__name">${t(slot.name)}</span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b> <i class="ico ico--sm ico--dust"></i></span>
+        <span class="ore__smelt">${t('reroll')}</span>`;
+      this.el.enchList.append(row);
+      this.enchRows.set(slot.id, {
+        slot, row,
+        what: row.querySelector('.key__what'),
+        cost: row.querySelector('b'),
+      });
+    }
+
     this.refreshOdds();
   }
 
@@ -687,6 +718,15 @@ export class UI {
       this.refreshSkills();
     });
 
+    el.pathList.addEventListener('click', (e) => {
+      const row = e.target.closest('.pathrow');
+      if (!row || !state.choosePath(row.dataset.path)) return;
+      this.sfx.play('jingle');
+      this.toast({ text: t('THE {0} PATH', t(this.pathRows.get(state.path).path.name).toUpperCase()) });
+      this.refreshShop(true);
+      this.refreshPaths();
+    });
+
     el.quests.addEventListener('click', (e) => {
       const row = e.target.closest('.quest');
       const entry = row && this.questRows[Number(row.dataset.quest)]?.entry;
@@ -731,6 +771,17 @@ export class UI {
     el.forgeList.addEventListener('click', (e) => {
       const button = e.target.closest('.slot');
       if (button) this.doForge(button.dataset.slot);
+    });
+
+    el.enchList.addEventListener('click', (e) => {
+      const row = e.target.closest('.ench');
+      if (!row) return;
+      const mod = state.rerollEnchant(row.dataset.slot);
+      if (!mod) return;
+      state.save();
+      this.sfx.play('forge');
+      this.toast({ text: describeEnchant(mod).toUpperCase() });
+      this.refreshForge();
     });
 
     el.petsList.addEventListener('click', (e) => {
@@ -961,6 +1012,41 @@ export class UI {
     this.el.ascAwaken.hidden = name !== 'awaken';
     this.el.ascFeats.hidden = name !== 'feats';
     this.refreshPrestige();
+  }
+
+  /** Three path cards on the Awaken pane; one free pick per awakening. */
+  buildPaths() {
+    setText(this.el.pathsTitle, t('Path'));
+    this.pathRows = new Map();
+    for (const path of PATHS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key pathrow';
+      row.dataset.path = path.id;
+      row.style.setProperty('--ore', path.accent);
+      row.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${path.icon}"></i> ${t(path.name)}</span>
+        <span class="key__what">${describePath(path)}</span>
+        <span class="ore__smelt"></span>`;
+      this.el.pathList.append(row);
+      this.pathRows.set(path.id, { path, row, action: row.querySelector('.ore__smelt') });
+    }
+  }
+
+  refreshPaths() {
+    const { state, el } = this;
+    el.paths.hidden = state.awakens <= 0 && state.path === 'none';
+    if (el.paths.hidden) return;
+    for (const { path, row, action } of this.pathRows.values()) {
+      const mine = state.path === path.id;
+      row.classList.toggle('is-done', mine);
+      row.disabled = mine || !state.canChoosePath;
+      row.classList.toggle('can-smelt', !mine && state.canChoosePath);
+      setText(action, mine ? t('yours') : state.canChoosePath ? t('follow') : t('locked'));
+    }
+    setText(el.pathNote, state.canChoosePath
+      ? t('Pick a path: it is yours until your next awakening.')
+      : t('The choice comes back with your next awakening.'));
   }
 
   buildFeats() {
@@ -1282,13 +1368,29 @@ export class UI {
       entry.button.disabled = !state.canForge(entry.slot.id);
 
       setText(entry.rarity, rarity ? rarity.name : 'empty');
+      const mod = state.gearMods[entry.slot.id];
       setText(entry.effect, equipped == null
         ? 'nothing equipped'
-        : describeGear(entry.slot, equipped));
+        : describeGear(entry.slot, equipped) + (mod ? ` · ${describeEnchant(mod)}` : ''));
       setHtml(entry.cost, maxed
         ? 'maxed'
         : `<i class="ico ico--sm ico--dust"></i> ${cost}`);
     }
+
+    // The reroll bench only lists slots with an affix to argue about.
+    let enchanted = 0;
+    for (const [slotId, entry] of this.enchRows) {
+      const mod = state.gearMods[slotId];
+      entry.row.hidden = !mod;
+      if (!mod) continue;
+      enchanted += 1;
+      setText(entry.what, describeEnchant(mod));
+      setText(entry.cost, String(state.enchantCost(slotId)));
+      const can = state.canReroll(slotId);
+      entry.row.disabled = !can;
+      entry.row.classList.toggle('can-smelt', can);
+    }
+    el.enchWrap.hidden = enchanted === 0;
 
     // The set line: what the whole board pays now, or what it would.
     const worn = setRarity(state.gear);
@@ -1493,6 +1595,8 @@ export class UI {
         line = offer.why === 'forge' ? t('the forge opens on your first rebirth')
           : offer.why === 'full' ? t('every slot is already Mythic')
           : t('reforges your {0} to Mythic', t(SLOTS.find((s) => s.id === slot).name));
+      } else if (ware.id === 'idol' && offer.why === 'owned') {
+        line = t('yours already: the night pays in full');
       } else if (inRun) {
         // Two hours inside eight rooms would end the run and spend the rest
         // of the span back on the line, which is not what the button says.
@@ -1580,6 +1684,9 @@ export class UI {
       this.toast({ text: t('+{0} GOLD', fmt(bought.gold)) });
       this.sfx.play('gold');
       this.refreshShop(true);
+    } else if (bought.id === 'idol') {
+      this.toast({ text: t('THE IDOL SHINES: OFFLINE PAYS IN FULL') });
+      this.sfx.play('jingle');
     } else if (bought.id === 'chest') {
       const slot = SLOTS.find((s) => s.id === bought.slotId);
       const rarity = RARITIES[bought.rolled];
@@ -1877,6 +1984,12 @@ export class UI {
     const next = nextRelicStage(relicsEarnedAt(state.maxStage));
     setText(el.presNext, isFinite(next) ? t('stage {0}', next) : t('n/a'));
 
+    // The sprint: a record only a reset can improve, said next to the
+    // button that does the resetting.
+    setText(el.presSprint, state.sprintBest > 1
+      ? t('stage {0} in 30min', state.sprintBest) : t('n/a'));
+    setText(el.presClock, duration(state.runClock));
+
     el.presGainBox.classList.toggle('is-empty', gain <= 0);
     this.refreshPerks();
 
@@ -1908,6 +2021,7 @@ export class UI {
     const next = nextSoulRelics(soulsEarnedAt(earned));
     setText(el.awkNext, isFinite(next) ? t('{0} relics', next) : t('n/a'));
 
+    this.refreshPaths();
     el.awkGainBox.classList.toggle('is-empty', gain <= 0);
     el.pipAwaken.hidden = gain <= 0;
     el.awkGo.disabled = gain <= 0;

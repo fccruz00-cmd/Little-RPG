@@ -40,9 +40,12 @@ export const GEM_FIRST = [10, 15, 25, 40, 60];
 /** The Bloodmoon doubles gems the same way it doubles everything else. */
 
 // --- the shop -------------------------------------------------------
-// Three wares, one per thing a stuck player actually lacks: money, time, or
-// a slot that will not roll. Costs are in the same neighbourhood as a few
-// clears, so the shop is a place you visit between runs rather than a tab.
+// Three consumables, one per thing a stuck player actually lacks: money,
+// time, or a slot that will not roll. Costs are in the same neighbourhood as
+// a few clears, so the shop is a place you visit between runs rather than a
+// tab. The Gilded Idol is the one PERMANENT ware, and it stays inside rule
+// 2 on purpose: it buys pace (the offline discount, lifted for good), never
+// power, and it is priced like the long-term purchase it is.
 
 export const CACHE_SECONDS = 3600;  // Coin Cache: an hour of your best rate
 export const SKIP_SECONDS = 7200;   // Hourglass: two hours of real fighting
@@ -74,6 +77,13 @@ export const GEM_WARES = [
     // cap: the set bonus keys off the LOWEST rarity worn, so the chest walks
     // a board up one slot at a time and then refuses. Seven purchases is
     // everything it will ever sell you.
+  },
+  {
+    id: 'idol', name: 'Gilded Idol', icon: 'crown', cost: 150,
+    blurb: 'offline gold at the full rate, forever',
+    // One purchase, ever: after it the night pays what the day does. It
+    // survives rebirth, awakening, everything short of the erase button --
+    // the one honest "permanent offer" this genre has.
   },
 ];
 

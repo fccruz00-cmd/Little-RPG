@@ -13,6 +13,7 @@ import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import {
   SLOTS, RARITIES, LEGENDARY, DUST, SET_BONUS, setRarity, craftCost, rollRarity, gearValue,
+  ENCHANT_BY_ID, ENCHANT_FROM, rollEnchant,
 } from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
@@ -28,6 +29,7 @@ import { FEATS, featDone, emptyStats } from '../data/feats.js';
 import {
   dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
 } from '../data/quests.js';
+import { PATH_BY_ID } from '../data/paths.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -66,6 +68,9 @@ function defaults() {
     souls: 0,
     awakens: 0,
     soulTalents: {},  // survives awakening, like the souls that bought it
+    // The awakening path: a build lens, chosen once per awakening.
+    path: 'none',
+    pathFree: false,  // an unspent choice; granted by awaken()
     // Relics this ascension earned OFF the stage curve, which today means
     // dungeon clears. It cannot live in relicsEarned, because that doubles as
     // the offset `pendingRelics` subtracts from the curve: adding to it there
@@ -74,6 +79,7 @@ function defaults() {
 
     dust: 0,
     gear: {},        // slotId -> index of the equipped rarity
+    gearMods: {},    // slotId -> {id, tier}: the enchant riding that item
     autoCraftOn: true,
 
     // gathering: three skills on one set of rails
@@ -105,6 +111,14 @@ function defaults() {
     keys: {},         // key tier -> how many are held
     deepestKey: -1,   // deepest key tier fully cleared
     bossHeld: false,  // the boss beat you; it waits for the button
+
+    // the sprint: deepest stage inside the first 30 minutes after a reset.
+    // A personal time-trial with no server behind it; runClock is game time.
+    runClock: 0,
+    sprintBest: 0,
+
+    // Gilded Idol: the one permanent gem ware. Offline gold at full rate.
+    idolOwned: false,
 
     // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
     // rebirth and not awakening, because a purse you can also be sold must
@@ -178,6 +192,11 @@ function migrate(data) {
     // v14: before contracts, enchants, paths, the sprint and the idol. All
     // of them start empty via defaults; the constructor rolls the first
     // quest board from live stats, so day one asks for a day's work.
+    const out14 = data;
+    // A save that had already awakened earned the choice a new awakening
+    // would have granted; without this line those players wait a whole
+    // ascension for a feature younger saves get on day one.
+    if ((out14.awakens ?? 0) > 0 && out14.pathFree == null) out14.pathFree = true;
     const out = {
       ...defaults(),
       ...data,
@@ -220,6 +239,7 @@ export class GameState {
     this.relicTalents = { ...(data.relicTalents ?? {}) };
     this.soulTalents = { ...(data.soulTalents ?? {}) };
     this.gear = { ...(data.gear ?? {}) };
+    this.gearMods = { ...(data.gearMods ?? {}) };
     this.skills = Object.fromEntries(SKILL_IDS.map((id) => [id, {
       level: data.skills?.[id]?.level ?? 1,
       xp: data.skills?.[id]?.xp ?? 0,
@@ -290,12 +310,34 @@ export class GameState {
       else b[slot.key] += amount;
     }
 
+    // Enchants ride their item: no item in the slot, no affix. Values are a
+    // fraction of a rarity step by design, so they colour a board rather
+    // than carry one.
+    for (const slot of SLOTS) {
+      const mod = this.gearMods[slot.id];
+      const def = mod && this.gear[slot.id] != null ? ENCHANT_BY_ID[mod.id] : null;
+      if (!def) continue;
+      const amount = def.per * mod.tier;
+      if (def.mode === 'mul') b[def.key] *= 1 + amount;
+      else b[def.key] += amount;
+    }
+
     // Wearing every slot at one rarity or better pays the set bonus, keyed
     // by the LOWEST rarity worn: the whole board has to rise together.
     const setLevel = setRarity(this.gear);
     if (setLevel != null && SET_BONUS[setLevel]) {
       for (const [key, amount] of Object.entries(SET_BONUS[setLevel])) {
         b[key] *= 1 + amount;
+      }
+    }
+
+    // The awakening path bends the whole fold: costs are negative grants,
+    // which a multiplier key turns into a real reduction.
+    const path = PATH_BY_ID[this.path];
+    if (path) {
+      for (const [key, v] of Object.entries(path.grants)) {
+        if (MULTIPLIER_KEYS.includes(key)) b[key] *= 1 + v;
+        else b[key] += v;
       }
     }
 
@@ -882,14 +924,60 @@ export class GameState {
 
     if (better) {
       this.gear[slotId] = rolled;
+      // The affix belongs to the ITEM: a new piece brings its own or none.
+      if (rolled >= ENCHANT_FROM) this.gearMods[slotId] = rollEnchant();
+      else delete this.gearMods[slotId];
       this.invalidateBonus();
-      return { rolled, equipped: true, refund: 0 };
+      return { rolled, equipped: true, refund: 0, mod: this.gearMods[slotId] ?? null };
     }
 
     const back = DUST.scrapRefund + this.gatherBonus('smithing').scrapBack;
     const refund = Math.max(1, Math.round(craftCost(current, this.forgeDiscount) * Math.min(0.95, back)));
     this.dust += refund;
     return { rolled, equipped: false, refund };
+  }
+
+  /**
+   * Rerolling an enchant prices off the item it rides: most of a fresh
+   * forge of that slot, so chasing Keen III on a Mythic sword is a real
+   * dust sink and never cheaper than just forging the next slot up.
+   */
+  enchantCost(slotId) {
+    return Math.max(10, Math.round(craftCost(this.gear[slotId] ?? 0, this.forgeDiscount) * 0.6));
+  }
+
+  canReroll(slotId) {
+    return this.gearMods[slotId] != null && this.dust >= this.enchantCost(slotId);
+  }
+
+  /** Rerolls a slot's enchant. Returns the new `{id, tier}`, or null. */
+  rerollEnchant(slotId) {
+    if (!this.canReroll(slotId)) return null;
+    this.dust -= this.enchantCost(slotId);
+    const mod = rollEnchant();
+    this.gearMods[slotId] = mod;
+    this.invalidateBonus();
+    return mod;
+  }
+
+  /**
+   * A forge roll with no dust bill: the wandering merchant's favour. Same
+   * rules as the paid forge -- only a better rarity equips, and the affix
+   * comes with the item -- so the road can never hand over a downgrade.
+   */
+  freeForge(slotId) {
+    const rolled = rollRarity(this.forgeQuality, this.forgeFloor);
+    this.stats.forges += 1;
+    if (rolled >= LEGENDARY) this.stats.legendaries += 1;
+    const current = this.gear[slotId];
+    if (current == null || rolled > current) {
+      this.gear[slotId] = rolled;
+      if (rolled >= ENCHANT_FROM) this.gearMods[slotId] = rollEnchant();
+      else delete this.gearMods[slotId];
+      this.invalidateBonus();
+      return { rolled, equipped: true };
+    }
+    return { rolled, equipped: false };
   }
 
   /** Cheapest slot still worth upgrading, used by the automatic forge. */
@@ -924,6 +1012,11 @@ export class GameState {
       return { amount, ok: paid && amount > 0, why: amount > 0 ? '' : 'earn' };
     }
     if (id === 'skip') return { amount: SKIP_SECONDS, ok: paid, why: '' };
+    // The idol is the one ware you can only buy once, because it never runs
+    // out: after it, the night pays what the day does.
+    if (id === 'idol') {
+      return { amount: 1, ok: paid && !this.idolOwned, why: this.idolOwned ? 'owned' : '' };
+    }
     // The chest aims at the weakest slot, and there is nothing to aim at
     // before the forge exists or once the whole board is already Epic.
     const slot = this.weakestSlot();
@@ -961,12 +1054,18 @@ export class GameState {
       return { id, gold };
     }
     if (id === 'skip') return { id, seconds: SKIP_SECONDS };
+    if (id === 'idol') {
+      this.idolOwned = true;
+      this.save();
+      return { id };
+    }
 
     const slotId = this.weakestSlot();
     // Guaranteed, not rolled. The player saw "Mythic" on the button and that
     // is what the button has to hand over, every time.
     const rolled = Math.min(CHEST_FLOOR, RARITIES.length - 1);
     this.gear[slotId] = rolled;
+    this.gearMods[slotId] = rollEnchant();
     this.stats.forges += 1;
     // Legendary OR BETTER. Keyed on the id, not on the top of the ladder:
     // when Mythic was added, `=== RARITIES.length - 1` silently stopped
@@ -1106,6 +1205,7 @@ export class GameState {
 
   /** The wipe both reset layers share: the gold run itself. */
   resetRun() {
+    this.runClock = 0;   // the sprint clock starts with the run
     this.gold = 0;
     this.levels = emptyLevels();
     this.level = 1;
@@ -1162,6 +1262,21 @@ export class GameState {
     return soulsEarnedAt(this.cycleRelics);
   }
 
+  /** Whether the path picker is live: awakened, with a choice unspent. */
+  get canChoosePath() {
+    return this.awakens > 0 && this.pathFree;
+  }
+
+  /** Commits the one free choice this awakening granted. */
+  choosePath(id) {
+    if (!this.canChoosePath || !PATH_BY_ID[id] || id === this.path) return false;
+    this.path = id;
+    this.pathFree = false;
+    this.invalidateBonus();
+    this.save();
+    return true;
+  }
+
   /** Awaken. Returns the souls gained (0 when it did not fire). */
   awaken() {
     const gain = this.pendingSouls;
@@ -1169,6 +1284,8 @@ export class GameState {
 
     this.souls += gain;
     this.awakens += 1;
+    // The choice comes back with every awakening; the path itself stays.
+    this.pathFree = true;
 
     // The relic layer goes with the run: that is the whole point of the
     // deeper reset. Wiped before resetRun so startStage (Heirloom) and
@@ -1180,6 +1297,7 @@ export class GameState {
     this.prestiges = 0;
     this.dust = 0;
     this.gear = {};
+    this.gearMods = {};
 
     this.resetRun();
     this.save();
@@ -1252,22 +1370,22 @@ export class GameState {
     const {
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges,
-      souls, awakens, extraRelics, soulTalents,
-      dust, gear, autoCraftOn,
+      souls, awakens, extraRelics, soulTalents, path, pathFree,
+      dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      quests, gems, bestGps, redeemed,
+      quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
       version: SAVE_VERSION,
       gold, stage, maxStage, bestStage, kills, levels, level, xp, talents,
       relics, relicsEarned, relicTalents, prestiges,
-      souls, awakens, extraRelics, soulTalents,
-      dust, gear, autoCraftOn,
+      souls, awakens, extraRelics, soulTalents, path, pathFree,
+      dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      quests, gems, bestGps, redeemed,
+      quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }
@@ -1324,7 +1442,9 @@ export class GameState {
     if (!this.goldPerSec) return null;
     const seconds = Math.min(rawSeconds, OFFLINE.maxHours * 3600);
     if (seconds < 60) return null;
-    const gold = this.goldPerSec * seconds * OFFLINE.rate;
+    // The Gilded Idol lifts the offline discount for good.
+    const rate = this.idolOwned ? 1 : OFFLINE.rate;
+    const gold = this.goldPerSec * seconds * rate;
     this.gold += gold;
     return { seconds, gold };
   }

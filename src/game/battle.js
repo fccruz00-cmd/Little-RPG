@@ -8,6 +8,7 @@ import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
+import { RARITIES } from '../data/gear.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
@@ -30,6 +31,12 @@ const NODE_REACH = 5;      // world px either side of a node the hero can work
 // button. Retrying is free (the hero heals to full either way), so the only
 // thing the timer costs an idle run is the retry cadence.
 const BOSS_RETRY = 60;
+
+// The sprint window: the first 30 minutes of game time after any reset.
+const SPRINT_WINDOW = 1800;
+
+// Freed caravan: how many kills pay double gold and double XP.
+const RUSH_KILLS = 5;
 
 let nextId = 1;
 
@@ -91,6 +98,7 @@ export class Battle {
     this.burnTimer = 0;   // Scorch: seconds of regen still snuffed out
     this.retryTimer = 0;  // seconds a held boss has been waiting
     this.overflow = 0;    // Overkill: excess damage owed to the next enemy
+    this.rush = 0;        // freed-caravan kills still paying double
 
     // Gathering nodes live on the same line as everything else. `nextNodeX`
     // walks forward with the hero so a node is placed once and never twice.
@@ -199,10 +207,15 @@ export class Battle {
     // a reload must not re-roll the dice: that is a slot machine with F5.
     if (!keepKills && !this.run) {
       const roll = Math.random();
+      const at = this.hero.x + 60 + Math.random() * 140;
       if (roll < 0.12) {
-        this.props.push({ kind: 'chest', x: this.hero.x + 60 + Math.random() * 140 });
+        this.props.push({ kind: 'chest', x: at });
       } else if (roll < 0.20) {
-        this.props.push({ kind: 'shrine', x: this.hero.x + 60 + Math.random() * 140 });
+        this.props.push({ kind: 'shrine', x: at });
+      } else if (roll < 0.25) {
+        this.props.push({ kind: 'merchant', x: at });
+      } else if (roll < 0.30) {
+        this.props.push({ kind: 'caravan', x: at });
       }
     }
     this.emit('stage', this.state.stage);
@@ -217,6 +230,12 @@ export class Battle {
     const next = this.state.stage + 1;
     this.state.maxStage = Math.max(this.state.maxStage, next);
     this.state.bestStage = Math.max(this.state.bestStage, next);
+    // The sprint: deepest stage inside the first half hour of a run. A
+    // record with no server behind it, kept because "how fast does my build
+    // open" is the one question each rebirth actually answers.
+    if (this.state.runClock <= SPRINT_WINDOW && next > this.state.sprintBest) {
+      this.state.sprintBest = next;
+    }
     this.enterStage(next);
   }
 
@@ -237,6 +256,35 @@ export class Battle {
           this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, dust, 'dust');
           this.emit('dust', dust);
         }
+        this.emit('chest', prop);
+      } else if (prop.kind === 'merchant') {
+        // A wanderer with a hand cart. After the forge exists he reforges
+        // your weakest slot on the house -- same rules as the forge, so a
+        // bad roll pays a pinch of dust instead of a downgrade. Before the
+        // forge, he pays gold: a merchant with nothing to fit you still buys.
+        const slotId = state.weakestSlot();
+        if (slotId) {
+          const out = state.freeForge(slotId);
+          if (out.equipped) {
+            this.emit('toast', { text: `MERCHANT: ${RARITIES[out.rolled].name.toUpperCase()} ${slotId.toUpperCase()}` });
+          } else {
+            const dust = Math.max(3, Math.round(6 * state.bonus.dustMul));
+            state.dust += dust;
+            this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, dust, 'dust');
+            this.emit('toast', { text: `MERCHANT: +${dust} DUST` });
+            this.emit('dust', dust);
+          }
+        } else {
+          const gold = state.earn(enemyGold(this.level, 1) * 5);
+          this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, gold, 'gold');
+          this.emit('toast', { text: 'MERCHANT: A FAIR PRICE' });
+        }
+        this.emit('chest', prop);   // same jingle: something good on the road
+      } else if (prop.kind === 'caravan') {
+        // An ambushed caravan, freed in passing: the grateful next few
+        // fights pay double gold and double experience.
+        this.rush = RUSH_KILLS;
+        this.emit('toast', { text: `CARAVAN FREED: ${RUSH_KILLS} KILLS PAY DOUBLE` });
         this.emit('chest', prop);
       } else {
         // A shrine pours a free minute and a half of one of the cauldron's
@@ -660,6 +708,7 @@ export class Battle {
   update(dt) {
     const { state, hero } = this;
 
+    state.runClock += dt;   // the sprint clock counts game time, like clock
     hero.maxHp = state.maxHp;
     hero.hp = Math.min(hero.hp, hero.maxHp);
     if (hero.flash > 0) hero.flash -= dt;
@@ -855,7 +904,10 @@ export class Battle {
     // War Chest tops up the two encounter kinds that pay flat multiples, so
     // it scales the stage's PUNCTUATION rather than the whole income line.
     const spoils = target.isBoss || target.isElite ? 1 + state.warChest : 1;
-    const gold = state.earn(target.gold * (lucky ? 2 : 1) * spoils);
+    // The freed caravan's thanks: a burst, not a buff, so it cannot stack.
+    const rush = this.rush > 0 ? 2 : 1;
+    if (this.rush > 0) this.rush -= 1;
+    const gold = state.earn(target.gold * (lucky ? 2 : 1) * spoils * rush);
     this.pushFloater(target, gold, 'gold');
 
     let dust = state.rollDust(target.kind);
@@ -871,7 +923,7 @@ export class Battle {
     const xpMul = target.isBoss ? LEVELS.bossXp
       : target.isElite ? LEVELS.eliteXp
       : (target.champion?.xp ?? 1);
-    const levelsUp = state.gainXp(killXp(this.level, xpMul));
+    const levelsUp = state.gainXp(killXp(this.level, xpMul) * rush);
     if (levelsUp) this.emit('toast', { text: `LEVEL ${state.level}!` });
     this.emit('kill', { target, gold, levelsUp });
 

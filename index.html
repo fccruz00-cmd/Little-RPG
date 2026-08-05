@@ -220,6 +220,12 @@
         you wear and it swaps itself in, worse and it turns back into dust.
       </p>
       <div class="forge" id="forge-list"></div>
+      <!-- Rare-or-better pieces carry an affix; dust rerolls it. Hidden
+           until the first enchanted item exists to argue about. -->
+      <div class="quests" id="ench-wrap" hidden>
+        <h3 class="sect"><i class="ico ico--sm ico--dust"></i> <span id="ench-title">Enchants</span></h3>
+        <div class="keys" id="ench-list"></div>
+      </div>
       <dl class="odds" id="odds"></dl>
       <p class="foot-note">Odds move with <b>Smithing</b>, on the Skills tab.
         Dungeon <b>keys</b> are forged there too.<br>
@@ -269,6 +275,9 @@
           <div><dt>Rebirths</dt><dd id="pres-count">0</dd></div>
           <div><dt>Deepest stage</dt><dd id="pres-best">1</dd></div>
           <div><dt>Next relic</dt><dd id="pres-next">stage 25</dd></div>
+          <!-- the sprint: deepest stage inside a run's first 30 minutes -->
+          <div><dt>Best sprint</dt><dd id="pres-sprint">n/a</dd></div>
+          <div><dt>This run</dt><dd id="pres-clock">0m</dd></div>
         </dl>
 
         <p class="prestige__note">
@@ -313,6 +322,14 @@
           <div><dt>Souls spent</dt><dd id="awk-spent">0</dd></div>
           <div><dt>Next soul</dt><dd id="awk-next">50 relics</dd></div>
         </dl>
+
+        <!-- The path: one free choice per awakening. Hidden until the
+             first awakening puts a choice on the table. -->
+        <section class="quests" id="paths" hidden>
+          <h3 class="sect"><i class="ico ico--sm ico--orb"></i> <span id="paths-title">Path</span></h3>
+          <div class="keys" id="path-list"></div>
+          <p class="pane__detail" id="path-note"></p>
+        </section>
 
         <p class="prestige__note">
           Awakening wipes everything Rebirth wipes <b>plus relics, the relic
