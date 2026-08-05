@@ -1896,13 +1896,40 @@ body { display: flex; justify-content: center; }
     flex-direction: column;
     flex: none;
     border-right: 0;
+    /* What the band shows BESIDE the window: the same wood as the HUD, so
+       the arena reads as a thing set into the cabinet rather than a canvas
+       that failed to stretch. */
+    background-color: var(--wood-dkr);
+    /* Dark enough that the window is the lit thing on the band and the wood
+       is what it is set into. At the HUD's overlay the planks read as the
+       subject instead. */
+    background-image: linear-gradient(#000000ad, #000000ad), url(assets/ui/wood.png);
+    background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+    image-rendering: pixelated;
   }
+
+  /* THE RATIO IS THE HERO'S PLACE ON SCREEN, not a taste call.
+     `heroAnchor` is `1 - WALK_IN / worldWidth`; worldWidth is worldHeight
+     times the canvas ratio; and the zoom holds worldHeight at about 92. So
+     2.2 gives ~200 units of road and stands the hero at 0.55. Full width on
+     a 1920px screen gave 480 units and pinned him at 0.78 against the anchor
+     clamp, with a thousand pixels of ground nobody walks on behind him.
+
+     Narrowing the BOX and not the zoom is the whole point: the sprites stay
+     at the scale they always were, and the panel keeps every pixel of its
+     height, because neither of those is paying for the framing. */
   .arena {
     flex: none;
     height: clamp(240px, 38vh, 380px);
-    border-bottom: 2px solid #000;
+    aspect-ratio: 2.2 / 1;
+    width: auto;
+    max-width: 100%;
+    margin-inline: auto;
+    /* the seam under the band belongs to the band, not to the window */
+    border-bottom: 0;
+    box-shadow: 0 0 0 2px #000, 0 0 0 5px var(--wood-dk), 0 0 0 7px #000;
   }
-  /* Fills the band: no aspect clamp needed once the height is real. */
+  /* Fills the window: no aspect clamp needed once the height is real. */
   #stage {
     flex: 1 1 auto;
     width: 100%;
@@ -1910,7 +1937,7 @@ body { display: flex; justify-content: center; }
     aspect-ratio: auto;
     max-height: none;
   }
-  .statbar { border-right: 0; border-bottom: 2px solid #000; }
+  .statbar { border-right: 0; border-top: 2px solid #000; border-bottom: 2px solid #000; }
   .panel { flex: 1 1 auto; min-height: 0; }
 }
 

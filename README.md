@@ -681,35 +681,39 @@ A wide view now shows more of the road *behind* you — corpses, the pets, the
 scenery you came through — rather than more empty ground to cross. Measured
 after: 36-40 kills at every viewport.
 
-**A wide screen is a trade with no free side, and it was tried.** The zoom
-comes from canvas *height*, so a 1920px band shows **480 units of road** —
-four times a phone's — and since `heroAnchor` is `1 - WALK_IN / viewWidth`,
-91 units of 480 puts the hero at 0.81, clamped to 0.78: near the right edge
-with a lot of empty ground behind.
+**A wide band needed a window, not a wider camera.** The zoom comes from
+canvas *height*, so a band stretched edge to edge on a 1920px screen showed
+**480 units of road** — four times a phone's — and since `heroAnchor` is
+`1 - WALK_IN / worldWidth`, 91 units of 480 put the hero at 0.81, clamped to
+0.78: near the right edge with a thousand pixels of ground nobody walks on
+behind him.
 
-Zooming in fixes the framing and costs the other two things on the screen.
-Band height is what buys the zoom (the world keeps the canvas's aspect ratio
-at every scale, so 192 units across 1920px needs 10x, and 10x needs
-`10 x 64 = 640px` of band), so a centred hero meant **doubled sprites and a
-panel squeezed to a strip**. It was built, measured and reverted. The camera
-that ships is the one the game was balanced on.
+Zooming in fixes the framing and bills the other two things on the screen for
+it. Band height is what buys the zoom — the world keeps the canvas's aspect
+ratio at every scale, so 192 units across 1920px needs 10x, and 10x needs
+`10 x 64 = 640px` of band — so a centred hero meant **doubled sprites and a
+panel squeezed to a strip**. It was built, measured and reverted.
 
-The three ways out, for whoever picks this up next:
+What works instead is narrowing the **box**: `.arena` is
+`aspect-ratio: 2.2 / 1`, centred, with the wood of the cabinet either side of
+it and a bevel around it. The ratio is not a taste call — worldWidth is
+worldHeight times the canvas ratio and the zoom holds worldHeight at about
+92, so 2.2 is ~200 units of road and stands the hero at 0.55. The zoom is
+untouched and the panel keeps every pixel, because neither of them was paying
+for the framing.
 
-| | hero | sprites | panel | arena |
+| 1920x880 | hero | sprites | panel | arena |
 |---|---|---|---|---|
-| **band, as it ships** | 0.78 | 4x | full | full width |
-| zoom in | 0.53 | 10x | strip | full width |
-| narrow the canvas | 0.54 | 4x | full | 800 of 1920px, sides framed |
-| two columns on wide screens | 0.32 | 6x | full height, 1114px wide | 804x757 |
+| band edge to edge | 0.78 | 4x | 425px | 1920x334 |
+| zoomed in | 0.51 | 10x | strip | 1920x520 |
+| **window, as it ships** | **0.51** | **4x** | **423px** | **736x334** |
 
-**The anchor clamp is a tax on very wide screens**, and it is worth naming.
-At 0.78 the gap an enemy walks stops being `WALK_IN` and starts being
-`viewWidth x 0.22`: 106 units at 1920, 141 at 2560, against 91 everywhere the
-anchor is free. Measured over four simulated minutes, a 2560px screen earns
-**54 kills against a phone's 66**. It predates all of the above; the fix is
-to spawn at a pinned distance from the hero rather than off the right edge,
-which costs a visible spawn point.
+It also closed a leak nobody had noticed. The 0.78 clamp is what stopped the
+hero leaving the screen, and past ~420 units of road it quietly stopped the
+gap being `WALK_IN` too: 106 units at 1920 wide, **141 at 2560**, against 91
+everywhere the anchor is free. A 2560px screen was earning **54 kills in four
+simulated minutes against a phone's 66**. With the window the anchor is free
+on every band, the gap is 91 everywhere, and that screen earns 65.
 
 **The HUD grows, and that part stayed.** Every size in it was picked for a
 390px phone, where 48px of wood carrying two rows is a tenth of the screen;
