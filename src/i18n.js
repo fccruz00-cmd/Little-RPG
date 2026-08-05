@@ -36,6 +36,7 @@ const PT = {
   'Chopping': 'Lenhar',
   'Fishing': 'Pescar',
   'Smithing': 'Forjar',
+  'Alchemy': 'Alquimia',
   'Rebirth': 'Renascer',
   'Awaken': 'Despertar',
   'Feats': 'Feitos',
@@ -279,10 +280,19 @@ const PT = {
   'clear 10 dungeons': 'limpe 10 masmorras',
   'clear 5 Bloodmoons': 'limpe 5 Luas de Sangue',
 
-  // --- potions ---
+  // --- potions and alchemy ---
   '+20s on every boss timer while it lasts': '+20s em todo relógio de chefe enquanto durar',
   '+25% damage while it lasts': '+25% de dano enquanto durar',
   '+50% gold while it lasts': '+50% de ouro enquanto durar',
+  'potions {0} stronger': 'poções {0} mais fortes',
+  'brews last {0} longer': 'poções duram {0} mais',
+  'brews cost {0} less': 'poções custam {0} menos',
+  'bank +{0} bottle(s)': 'guarda +{0} garrafa(s)',
+  '+{0} chance a brew pours twice': '+{0} de chance da poção render em dobro',
+  'shrines pour {0} longer': 'santuários servem {0} mais',
+  'Game speed': 'Velocidade do jogo',
+  'x2 opens on your first rebirth': 'x2 abre no seu primeiro renascimento',
+  'x3 opens on your first awakening': 'x3 abre no seu primeiro despertar',
 
   // --- gear / rarities ---
   'Common': 'Comum',

@@ -6,7 +6,9 @@ import {
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
-import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
+import {
+  SKILLS, GATHER_IDS, GATHER, ALCH, rollResource, nodeYield, workTime,
+} from '../data/gathering.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { RARITIES } from '../data/gear.js';
 import { PETS } from '../data/pets.js';
@@ -289,9 +291,13 @@ export class Battle {
       } else {
         // A shrine pours a free minute and a half of one of the cauldron's
         // brews: a taste of the bench for whoever has not found it yet.
+        // Shrinewise stretches the pour, and every shrine teaches the
+        // cauldron a little -- the idle trickle a brew-only skill lacks.
         const potion = POTIONS[(Math.random() * POTIONS.length) | 0];
-        state.potions[potion.id] = Math.max(state.potions[potion.id] ?? 0, 90);
-        this.emit('toast', { text: `SHRINE: ${potion.name.toUpperCase()}, 90S` });
+        const pour = Math.round(90 * (1 + state.gatherBonus('alchemy').shrinePower));
+        state.potions[potion.id] = Math.max(state.potions[potion.id] ?? 0, pour);
+        state.gainGatherXp('alchemy', ALCH.shrineXp);
+        this.emit('toast', { text: `SHRINE: ${potion.name.toUpperCase()}, ${pour}S` });
         this.emit('shrine', prop);
       }
     }

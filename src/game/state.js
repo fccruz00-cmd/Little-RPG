@@ -17,7 +17,7 @@ import {
 } from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
-  MEAL, SMITH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
+  MEAL, SMITH, ALCH, TOOL_TIERS, ORES, LOGS, toolCost, gatherXpToNext, refineCost,
 } from '../data/gathering.js';
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
 import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
@@ -130,6 +130,10 @@ function defaults() {
     bestGps: 0,
     // Store purchase tokens already credited. See redeemPurchase().
     redeemed: [],
+
+    // Sim speed, 1..3. x2 opens with the first rebirth, x3 with the first
+    // awakening: the resets sell time, and this is time.
+    speed: 1,
 
     buyMax: false,
     muted: false,
@@ -260,6 +264,9 @@ export class GameState {
     this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
     this.quests = data.quests ?? null;
     this.rollQuests();
+    // A save cannot keep a speed its gates no longer justify (imports,
+    // hand-edited saves): clamp instead of trusting the field.
+    this.speed = Math.max(1, Math.min(Math.round(data.speed ?? 1), this.maxSpeed));
     // Unlocks read live state, so a save from before pets existed walks out
     // of load with everything it already earned, the slime included. Silent
     // on purpose: the battle announces tames that happen live, not backlog.
@@ -695,6 +702,11 @@ export class GameState {
   // Potion effects live on the timers, not in the cached bonus fold: the
   // clock moves every frame, and a cache you invalidate every frame is not
   // a cache. Two multiplications on hot getters is the cheaper trade.
+  //
+  // Alchemy's tree reaches every number here: strength through potionMul,
+  // duration through potionSpan, price through potionCost, the bank through
+  // brewCapped. The skill levels from brewing, so the bench pays for its
+  // own progression.
 
   /** Deepest material band the save has seen, 0..4. Brews price off it. */
   get brewBand() {
@@ -709,15 +721,22 @@ export class GameState {
   potionCost(id) {
     const potion = POTION_BY_ID[id];
     const band = this.brewBand;
-    const amount = POTION_COSTS[id][band];
+    const amount = Math.max(1, Math.round(
+      POTION_COSTS[id][band] * this.gatherBonus('alchemy').brewLess));
     if (potion.resource === 'dust') return { dust: true, amount };
     const res = (potion.line === 'mining' ? ORES : LOGS)[band];
     return { res, amount };
   }
 
-  /** Banked past two bottles: a third would be truncated by the cap. */
+  /** Seconds one bottle pours, Stillroom included. */
+  potionSpan(id) {
+    return POTION_BY_ID[id].duration * this.gatherBonus('alchemy').potionTime;
+  }
+
+  /** Banked past the cellar: one more bottle would be truncated by the cap. */
   brewCapped(id) {
-    return (this.potions[id] ?? 0) > POTION_BY_ID[id].duration * 2;
+    const cellar = 2 + this.gatherBonus('alchemy').brewCap;
+    return (this.potions[id] ?? 0) > this.potionSpan(id) * cellar;
   }
 
   canBrew(id) {
@@ -732,11 +751,16 @@ export class GameState {
     const cost = this.potionCost(id);
     if (cost.dust) this.dust -= cost.amount;
     else this.refined[cost.res.id] -= cost.amount;
-    // Brewing ahead banks up to three bottles' worth, no more: an effect
-    // you can stockpile for a week is a stat with extra steps.
-    const potion = POTION_BY_ID[id];
-    this.potions[id] = Math.min((this.potions[id] ?? 0) + potion.duration, potion.duration * 3);
+    // Brewing ahead banks a few bottles' worth, no more: an effect you can
+    // stockpile for a week is a stat with extra steps. Deep Cellar widens
+    // the bank; Second Pour sometimes fills two bottles for one bill.
+    const alch = this.gatherBonus('alchemy');
+    const span = this.potionSpan(id) * (Math.random() < alch.doubleBrew ? 2 : 1);
+    const cap = this.potionSpan(id) * (3 + alch.brewCap);
+    this.potions[id] = Math.min((this.potions[id] ?? 0) + span, cap);
     this.stats.brews += 1;
+    // The cauldron levels its own skill, priced off the band the brew cost.
+    this.gainGatherXp('alchemy', ALCH.brewXp[this.brewBand]);
     return true;
   }
 
@@ -745,12 +769,14 @@ export class GameState {
   }
 
   potionMul(id) {
-    return this.potionActive(id) ? 1 + POTION_BY_ID[id].amount : 1;
+    if (!this.potionActive(id)) return 1;
+    return 1 + POTION_BY_ID[id].amount * (1 + this.gatherBonus('alchemy').potionPower);
   }
 
   /** Seconds the Time Draught adds to a boss clock set right now. */
   get potionBossTime() {
-    return this.potionActive('time') ? POTION_BY_ID.time.amount : 0;
+    if (!this.potionActive('time')) return 0;
+    return POTION_BY_ID.time.amount * (1 + this.gatherBonus('alchemy').potionPower);
   }
 
   get activePotions() {
@@ -1141,6 +1167,22 @@ export class GameState {
     return this.grantGems(amount);
   }
 
+  // --- game speed -----------------------------------------------------
+  /** Fastest speed the save's gates allow. Same shape as the shop shelves:
+   *  the rebirth gate honours awakens, because awakening zeroes prestiges. */
+  get maxSpeed() {
+    if (this.awakens > 0) return 3;
+    if (this.prestiges > 0) return 2;
+    return 1;
+  }
+
+  /** Cycles x1 -> x2 -> x3 -> x1 through what is unlocked. */
+  cycleSpeed() {
+    this.speed = this.speed >= this.maxSpeed ? 1 : this.speed + 1;
+    this.save();
+    return this.speed;
+  }
+
   // --- contracts ------------------------------------------------------
   /**
    * Rolls the board over when the UTC day or week has moved on. Idempotent
@@ -1378,7 +1420,7 @@ export class GameState {
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned,
+      quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1389,7 +1431,7 @@ export class GameState {
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned,
+      quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

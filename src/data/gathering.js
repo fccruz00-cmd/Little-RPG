@@ -149,6 +149,16 @@ SKILLS.smithing = {
   id: 'smithing', name: 'Smithing', accent: '#e67146',
   gathers: false, toolIcon: 'bar',
 };
+
+// Alchemy is the other skill without a line, and the only one with its own
+// TAB: the cauldron moved out of Smithing's workshop the day it grew a tree.
+// It levels from brewing and from shrines on the road, and everything it
+// buys points at the potions -- strength, duration, price, the bank -- so
+// the bench that used to be three static rows finally progresses.
+SKILLS.alchemy = {
+  id: 'alchemy', name: 'Alchemy', accent: '#b072c9',
+  gathers: false, toolIcon: 'orb',
+};
 for (const id of ['mining', 'chopping', 'fishing']) SKILLS[id].gathers = true;
 
 /** Every skill, including the one that does not gather. */
@@ -161,6 +171,14 @@ export const GATHER_IDS = SKILL_IDS.filter((id) => SKILLS[id].gathers);
 export const SMITH = {
   refineXp: 0.4,   // times the resource's own XP, per unit refined
   forgeXp: 0.8,    // times the dust a forge cost
+};
+
+// XP Alchemy earns. Brews are occasional by design, so each one pays big
+// and scales with the material band it cost; shrines add the idle trickle,
+// because a skill you can only push by hand stalls the moment you look away.
+export const ALCH = {
+  brewXp: [10, 22, 48, 105, 230],  // per brew, by material band
+  shrineXp: 12,                    // per shrine walked over
 };
 
 /** XP needed to leave `level` of any gathering skill. */
@@ -294,18 +312,42 @@ SKILL_TREES.smithing = [
   ]),
 ];
 
+SKILL_TREES.alchemy = [
+  branch('potency', 'Potency', '#e67146', [
+    { id: 'strongStuff', name: 'Strong Stuff',       icon: 'damage', max: 10, key: 'potionPower', mode: 'add', per: 0.04 },
+    { id: 'concentrate', name: 'Concentrate',        icon: 'orb',    max: 8,  key: 'potionPower', mode: 'add', per: 0.05 },
+    { id: 'catalyst',    name: 'Catalyst',           icon: 'bolt',   max: 5,  key: 'doubleBrew',  mode: 'add', per: 0.05 },
+    { id: 'philosopher', name: "Philosopher's Drop", icon: 'crown',  max: 5,  key: 'potionPower', mode: 'add', per: 0.08 },
+  ]),
+  branch('stillroom', 'Stillroom', '#5aa9c9', [
+    { id: 'slowSimmer',   name: 'Slow Simmer',  icon: 'boss',   max: 10, key: 'potionTime',  mode: 'mul', per: 0.06 },
+    { id: 'preservative', name: 'Preservative', icon: 'shield', max: 8,  key: 'potionTime',  mode: 'mul', per: 0.08 },
+    { id: 'deepCellar',   name: 'Deep Cellar',  icon: 'bag',    max: 2,  key: 'brewCap',     mode: 'add', per: 1 },
+    { id: 'shrinewise',   name: 'Shrinewise',   icon: 'torch',  max: 5,  key: 'shrinePower', mode: 'add', per: 0.30 },
+  ]),
+  branch('reagents', 'Reagents', '#6dba79', [
+    { id: 'frugal',     name: 'Frugal Measures', icon: 'bar',   max: 10, key: 'brewLess',    mode: 'less', per: 0.03 },
+    { id: 'studious',   name: 'Studious',        icon: 'book',  max: 8,  key: 'gatherXpMul', mode: 'mul',  per: 0.08 },
+    { id: 'secondPour', name: 'Second Pour',     icon: 'regen', max: 5,  key: 'doubleBrew',  mode: 'add',  per: 0.04 },
+    { id: 'cleanGlass', name: 'Clean Glass',     icon: 'gold',  max: 5,  key: 'brewLess',    mode: 'less', per: 0.04 },
+  ]),
+];
+
 /** Keys a per-skill bonus object carries. Shared names, separate namespaces. */
 export const GATHER_KEYS = [
   'yieldMul', 'yieldDouble', 'nodeMul', 'gatherSpeed', 'gatherXpMul',
   'refineLess', 'nodeGold', 'nodeDust', 'fedRegen', 'mealTime', 'fedArmor',
   // smithing
   'forgeLuck', 'forgeFloor', 'forgeCostLess', 'refineAll', 'scrapBack',
+  // alchemy
+  'potionPower', 'potionTime', 'brewLess', 'brewCap', 'doubleBrew', 'shrinePower',
 ];
 
 /** Of those, the ones that multiply rather than add. */
 export const GATHER_MULS = [
   'yieldMul', 'nodeMul', 'gatherSpeed', 'gatherXpMul', 'refineLess',
   'fedRegen', 'mealTime', 'forgeCostLess', 'refineAll',
+  'potionTime', 'brewLess',
 ];
 
 /** What a gathering node does at a given number of points. */
@@ -330,6 +372,12 @@ export function describeGatherNode(node, ranks) {
     case 'forgeCostLess': return `${pct(total)} cheaper to forge`;
     case 'refineAll':   return `${pct(total)} less raw per unit, in EVERY skill`;
     case 'scrapBack':   return `+${pct(total)} dust back on a worse roll`;
+    case 'potionPower': return t('potions {0} stronger', pct(total));
+    case 'potionTime':  return t('brews last {0} longer', pct(total));
+    case 'brewLess':    return t('brews cost {0} less', pct(total));
+    case 'brewCap':     return t('bank +{0} bottle(s)', total);
+    case 'doubleBrew':  return t('+{0} chance a brew pours twice', pct(total));
+    case 'shrinePower': return t('shrines pour {0} longer', pct(total));
     default:            return `x${(1 + total).toFixed(2)}`;
   }
 }

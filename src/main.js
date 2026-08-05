@@ -140,16 +140,21 @@ async function boot() {
     const raw = Math.max(0, (now - last) / 1000);
     last = now;
 
-    if (raw > MAX_CATCHUP) {
+    // The speed toggle: a real wall-clock second simulates `speed` game
+    // seconds. It multiplies TIME, not rates, so every curve keeps its
+    // shape -- boss clocks, spawn gaps and gold windows all just play out
+    // faster, and everything measured per game second stays true.
+    const sim = raw * state.speed;
+    if (sim > MAX_CATCHUP) {
       // A visible tab can still be starved: a window sitting behind another,
       // or one the compositor thinks is occluded, gets its frames throttled
       // without ever firing visibilitychange. Nothing else would notice, so
       // catch the whole gap up here instead of clamping it away.
       accumulator = 0;
-      skipped += raw - advance(raw, BG_BUDGET_MS);
+      skipped += sim - advance(sim, BG_BUDGET_MS);
       flushSkipped();
     } else {
-      accumulator += raw;
+      accumulator += sim;
       while (accumulator >= STEP) {
         battle.update(STEP);
         state.clock += STEP;
@@ -180,8 +185,10 @@ async function boot() {
     bgLast = now;
     if (elapsed <= 0) return;
 
-    const wanted = Math.min(elapsed, BG_MAX_CATCHUP);
-    skipped += elapsed - wanted;
+    // The hidden tab runs at the same chosen speed as the visible one:
+    // looking away must never be slower than watching.
+    const wanted = Math.min(elapsed * state.speed, BG_MAX_CATCHUP);
+    skipped += elapsed * state.speed - wanted;
     const done = advance(wanted, BG_BUDGET_MS);
     skipped += wanted - done;
 

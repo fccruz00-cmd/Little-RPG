@@ -184,7 +184,7 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The six tabs
+### The seven tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three webs behind one switch at the top. All three are the
@@ -198,8 +198,10 @@ it.
      The switch only appears once an awakening has paid for it.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
-5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
-6. **Ascend**: the two reset layers behind one switch.
+5. **Cauldron**: the brew bench and the Alchemy skill that grew out of it.
+   See *The cauldron, feats and Bloodmoons*.
+6. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
+7. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
@@ -268,8 +270,8 @@ hit hardest, which is backwards.
 
 ### Every tree is a web
 
-The same silhouette runs through all seven trees in the game — talents,
-relics, souls, and one for each gathering skill. `web.js` holds the machinery
+The same silhouette runs through all eight trees in the game — talents,
+relics, souls, and one per skill, Alchemy's included. `web.js` holds the machinery
 and `skilltree.js` holds nothing but topology; a node's data (`max`, `cost`,
 `key`, `mode`, `per`) stays in the file that owns its tree, so there is one
 place to change what a node *does*.
@@ -451,13 +453,28 @@ live DOM.
 - **Export/Import save** (gear, top right): the whole save as one line of text,
   for backups and moving between browsers. Garbage and future versions are
   rejected on import.
+- **Game speed** (the x1 button, top right): x2 opens with the first
+  rebirth, x3 with the first awakening — the resets sell time, and this is
+  time. It multiplies the *clock*, not any rate: a wall second simulates 2
+  or 3 game seconds in the foreground and in hidden tabs alike, so every
+  curve keeps its shape and nothing measured per game second changes. The
+  offline payout stays real-time — the toggle speeds up playing, not being
+  gone.
 
 ### The cauldron, feats and Bloodmoons
 
-- **Cauldron** (Smithing workshop): three potions, each drinking one line's
+- **Cauldron** (its own tab): three potions, each drinking one line's
   surplus. Time Draught (planks, +20s on every boss clock), Fury Tonic
   (bars, +25% damage), Lucky Brew (dust, +50% gold). Ten minutes each,
   bankable to thirty; prices scale with the deepest material band seen.
+  The bench levels **Alchemy**, the fifth skill: every brew pays XP scaled
+  to the band it cost, shrines on the road teach a little (the idle trickle
+  a brew-only skill would otherwise lack), and its 12-node web reshapes
+  every number on this list — potion strength (Potency, up to +120% on the
+  effect), duration (Stillroom, up to ~2.6x), price (Reagents, ~45% off),
+  the bottle bank (Deep Cellar), a double-pour chance, and longer shrine
+  pours (Shrinewise). Same rails as every other skill: level, points, web,
+  respec.
 - **Feats** (Ascend tab): fourteen lifetime marks, each paying a small
   permanent bonus. The counters never reset, not even on an awakening.
 - **Bloodmoon runs**: a dungeon tier you have already cleared can be

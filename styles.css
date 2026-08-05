@@ -728,6 +728,18 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
+/* The speed toggle wears its state as its label: x1 quiet, x2/x3 gold. */
+.hud__btn--speed {
+  width: auto;
+  min-width: 26px;
+  padding-inline: 4px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cream);
+}
+.hud__btn--speed.is-on { color: var(--gold); }
+
 /* The contract board rides at the top of the shop list and scrolls with it.
    The shop turns multi-column on wide panels, so anything that is not an
    upgrade row must span the whole track list -- as a plain cell it becomes
