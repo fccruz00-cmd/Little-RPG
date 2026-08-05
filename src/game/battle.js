@@ -737,7 +737,7 @@ export class Battle {
     const { state, hero } = this;
     // Double Strike turns one swing into two; both go through the same
     // rules, so crit, ambush and execute apply to each.
-    const swings = 1 + (Math.random() < state.bonus.doubleHit ? 1 : 0);
+    const swings = 1 + (Math.random() < state.doubleHit ? 1 : 0);
 
     for (let i = 0; i < swings; i++) {
       if (target.dead) return;
@@ -761,8 +761,8 @@ export class Battle {
       const killed = target.hurt(dealt);
       this.pushFloater(target, dealt, crit ? 'crit' : 'hit');
 
-      if (state.bonus.lifesteal > 0 && !hero.dead && hero.hp < hero.maxHp) {
-        hero.hp = Math.min(hero.maxHp, hero.hp + dealt * state.bonus.lifesteal);
+      if (state.lifesteal > 0 && !hero.dead && hero.hp < hero.maxHp) {
+        hero.hp = Math.min(hero.maxHp, hero.hp + dealt * state.lifesteal);
       }
 
       this.emit('hit', { target, damage: dealt, crit });

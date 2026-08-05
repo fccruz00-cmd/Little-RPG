@@ -359,8 +359,17 @@ export class GameState {
   get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul * this.fedRegenMul; }
   get goldGain()   { return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul * this.potionMul('lucky'); }
   get moveSpeed()  { return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul; }
-  get xpGain()     { return this.bonus.xpMul; }
-  get damageTaken(){ return this.bonus.damageTaken * this.fedArmor; }
+  get xpGain()     { return this.bonus.xpMul * statValue('insight', this.levels.insight); }
+  get damageTaken(){
+    return this.bonus.damageTaken * this.fedArmor * (1 - statValue('armor', this.levels.armor));
+  }
+
+  // Two of the second shelf share a key with a talent node, so they are
+  // summed HERE rather than in either place alone -- battle.js reads these,
+  // not `bonus.x`, or a shop level would be quietly ignored the moment the
+  // tree granted the same thing.
+  get lifesteal()  { return this.bonus.lifesteal + statValue('lifesteal', this.levels.lifesteal); }
+  get doubleHit()  { return this.bonus.doubleHit + statValue('ferocity', this.levels.ferocity); }
   get respawnMul() { return this.bonus.respawnMul; }
 
   /** Regular mobs before the final encounter, Scout included. */

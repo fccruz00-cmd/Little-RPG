@@ -81,6 +81,33 @@ count the same growth twice and dump the second count straight onto the
 timer. The hell bosses ramp `dmg` instead, which is threat the player can
 answer with health and regen.
 
+### The shop: twelve upgrades, not eight
+
+Eight was what fitted a phone column. A landscape panel shows twelve without
+scrolling, and the early game — the part you sit and watch — had nothing left
+to spend on after the first hour. Four more, all bought with **gold** and all
+wiped on rebirth like the rest:
+
+| upgrade | what it does | cap |
+|---|---|---|
+| **Armor** | less damage taken | 35% |
+| **Lifesteal** | heals a share of damage dealt | 10% |
+| **Ferocity** | chance to strike twice | 20% |
+| **Insight** | XP multiplier — levels faster, so the talent tree fills faster | x3 |
+
+**Every one of them is capped, and that is load-bearing.** Only `damage`,
+`maxHp` and `regen` are allowed to run without a ceiling, because they are
+the rails that track the stage curve; anything else uncapped compounds
+against them and the hero one-shots the world around stage 25. These four sit
+low and finish early on purpose, which is what makes them answers to the
+early game rather than four more late-game rails.
+
+Two of them share a bonus key with a talent node, so `GameState` sums the
+shop level and the tree bonus in one getter (`state.lifesteal`,
+`state.doubleHit`) and `battle.js` reads *those*. Reading `bonus.x` directly
+would have silently ignored the shop level the moment the tree granted the
+same thing.
+
 ### Reading the screen
 
 - **Gold** is the big number up top, with gold per second under it.

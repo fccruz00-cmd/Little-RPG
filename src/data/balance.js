@@ -47,6 +47,22 @@ export const STATS = {
   regen:     { base: 1.5,  growth: 1.140, cost: 55,  costGrowth: 1.170 },
   goldGain:  { base: 1,    step: 0.05,    cost: 200, costGrowth: 1.320, cap: 3 },
   moveSpeed: { base: 34,   step: 3.2,     cost: 70,  costGrowth: 1.280, cap: 110 },
+
+  // The second shelf. Eight upgrades was what fitted a phone column; a
+  // landscape panel shows twelve without scrolling, and the early game --
+  // the part you actually sit and watch -- had nothing left to spend on
+  // after the first hour.
+  //
+  // All four are CAPPED, and that is not decoration. Only damage, maxHp and
+  // regen are allowed to run without a ceiling, because they are the rails
+  // that track the stage curve; anything else uncapped compounds against
+  // them and the hero one-shots the world around stage 25. These sit low on
+  // purpose and finish early, which is what makes them EARLY-game answers
+  // rather than another late-game rail.
+  armor:     { base: 0,    step: 0.010,   cost: 120, costGrowth: 1.240, cap: 0.35 },
+  lifesteal: { base: 0,    step: 0.004,   cost: 260, costGrowth: 1.300, cap: 0.10 },
+  ferocity:  { base: 0,    step: 0.008,   cost: 320, costGrowth: 1.310, cap: 0.20 },
+  insight:   { base: 1,    step: 0.06,    cost: 150, costGrowth: 1.290, cap: 3 },
 };
 
 /** Value of a stat at a given level. */

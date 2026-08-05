@@ -41,6 +41,11 @@ const SCORE = {
   regen:      [(s) => s.maxHp * (1 + s.regen / 8), 0.45],
   goldGain:   [(s) => s.goldGain, 1],
   moveSpeed:  [(s) => s.moveSpeed, 0.35],
+  // Effective health: armour is worth exactly what it saves you.
+  armor:      [(s) => s.maxHp / s.damageTaken, 0.45],
+  lifesteal:  [(s) => s.dps * (1 + s.lifesteal * 4), 0.5],
+  ferocity:   [(s) => s.dps * (1 + s.doubleHit), 1],
+  insight:    [(s) => s.xpGain, 0.4],
 };
 
 const $ = (id) => document.getElementById(id);

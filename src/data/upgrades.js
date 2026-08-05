@@ -39,4 +39,21 @@ export const UPGRADES = [
     key: 'goldGain', icon: 'gold', name: 'Gold Gain',
     describe: (lvl) => t('{0} gold', mult(statValue('goldGain', lvl))),
   },
+  // --- the second shelf: things that change the fight, not its size ---
+  {
+    key: 'armor', icon: 'shield', name: 'Armor',
+    describe: (lvl) => t('{0} less damage taken', pct(statValue('armor', lvl))),
+  },
+  {
+    key: 'lifesteal', icon: 'regen', name: 'Lifesteal',
+    describe: (lvl) => t('heals {0} of damage dealt', pct(statValue('lifesteal', lvl))),
+  },
+  {
+    key: 'ferocity', icon: 'bolt', name: 'Ferocity',
+    describe: (lvl) => t('+{0} chance to strike twice', pct(statValue('ferocity', lvl))),
+  },
+  {
+    key: 'insight', icon: 'book', name: 'Insight',
+    describe: (lvl) => t('{0} XP', mult(statValue('insight', lvl))),
+  },
 ];
