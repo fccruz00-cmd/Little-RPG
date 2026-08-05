@@ -11,6 +11,18 @@ const TARGET_WORLD_H = 92;
 // The CSS pins the canvas to a wide box so this rarely binds; it is here so a
 // future layout change cannot starve the camera without anyone noticing.
 const MIN_WORLD_W = 100;
+// And the CEILING, which is the one that bites on a desktop. Zoom is derived
+// from canvas HEIGHT, so a 1920px band at a height-derived zoom of 4 shows
+// 480 units of road -- four times a phone's. Nothing is wrong with the fight,
+// but the hero is a stamp pinned to the right edge by the anchor clamp (the
+// walk-in is 91 units, and 91 of 480 is a fifth of the screen) with a
+// thousand pixels of empty ground behind. Past this the canvas zooms IN
+// rather than showing more ground nobody walks on.
+const MAX_WORLD_W = 240;
+// The floor the zoom-in may not cross. The ground takes 16 and the far hills
+// stand up to 46 above it, so under this the parallax closes over the sky and
+// the blood moon has nowhere to hang.
+const MIN_WORLD_H = 64;
 const GROUND_FROM_BOTTOM = 16;
 
 /** Deterministic noise: same input, same scenery, no popping. */
@@ -105,7 +117,16 @@ export class Renderer {
     // MIN_WORLD_W, which is the number the term exists to protect.
     const byHeight = Math.round(cssH / TARGET_WORLD_H);
     const byWidth = Math.floor(cssW / MIN_WORLD_W);
-    this.scale = Math.min(6, Math.max(2, Math.min(byHeight, byWidth)));
+    const base = Math.min(byHeight, byWidth);
+    // The zoom-in only ever raises the scale, and only when the canvas is
+    // both wide enough to be showing waste and tall enough to afford the
+    // crop. Written as a MAX over the base so no screen can come out of here
+    // more zoomed out than it was.
+    const zoomIn = Math.min(
+      Math.ceil(cssW / MAX_WORLD_W),
+      Math.floor(cssH / MIN_WORLD_H),
+    );
+    this.scale = Math.min(10, Math.max(2, base, zoomIn));
 
     this.canvas.width = Math.round(cssW * this.dpr);
     this.canvas.height = Math.round(cssH * this.dpr);

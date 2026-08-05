@@ -1913,3 +1913,49 @@ body { display: flex; justify-content: center; }
   .statbar { border-right: 0; border-bottom: 2px solid #000; }
   .panel { flex: 1 1 auto; min-height: 0; }
 }
+
+/* A desktop is not a big tablet. The 380px cap on the band was sized for a
+   820px-tall screen, and on a 1080p monitor it left the panel with three
+   hundred pixels of dead wood under the shop while the arena stayed a strip.
+   Height here is what BUYS the zoom-in: the camera may only crop the sky
+   down to 72 units, so more band means a tighter shot and a hero that is not
+   glued to the right edge. */
+@media (min-width: 1200px) and (min-height: 800px) {
+  .arena { height: clamp(380px, 50vh, 760px); }
+}
+
+/* ============================================================
+   The HUD on a screen that has room
+
+   Every size in the HUD was picked for a 390px-wide phone, where 48px of
+   wood carrying two rows is already a tenth of the screen. On a 1080p
+   monitor those same 48px are a twentieth, and the row that runs the game --
+   the gold, the stage, the experience bar -- reads as a strip of trim rather
+   than the readout it is. So the type and the bar grow with the screen while
+   the wood, the frames and the pixel art stay exactly what they were.
+   ============================================================ */
+@media (min-width: 900px) and (min-height: 700px) {
+  .hud { padding: 6px 12px 7px; gap: 4px; }
+  .hud__row { gap: 12px; }
+  .hud__stage { gap: 5px; }
+  .hud__stage-name { font-size: 16px; }
+  .hud__stage-sub { font-size: 11px; }
+  .stepper { width: 30px; height: 24px; }
+  .purse__now { font-size: 20px; }
+  .purse__rate { font-size: 11px; }
+  /* 24 and not 20: the sheet is 16px a cell, and 1.5x is the step the rest of
+     the game already uses (.ico--lg). 1.25x would put half a source pixel in
+     every icon. */
+  .purse .ico, .hud__btn .ico {
+    width: 24px;
+    height: 24px;
+    background-size: calc(var(--n) * 24px) 24px;
+    background-position: calc(var(--i) * -24px) 0;
+  }
+  .hud__btn { width: 34px; height: 29px; }
+  .gems { font-size: 11px; padding: 2px 6px 3px; }
+  .hud__lvl { font-size: 11px; }
+  .hud__lvl b { font-size: 17px; }
+  .xpbar { height: 16px; }
+  .xpbar__text { font-size: 10px; }
+}

@@ -681,6 +681,46 @@ A wide view now shows more of the road *behind* you — corpses, the pets, the
 scenery you came through — rather than more empty ground to cross. Measured
 after: 36-40 kills at every viewport.
 
+**And then a desktop turned out not to be a big tablet.** The zoom comes from
+canvas *height*, so a 1920px band at a height-derived zoom of 4 showed **480
+units of road** — four times a phone's. Nothing was wrong with the fight; the
+problem was framing. `heroAnchor` is `1 - WALK_IN / viewWidth`, so 91 units
+of 480 put the hero at 0.81, clamped to 0.78: pinned to the right edge with a
+thousand pixels of dead ground behind him, every sprite the size of a stamp.
+
+So the renderer gained a ceiling to go with its floor. `MAX_WORLD_W = 240`
+makes a wide canvas zoom **in** rather than show more ground nobody walks on,
+capped by `MIN_WORLD_H = 64` so the crop never closes the parallax over the
+sky, and written as a `max` over the old term so no screen can come out more
+zoomed out than before. The band's height cap goes from 380px to `50vh` on a
+1200x800 screen or larger, because height is what *buys* the zoom-in.
+
+| screen | before | after |
+|---|---|---|
+| 844x390 phone | 117x88 @3, anchor 0.30 | unchanged |
+| 1180x820 tablet | 393x103 @3, anchor 0.77 | 295x77 @4, anchor 0.69 |
+| 1440x900 | 360x86 @4, anchor 0.75 | 240x75 @6, anchor 0.62 |
+| 1920x1080 | 480x95 @4, anchor 0.78 | 240x67 @8, anchor 0.62 |
+| 2560x1440 | 480x95 @6, anchor 0.78 | 256x72 @10, anchor 0.64 |
+
+Kills a minute did not move: 33-40 across all nine viewports, phone included.
+
+**A wide but SHORT window is the one case this cannot fix**, and it is worth
+saying why rather than leaving it looking like a bug. A canvas keeps its
+aspect ratio whatever the zoom, so a 1920x266 band is a 7:1 world at every
+scale: 240 units of width would mean 33 of height, which is less than the
+ground plus a character. Reaching 240 needs roughly 512px of band, and a
+700px-tall window cannot give that without starving the panel. Under
+`min-height: 800px` the band is left exactly as it was.
+
+**The HUD grows too.** Every size in it was picked for a 390px phone, where
+48px of wood carrying two rows is a tenth of the screen; on a 1080p monitor
+the same 48px are a twentieth and the row that runs the game reads as trim.
+From `900x700` up the type and the experience bar scale (68px of HUD, 20px
+gold) while the wood, the frames and the pixel art stay exactly what they
+were. Icons step 16 -> 24 and not 16 -> 20, because the sheet is 16px a cell
+and 1.5x is the step the rest of the game already uses.
+
 The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 `orientation: landscape`, which fires on a 600x500 desktop window that has no
 room for two columns. Pane internals switch on a **container query** against
