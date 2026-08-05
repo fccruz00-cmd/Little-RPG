@@ -322,6 +322,9 @@ const PT = {
   '+{0} chance a kill pays double gold': '+{0} de chance de um abate pagar ouro dobrado',
   '<b>{0}</b> is a keystone: fill <b>{1}</b> to {2}/{2} first.':
     '<b>{0}</b> é uma pedra-chave: encha <b>{1}</b> até {2}/{2} antes.',
+  // The web has no "previous node", so the locked line names every door in.
+  '<b>{0}</b> is locked: it opens next to <b>{1}</b>.':
+    '<b>{0}</b> está travado: ele abre ao lado de <b>{1}</b>.',
 
   // --- landscape ---
   'Turn your phone sideways': 'Vire o celular de lado',

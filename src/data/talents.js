@@ -2,11 +2,12 @@ import { pct, mult } from '../format.js';
 import { t } from '../i18n.js';
 
 /**
- * The two skill trees.
+ * The prestige trees, and the vocabulary every tree in the game speaks.
  *
  * Every node feeds a "bonus": a key the `GameState` multiplies or adds on top
- * of the stats bought with gold. A node only unlocks once the previous one in
- * the same branch has at least one point, which is what gives the tree shape.
+ * of the stats bought with gold. In these column trees a node unlocks once the
+ * previous one in the same branch has at least one point; the talent WEB in
+ * `skilltree.js` uses the same node shape with a graph rule instead.
  *
  * `mode` says how the bonus stacks:
  *   'mul'  -> multiplier, 1 + per * ranks   (damage, gold, health...)
@@ -41,56 +42,9 @@ export const AUTO_BUY_BASE = 6;
 /** Seconds between tool swaps once Forager is bought. Mirrors GATHER.switchEvery. */
 export const AUTO_SWITCH_EVERY = 60;
 
-// --- skill tree (level points) --------------------------------------
-//
-// THE PROBLEM THIS SHAPE SOLVES. The tree used to be twelve nodes holding
-// eighty points, so it filled at level 81 -- and a four-hour run reaches 92
-// before the relic tree's +18 free points are counted. Every level after
-// that paid nothing. The tree you touch most was the one that ran out.
-//
-// It now holds 176, which is a long climb rather than a wall, and the last
-// two nodes of every branch stop being percentages. A `needs: 'max'` node is
-// a KEYSTONE: it does not open until the node before it is FULL, so it costs
-// a commitment rather than a point, and what it buys changes how a fight
-// goes instead of how big a number is.
-export const TALENT_TREE = [
-  {
-    id: 'fury', name: 'Fury', accent: '#e67146',
-    nodes: [
-      { id: 'edge',      name: 'Keen Edge',  icon: 'damage',       max: 15, key: 'dmgMul',       mode: 'mul',  per: 0.06 },
-      { id: 'haste',     name: 'Haste',      icon: 'attack_speed', max: 10, key: 'atkSpeedMul',  mode: 'mul',  per: 0.04 },
-      { id: 'precision', name: 'Precision',  icon: 'crit',         max: 8,  key: 'critAdd',      mode: 'add',  per: 0.02 },
-      { id: 'carnage',   name: 'Carnage',    icon: 'crit_power',   max: 8,  key: 'critPowerAdd', mode: 'add',  per: 0.25 },
-      { id: 'rupture',   name: 'Rupture',    icon: 'dagger',       max: 6,  key: 'executeMul',   mode: 'add',  per: 0.10 },
-      { id: 'onslaught', name: 'Onslaught',  icon: 'bolt',         max: 6,  key: 'doubleHit',    mode: 'add',  per: 0.02 },
-      { id: 'frenzy',    name: 'Frenzy',     icon: 'torch',        max: 10, key: 'frenzy',       mode: 'add',  per: 0.003, needs: 'max' },
-    ],
-  },
-  {
-    id: 'guard', name: 'Guard', accent: '#5aa9c9',
-    nodes: [
-      { id: 'leather',   name: 'Tough Hide', icon: 'health', max: 15, key: 'hpMul',       mode: 'mul',  per: 0.08 },
-      { id: 'stamina',   name: 'Stamina',    icon: 'regen',  max: 12, key: 'regenMul',    mode: 'mul',  per: 0.12 },
-      { id: 'carapace',  name: 'Carapace',   icon: 'shield', max: 8,  key: 'damageTaken', mode: 'less', per: 0.03 },
-      { id: 'rally',     name: 'Rally',      icon: 'orb',    max: 5,  key: 'respawnMul',  mode: 'less', per: 0.12 },
-      { id: 'mending',   name: 'Mending',    icon: 'regen',  max: 6,  key: 'lifesteal',   mode: 'add',  per: 0.005 },
-      { id: 'bulwark',   name: 'Bulwark',    icon: 'boss',   max: 5,  key: 'bossTime',    mode: 'add',  per: 2 },
-      { id: 'thorns',    name: 'Thorns',     icon: 'shield', max: 6,  key: 'thorns',      mode: 'add',  per: 0.05, needs: 'max' },
-    ],
-  },
-  {
-    id: 'fortune', name: 'Fortune', accent: '#ebb85b',
-    nodes: [
-      { id: 'pockets',    name: 'Deep Pockets', icon: 'gold',   max: 15, key: 'goldMul',    mode: 'mul', per: 0.08 },
-      { id: 'lore',       name: 'Lore',         icon: 'book',   max: 12, key: 'xpMul',      mode: 'mul', per: 0.08 },
-      { id: 'stride',     name: 'Stride',       icon: 'stride', max: 8,  key: 'moveMul',    mode: 'mul', per: 0.06 },
-      { id: 'scout',      name: 'Scout',        icon: 'scout',  max: 3,  key: 'killsLess',  mode: 'add', per: 1 },
-      { id: 'prospector', name: 'Prospector',   icon: 'dust',   max: 6,  key: 'dustChance', mode: 'add', per: 0.02 },
-      { id: 'vigil',      name: 'Vigil',        icon: 'crit',   max: 6,  key: 'ambush',     mode: 'add', per: 0.08 },
-      { id: 'treasure',   name: 'Treasure',     icon: 'bag',    max: 6,  key: 'treasure',   mode: 'add', per: 0.03, needs: 'max' },
-    ],
-  },
-];
+// The tree bought with level points is no longer a column at all -- it is the
+// web in `skilltree.js`. What stayed here is everything the OTHER trees still
+// share with it: the bonus keys, the caps, and `describeNode`.
 
 // --- relic tree (prestige) ------------------------------------------
 // Survives rebirth. `cost` is the price of the first point; every point after

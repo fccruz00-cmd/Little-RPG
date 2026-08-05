@@ -152,14 +152,14 @@ it.
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three trees behind one switch at the top.
-   - *Talents*, paid with **level points** (one per level). Wiped on rebirth,
-     and you can respec at any time.
+   - *Talents*, paid with **level points** (one per level). A **web**, not a
+     column — see below. Wiped on rebirth, and you can respec at any time.
    - *Relics*, the prestige tree, paid with **relics**. Survives rebirth, and
      an awakening takes it.
    - *Souls*, the awakening tree, paid with **souls**. Survives everything.
      The switch only appears once an awakening has paid for it.
-   - In all three, a node only opens once the previous one in its branch has
-     a point.
+   - In the two prestige trees a node opens once the previous one in its
+     branch has a point.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
 5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
@@ -176,28 +176,58 @@ it.
      Souls and the soul tree survive every later awakening, as does the
      Skills tab.
 
-### The talent tree, and why it was rebuilt
+### The talent web
 
 It used to be twelve nodes holding **80 points**, so it filled at level 81 —
 and a four-hour run reaches level 92 before the relic tree's +18 free points
 are even counted. The tree you touch most, once per level, was the one that
 ran out. Every level after that paid nothing.
 
-It now holds **176 across 21 nodes**, three branches of seven. The first four
-of each branch are the old percentages; the next two are effects the relic
-tree used to hoard (Rupture, Onslaught, Mending, Bulwark, Prospector, Vigil);
-and the last is a **keystone**.
+Making it deeper fixed the ceiling but not the shape: three independent
+columns is a shopping list, and every point in it is obvious. It is now a
+**web** (`src/data/skilltree.js`) — the small version of what Path of Exile
+does, a graph you travel, where a node opens because something *touching* it
+is already yours.
 
-A keystone does not open until the node before it is **full**, not merely
-started — `needs: 'max'`. That is the whole point: it costs a committed
-branch rather than a spare point, and it buys something that changes how a
-fight goes instead of how big a number is.
+```
+FURY     ●──●──●──●──●──●──◆        ● node   ○ crossing   ◆ keystone
+            │        │
+            ○        ○              a crossing costs a point,
+            │        │              and carries a stat both lanes want
+GUARD    ●──●──●──●──●──●──◆
+            │        │
+            ○        ○
+            │        │
+FORTUNE  ●──●──●──●──●──●──◆
+```
 
-| branch | keystone | what it does |
+**25 nodes, 204 points.** Three things follow from the shape, and they are the
+whole design:
+
+1. **You pick a door.** All three lane heads are open from the first point, so
+   the first thing the game asks is what kind of hero this run is.
+2. **Crossing costs.** The link between lanes is a *node*, not a free edge, so
+   splitting your points is a real price rather than a shrug — and the four
+   crossings carry hybrid stats, so the price buys something.
+3. **The end of a lane is earned.** A **keystone** does not open until the node
+   before it is **full**, not merely started. It costs a committed lane rather
+   than a spare point, and it buys something that changes how a fight goes
+   instead of how big a number is.
+
+| lane | keystone | what it does |
 |---|---|---|
 | **Fury** | Frenzy | +attack speed per kill in a streak, up to 15 — and the streak dies with you |
 | **Guard** | Thorns | throws a share of the damage you take back at whatever hit you |
 | **Fortune** | Treasure | a chance for any kill to pay double gold |
+
+Node ids are save keys, and every id the old three-column tree used is still
+in the web, so a save from before it keeps every point it bought.
+
+The coordinates in `skilltree.js` are grid units, not pixels, and the track
+weights (`COL_W`, `ROW_H`) drive **both** the CSS grid and the SVG wire
+endpoints. That is the only reason a wire lands on a node centre from a 300px
+panel to a 620px one — put a track size in the stylesheet instead and the two
+halves drift apart.
 
 Frenzy is capped on purpose. An uncapped streak would hand you an unbounded
 multiplier for parking on a stage you had already outgrown, which is the
@@ -560,10 +590,11 @@ against wounded targets and a bonus on the first hit.
 ### Levels and experience
 
 Every kill grants XP (mini boss x5, boss x12) and every level grants one skill
-point. Levelling does not touch a stat on its own; the tree is where the power
-comes from, otherwise it would be one more hidden curve. The whole tree costs
-80 points and fills up around stage 120. *Veteran*, on the relic tree, adds
-extra points that survive rebirth.
+point. Levelling does not touch a stat on its own; the web is where the power
+comes from, otherwise it would be one more hidden curve. Filling the whole web
+costs 204 points, which a single run does not reach — you spend a run choosing
+a shape, not completing a checklist. *Veteran*, on the relic tree, adds extra
+points that survive rebirth.
 
 ## Layout
 

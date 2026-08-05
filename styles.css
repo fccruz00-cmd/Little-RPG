@@ -951,6 +951,109 @@ body { display: flex; justify-content: center; }
 }
 .node:disabled .node__cost { color: var(--ink-mute); }
 
+/* --- the talent web ---
+   A lattice, not a list. The nodes are a CSS grid and the wires are one SVG
+   stretched over the same box; the track sizes and the wire coordinates both
+   come from the weights in skilltree.js, which is the only reason a wire
+   lands on a node centre at every size. Do not size a track here. */
+.web {
+  position: relative;
+  display: grid;
+  /* grid-template-columns/rows are set from the data, in buildWeb() */
+  /* Width floor: a cell has to stay wider than the 24px icon plus its frame,
+     and under that the web scrolls sideways rather than shrinking into
+     confetti. Height is taken from the pane when the pane has it, and
+     scrolls when it does not. */
+  width: 100%;
+  min-width: 300px;
+  max-width: 560px;
+  height: 100%;
+  min-height: 208px;
+  max-height: 330px;
+  margin-inline: auto;
+}
+#tree-talents { overflow-x: auto; }
+
+.web__wires {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* Unlit, but not invisible: the shape of the web is the information, and a
+   road you have not walked still has to read as a road. */
+.web__wire {
+  stroke: #55402c;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+/* one end bought: a door you can walk through next */
+.web__wire.is-open { stroke: #8d6f45; }
+/* both ends bought: a road you have already travelled */
+.web__wire.is-on {
+  stroke: var(--gold);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 3px #ebb85b);
+}
+
+.web__lane {
+  --accent: var(--gold);
+  align-self: center;
+  justify-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--accent);
+  text-shadow: 0 1px 0 #000, 0 0 4px #000;
+}
+
+.node--web {
+  /* A thinner frame: at web sizes the 6px one ate the icon. */
+  --px: .8;
+  position: relative;
+  z-index: 1;
+  place-self: center;
+  width: min(100%, 54px);
+  height: min(100%, 54px);
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+/* The count rides ON the frame instead of under the icon: stacking them cost
+   a row of height the third lane needed. */
+.node--web .node__rank {
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  transform: translateX(-50%);
+  padding: 0 2px;
+  font-size: 8px;
+  line-height: 1.35;
+  white-space: nowrap;
+  background: #14100dd9;
+  box-shadow: 0 0 0 1px #00000080;
+}
+/* A crossing is the price of changing lanes, so it should not read as one
+   more rung of the lane it happens to sit beside: smaller, and its own
+   colour. */
+.node--cross {
+  --accent: #9d8fb8;
+  width: min(100%, 40px);
+  height: min(100%, 40px);
+}
+.node--cross .ico--lg {
+  width: 16px; height: 16px;
+  background-size: calc(var(--n) * 16px) 16px;
+  background-position: calc(var(--i) * -16px) 0;
+}
+.node--cross.is-ranked .node__rank { color: #c9b8e0; }
+
 /* --- tab 3: gathering skills --- */
 .skillbar {
   flex: none;
@@ -1757,6 +1860,7 @@ body { display: flex; justify-content: center; }
 
 @container panel (min-width: 820px) {
   .shop, .forge, .featlist { grid-template-columns: repeat(3, 1fr); }
+  .web { max-width: 620px; }
 }
 
 /* On a tall screen the arena column has height to spare and the canvas does

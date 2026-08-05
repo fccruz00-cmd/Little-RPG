@@ -3,8 +3,9 @@ import {
 } from '../data/balance.js';
 import { LEVELS, xpToNext } from '../data/levels.js';
 import {
-  TALENT_TREE, RELIC_TREE, SOUL_TREE, BONUS_KEYS, FRENZY_CAP, relicCost, soulCost,
+  RELIC_TREE, SOUL_TREE, BONUS_KEYS, FRENZY_CAP, relicCost, soulCost,
 } from '../data/talents.js';
+import { WEB, webUnlocked } from '../data/skilltree.js';
 import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import {
@@ -259,7 +260,7 @@ export class GameState {
       else if (node.mode === 'less') b[node.key] *= Math.max(0.1, 1 - amount);
       else b[node.key] += amount;
     };
-    for (const branch of TALENT_TREE) for (const n of branch.nodes) apply(n, this.talents[n.id] ?? 0);
+    for (const n of WEB) apply(n, this.talents[n.id] ?? 0);
     for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
     for (const branch of SOUL_TREE) for (const n of branch.nodes) apply(n, this.soulTalents[n.id] ?? 0);
 
@@ -424,9 +425,10 @@ export class GameState {
 
   // --- trees --------------------------------------------------------
   /**
-   * A node opens once the previous one in the branch has 1+ point -- except a
-   * KEYSTONE, which wants the one before it FULL. That is the whole reason
-   * keystones feel earned: the cost is a committed branch, not a spare point.
+   * COLUMN trees (relics, souls, gathering): a node opens once the previous
+   * one in the branch has 1+ point -- except a KEYSTONE, which wants the one
+   * before it FULL. That is the whole reason keystones feel earned: the cost
+   * is a committed branch, not a spare point.
    */
   isUnlocked(branch, index, ranksOf) {
     if (index === 0) return true;
@@ -435,17 +437,24 @@ export class GameState {
     return branch.nodes[index].needs === 'max' ? have >= prev.max : have > 0;
   }
 
-  canBuyTalent(branch, index) {
-    const node = branch.nodes[index];
+  /**
+   * The TALENT WEB is a graph, not a column, so there is no "previous node":
+   * a node opens because something touching it is already yours. Addressed by
+   * node rather than by (branch, index) for the same reason.
+   */
+  talentUnlocked(node) {
+    return webUnlocked(node, this.talents);
+  }
+
+  canBuyTalent(node) {
     const ranks = this.talents[node.id] ?? 0;
     return ranks < node.max
       && this.freePoints > 0
-      && this.isUnlocked(branch, index, this.talents);
+      && this.talentUnlocked(node);
   }
 
-  buyTalent(branch, index) {
-    if (!this.canBuyTalent(branch, index)) return false;
-    const node = branch.nodes[index];
+  buyTalent(node) {
+    if (!this.canBuyTalent(node)) return false;
     this.talents[node.id] = (this.talents[node.id] ?? 0) + 1;
     this.invalidateBonus();
     return true;

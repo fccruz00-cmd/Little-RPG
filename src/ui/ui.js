@@ -1,8 +1,12 @@
 import { UPGRADES } from '../data/upgrades.js';
 import { GameState } from '../game/state.js';
 import {
-  TALENT_TREE, RELIC_TREE, SOUL_TREE, describeNode, relicCost, soulCost,
+  RELIC_TREE, SOUL_TREE, describeNode, relicCost, soulCost,
 } from '../data/talents.js';
+import {
+  LANES, WEB, WEB_EDGES, WEB_W, WEB_H, COL_TRACKS, ROW_TRACKS, webCenter,
+  NEIGHBOURS, NODE_BY_ID, keystoneGate,
+} from '../data/skilltree.js';
 import {
   nextRelicStage, relicsEarnedAt, PRESTIGE,
   nextSoulRelics, soulsEarnedAt, AWAKEN,
@@ -147,7 +151,7 @@ export class UI {
     this.slots = new Map();
 
     this.buildShop();
-    this.buildTree(this.el.treeTalents, TALENT_TREE, 'talent');
+    this.buildWeb(this.el.treeTalents);
     this.buildTree(this.el.treeRelics, RELIC_TREE, 'relic');
     this.buildTree(this.el.treeSouls, SOUL_TREE, 'soul');
     for (const id of SKILL_IDS) this.buildTree(this.el.trees[id], SKILL_TREES[id], id);
@@ -478,6 +482,85 @@ export class UI {
     host.append(grid);
   }
 
+  /**
+   * Builds the talent WEB: one lattice, wires drawn under the nodes.
+   *
+   * The nodes sit in a plain CSS grid so they stay crisp and tappable at any
+   * size, and the wires are one SVG stretched over the same box with
+   * `preserveAspectRatio="none"`. Both halves take their track sizes from the
+   * SAME weights in `skilltree.js`, which is what makes a node's centre in
+   * viewBox units land exactly on the node however the box is stretched.
+   */
+  buildWeb(host) {
+    const wrap = document.createElement('div');
+    wrap.className = 'web';
+    wrap.style.gridTemplateColumns = COL_TRACKS;
+    wrap.style.gridTemplateRows = ROW_TRACKS;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'web__wires');
+    svg.setAttribute('viewBox', `0 0 ${WEB_W} ${WEB_H}`);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+
+    this.wires = [];
+    for (const [a, b] of WEB_EDGES) {
+      const from = webCenter(a);
+      const to = webCenter(b);
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', from.cx);
+      line.setAttribute('y1', from.cy);
+      line.setAttribute('x2', to.cx);
+      line.setAttribute('y2', to.cy);
+      // Without this the non-uniform stretch would squash every vertical wire
+      // and fatten every horizontal one.
+      line.setAttribute('vector-effect', 'non-scaling-stroke');
+      line.setAttribute('class', 'web__wire');
+      svg.append(line);
+      this.wires.push({ a: a.id, b: b.id, line });
+    }
+    wrap.append(svg);
+
+    // Lane names live in column 0, which holds no node.
+    for (const lane of LANES) {
+      const tag = document.createElement('span');
+      tag.className = 'web__lane';
+      tag.style.setProperty('--accent', lane.accent);
+      tag.style.gridArea = `${lane.y + 1} / 1`;
+      tag.textContent = lane.name;
+      wrap.append(tag);
+    }
+
+    const accentOf = Object.fromEntries(LANES.map((l) => [l.id, l.accent]));
+    for (const node of WEB) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'node node--web'
+        + (node.kind === 'keystone' ? ' node--key' : '')
+        + (node.kind === 'cross' ? ' node--cross' : '');
+      button.style.setProperty('--accent', accentOf[node.lane] ?? '#b9a17a');
+      button.style.gridArea = `${node.y + 1} / ${node.x + 1}`;
+      // The name is not printed on the node -- there is no room for it at this
+      // size -- so it has to reach a screen reader some other way, and the
+      // detail line under the web says it in full on hover or tap.
+      button.setAttribute('aria-label', node.name);
+      button.title = node.name;
+      button.innerHTML = `
+        <i class="ico ico--lg ico--${node.icon}"></i>
+        <span class="node__rank">0/${node.max}</span>`;
+      wrap.append(button);
+
+      this.nodes.push({
+        kind: 'talent', web: true, node, button, branch: null, index: 0,
+        rank: button.querySelector('.node__rank'),
+        cost: null, link: null,
+      });
+    }
+
+    host.append(wrap);
+  }
+
   // --- events -------------------------------------------------------
   bind() {
     const { el, state, battle } = this;
@@ -508,7 +591,7 @@ export class UI {
     // can, and the line below explains what happened.
     for (const entry of this.nodes) {
       entry.button.addEventListener('click', () => {
-        const bought = entry.kind === 'talent' ? state.buyTalent(entry.branch, entry.index)
+        const bought = entry.kind === 'talent' ? state.buyTalent(entry.node)
           : entry.kind === 'relic' ? state.buyRelic(entry.branch, entry.index)
           : entry.kind === 'soul' ? state.buySoul(entry.branch, entry.index)
           : state.buySkillTalent(entry.kind, entry.branch, entry.index);
@@ -864,23 +947,32 @@ export class UI {
   /** Explanation line for the node being touched. */
   describe(entry) {
     const { state } = this;
-    const { node, kind, branch, index } = entry;
+    const { node, kind, branch, index, web } = entry;
     const ranksOf = this.ranksFor(kind);
     const ranks = ranksOf[node.id] ?? 0;
-    const locked = !state.isUnlocked(branch, index, ranksOf);
+    const locked = web
+      ? !state.talentUnlocked(node)
+      : !state.isUnlocked(branch, index, ranksOf);
 
     const say = SKILLS[kind] ? describeGatherNode : describeNode;
     const now = ranks > 0 ? t('now: {0}', say(node, ranks)) : t('no points yet');
     let line;
     if (locked) {
-      const prev = branch.nodes[index - 1];
-      // A keystone needs the branch FILLED, not merely started, and saying
+      // A keystone needs its approach FILLED, not merely started, and saying
       // "invest in X first" to somebody who already has nine points in X
       // reads as a bug rather than a requirement.
-      line = node.needs === 'max'
-        ? t('<b>{0}</b> is a keystone: fill <b>{1}</b> to {2}/{2} first.',
-            node.name, prev.name, prev.max)
-        : t('<b>{0}</b> is locked: invest in <b>{1}</b> first.', node.name, prev.name);
+      const keystone = web ? node.kind === 'keystone' : node.needs === 'max';
+      const prev = web ? (keystoneGate(node) ?? node) : branch.nodes[index - 1];
+      if (keystone) {
+        line = t('<b>{0}</b> is a keystone: fill <b>{1}</b> to {2}/{2} first.',
+          node.name, prev.name, prev.max);
+      } else if (web) {
+        // In a web there is no single "previous node" -- name every door.
+        const doors = NEIGHBOURS[node.id].map((id) => NODE_BY_ID[id].name).join(', ');
+        line = t('<b>{0}</b> is locked: it opens next to <b>{1}</b>.', node.name, doors);
+      } else {
+        line = t('<b>{0}</b> is locked: invest in <b>{1}</b> first.', node.name, prev.name);
+      }
     } else if (ranks >= node.max) {
       line = t('<b>{0}</b> is maxed. {1}.', node.name, say(node, ranks));
     } else {
@@ -1653,11 +1745,13 @@ export class UI {
 
       const ranksOf = this.ranksFor(entry.kind);
       const ranks = ranksOf[entry.node.id] ?? 0;
-      const unlocked = state.isUnlocked(entry.branch, entry.index, ranksOf);
+      const unlocked = entry.web
+        ? state.talentUnlocked(entry.node)
+        : state.isUnlocked(entry.branch, entry.index, ranksOf);
       const full = ranks >= entry.node.max;
       const canBuy = entry.kind === 'relic' ? state.canBuyRelic(entry.branch, entry.index)
         : entry.kind === 'soul' ? state.canBuySoul(entry.branch, entry.index)
-        : state.canBuyTalent(entry.branch, entry.index);
+        : state.canBuyTalent(entry.node);
 
       entry.button.disabled = !canBuy;
       entry.button.classList.toggle('is-ranked', ranks > 0);
@@ -1672,6 +1766,18 @@ export class UI {
         setText(entry.cost, full ? t('max') : price);
       }
       if (entry.link) entry.link.classList.toggle('is-on', ranks > 0);
+    }
+
+    // Wires say where you have BEEN (both ends bought) and where you can go
+    // next (one end bought). Without the second state a web looks like a maze
+    // with the lights off.
+    if (KIND === 'talent') {
+      for (const wire of this.wires) {
+        const a = (state.talents[wire.a] ?? 0) > 0;
+        const b = (state.talents[wire.b] ?? 0) > 0;
+        wire.line.classList.toggle('is-on', a && b);
+        wire.line.classList.toggle('is-open', (a || b) && !(a && b));
+      }
     }
   }
 
