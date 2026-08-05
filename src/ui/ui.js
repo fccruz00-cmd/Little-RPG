@@ -117,10 +117,8 @@ export class UI {
       trees: Object.fromEntries(SKILL_IDS.map((id) => [id, $(`tree-${id}`)])),
       pipSkills: $('pip-skills'), fed: $('fed'), fedTime: $('fed-time'),
       workshop: $('workshop'), smithOdds: $('smith-odds'), toolWrap: $('tool-wrap'),
-      keys: $('keys'), cauldron: $('cauldron'), brews: $('brews'), brewsN: $('brews-n'),
-      alchPoints: $('alch-points'), alchDetail: $('alch-detail'),
-      alchXpFill: $('alch-xp-fill'), alchXpText: $('alch-xp-text'),
-      respecAlch: $('btn-respec-alch'), pipCauldron: $('pip-cauldron'),
+      keys: $('keys'), cauldron: $('cauldron'), cauldronWrap: $('cauldron-wrap'),
+      brews: $('brews'), brewsN: $('brews-n'),
       speed: $('btn-speed'),
       arenaAct: $('arena-act'), actBoss: $('act-boss'),
       actEnter: $('act-enter'), actBlood: $('act-blood'), actLeave: $('act-leave'),
@@ -245,16 +243,15 @@ export class UI {
     const TEXT = [
       ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
       ['[data-tab="skills"]', 'Skills'], ['[data-tab="forge"]', 'Forge'],
-      ['[data-tab="cauldron"]', 'Cauldron'],
       ['[data-tab="pets"]', 'Pets'], ['[data-tab="prestige"]', 'Ascend'],
       ['[data-tree="talents"]', 'Talents'], ['[data-tree="relics"]', 'Relics'],
       ['[data-tree="souls"]', 'Souls'],
       ['[data-skill="mining"]', 'Mining'], ['[data-skill="chopping"]', 'Chopping'],
       ['[data-skill="fishing"]', 'Fishing'], ['[data-skill="smithing"]', 'Smithing'],
+      ['[data-skill="alchemy"]', 'Alchemy'],
       ['[data-asc="rebirth"]', 'Rebirth'], ['[data-asc="awaken"]', 'Awaken'],
       ['[data-asc="feats"]', 'Feats'],
       ['#btn-respec', 'respec'], ['#btn-respec-skill', 'respec'],
-      ['#btn-respec-alch', 'respec'],
       ['#act-boss', 'Try boss'], ['#act-blood', 'Bloodmoon'], ['#act-leave', 'Leave'],
       ['#pane-upgrades .toggle span', 'Buy max'],
       ['#autocraft-wrap span', 'Auto forge'],
@@ -287,6 +284,7 @@ export class UI {
     const TAIL = [
       ['#workshop .sect:nth-of-type(1)', 'Dungeon keys'],
       ['#workshop .sect:nth-of-type(2)', 'What smithing gives you'],
+      ['#cauldron-title', 'Cauldron'],
       ['#gem-title', 'Gem shop'],
       ['#store-title', 'Store'],
     ];
@@ -302,7 +300,6 @@ export class UI {
       ['.statbar div:nth-child(3) dt', `<i class="ico ico--sm ico--crit"></i>${t('crit')}`],
       ['.statbar div:nth-child(4) dt', `<i class="ico ico--sm ico--gold"></i>${t('gold')}`],
       ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos te seguem, todos os buffs somam, e os níveis sobrevivem a <b>tudo</b>, renascimento e despertar.'],
-      ['#alch-detail', 'O caldeirão sobe <b>Alquimia</b>: cada poção preparada paga experiência, e santuários na estrada também ensinam um pouco.'],
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
@@ -680,9 +677,7 @@ export class UI {
           : state.buySkillTalent(entry.kind, entry.node);
         if (bought) state.save();
         this.describe(entry);
-        if (entry.kind === 'alchemy') this.refreshCauldronTab();
-        else if (SKILLS[entry.kind]) this.refreshSkills();
-        else this.refreshTrees(true);
+        if (SKILLS[entry.kind]) this.refreshSkills(); else this.refreshTrees(true);
       });
       const show = () => this.describe(entry);
       entry.button.addEventListener('pointerenter', show);
@@ -724,15 +719,7 @@ export class UI {
       if (state.skills.alchemy.level > before) {
         this.toast({ text: `ALCHEMY ${state.skills.alchemy.level}!` });
       }
-      this.refreshCauldronTab();
-    });
-
-    el.respecAlch.addEventListener('click', () => {
-      if (!state.skillSpent('alchemy')) return;
-      if (!confirm(t('Refund every {0} point so you can respend them?', t('Alchemy')))) return;
-      state.respecSkill('alchemy');
-      state.save();
-      this.refreshCauldronTab();
+      this.refreshSkills();
     });
 
     // The speed toggle. Cycles what the gates allow; a tap that cannot go
@@ -1027,21 +1014,8 @@ export class UI {
     if (name === 'talents') this.refreshTrees(true);
     if (name === 'skills') this.refreshSkills();
     if (name === 'forge') this.refreshForge();
-    if (name === 'cauldron') this.refreshCauldronTab();
     if (name === 'pets') this.refreshPets();
     if (name === 'prestige') this.refreshPrestige();
-  }
-
-  /** The Cauldron tab: Alchemy's level, its bench, and its tree. */
-  refreshCauldronTab() {
-    const { state, el } = this;
-    const skill = state.skills.alchemy;
-    const need = state.gatherXpNeeded('alchemy');
-    el.alchXpFill.style.width = `${Math.min(100, (skill.xp / need) * 100).toFixed(1)}%`;
-    setText(el.alchXpText, `${fmt(skill.xp)} / ${fmt(need)}`);
-    setHtml(el.alchPoints, t('Lv <b>{0}</b>, <b>{1}</b> pt', skill.level, state.skillFree('alchemy')));
-    this.refreshCauldron();
-    this.refreshSkillTree('alchemy');
   }
 
   showTree(name) {
@@ -1143,8 +1117,6 @@ export class UI {
     const ranks = ranksOf[node.id] ?? 0;
     const locked = !webUnlocked(web, node, ranksOf);
 
-    const detail = kind === 'alchemy' ? this.el.alchDetail
-      : SKILLS[kind] ? this.el.skillDetail : this.el.treeDetail;
     const say = SKILLS[kind] ? describeGatherNode : describeNode;
     const now = ranks > 0 ? t('now: {0}', say(node, ranks)) : t('no points yet');
     let line;
@@ -1170,7 +1142,7 @@ export class UI {
       line = t('<b>{0}</b> ({1}/{2}), {3}. Next point: <b>{4}</b> for {5}.',
         node.name, ranks, node.max, now, say(node, ranks + 1), price);
     }
-    setHtml(detail, line);
+    setHtml(SKILLS[kind] ? this.el.skillDetail : this.el.treeDetail, line);
   }
 
   toast({ text, bad = false }) {
@@ -1237,14 +1209,11 @@ export class UI {
     el.treeTabSouls.hidden = state.souls <= 0 && state.soulsSpent <= 0;
     el.pipSouls.hidden = state.souls <= 0;
     el.pipSouls.classList.add('pip--gold');
-    el.pipSkills.hidden = !SKILL_IDS.some((id) => id !== 'alchemy' && state.skillFree(id) > 0)
+    el.pipSkills.hidden = !SKILL_IDS.some((id) => state.skillFree(id) > 0)
       && !GATHER_IDS.some((id) => state.canBuyTool(id))
-      && !KEYS.some((k) => state.canForgeKey(k.tier));
-    el.pipSkills.classList.add('pip--gold');
-    // The cauldron's own marker: points to spend, or a brew you can afford.
-    el.pipCauldron.hidden = state.skillFree('alchemy') <= 0
+      && !KEYS.some((k) => state.canForgeKey(k.tier))
       && !POTIONS.some((p) => state.canBrew(p.id));
-    el.pipCauldron.classList.add('pip--gold');
+    el.pipSkills.classList.add('pip--gold');
 
     // Contextual action in the arena. A held boss outranks a key, because a
     // hold is a thing that just happened to you and a key is a plan.
@@ -1288,7 +1257,6 @@ export class UI {
     else if (this.tab === 'talents') this.refreshTrees();
     else if (this.tab === 'skills') this.refreshSkills();
     else if (this.tab === 'forge') this.refreshForge();
-    else if (this.tab === 'cauldron') this.refreshCauldronTab();
     else if (this.tab === 'pets') this.refreshPets();
     else this.refreshPrestige();
   }
@@ -1832,11 +1800,7 @@ export class UI {
     for (const button of this.el.skillSwitch.querySelectorAll('button')) {
       button.classList.toggle('is-on', button.dataset.skill === id);
     }
-    // Alchemy's tree lives on its own tab: hiding it from here would blank
-    // the Cauldron pane every time somebody visited Skills.
-    for (const other of SKILL_IDS) {
-      if (other !== 'alchemy') this.el.trees[other].hidden = other !== id;
-    }
+    for (const other of SKILL_IDS) this.el.trees[other].hidden = other !== id;
     setText(this.el.skillDetail, 'Tap a node to invest.');
     this.refreshSkills();
   }
@@ -1854,13 +1818,16 @@ export class UI {
       t('Lv <b>{0}</b>, <b>{1}</b> pt', level.level, state.skillFree(id)));
 
     // The equip button IS the tradeoff, so it says which state it is in
-    // rather than only what it would do.
+    // rather than only what it would do. The two benchbound skills each
+    // bring their own furniture: Smithing the workshop, Alchemy the cauldron.
     const gathers = skill.gathers === true;
     el.stock.hidden = !gathers;
     el.toolWrap.hidden = !gathers;
-    el.workshop.hidden = gathers;
+    el.workshop.hidden = id !== 'smithing';
+    el.cauldronWrap.hidden = id !== 'alchemy';
     el.skillEquip.hidden = !gathers;
-    if (!gathers) { this.refreshWorkshop(); return this.refreshSkillTree(id); }
+    if (id === 'smithing') { this.refreshWorkshop(); return this.refreshSkillTree(id); }
+    if (id === 'alchemy') { this.refreshCauldron(); return this.refreshSkillTree(id); }
 
     const equipped = state.tool === id;
     el.equipIcon.className = `ico ico--lg ico--${skill.toolIcon}`;

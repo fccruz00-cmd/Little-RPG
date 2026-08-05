@@ -104,9 +104,6 @@
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
-      <button class="tab" data-tab="cauldron" type="button" role="tab">
-        Cauldron<i class="pip" id="pip-cauldron" hidden></i>
-      </button>
       <button class="tab" data-tab="pets" type="button" role="tab">
         Pets<i class="pip" id="pip-pets" hidden></i>
       </button>
@@ -161,6 +158,7 @@
           <button data-skill="chopping" type="button">Chopping</button>
           <button data-skill="fishing" type="button">Fishing</button>
           <button data-skill="smithing" type="button">Smithing</button>
+          <button data-skill="alchemy" type="button">Alchemy</button>
         </div>
         <button class="link" id="btn-respec-skill" type="button">respec</button>
       </div>
@@ -193,6 +191,13 @@
         </dl>
       </div>
 
+      <!-- alchemy has no line either: its bench is the cauldron, and every
+           brew levels the skill. Shown only on the Alchemy switch. -->
+      <div class="workshop" id="cauldron-wrap" hidden>
+        <h3 class="sect" id="cauldron-title"><i class="ico ico--sm ico--regen"></i> Cauldron</h3>
+        <div class="keys" id="cauldron"></div>
+      </div>
+
       <div class="mine-tools" id="tool-wrap">
         <button class="slot" id="tool-buy" type="button">
           <i class="ico ico--lg" id="tool-icon"></i>
@@ -209,6 +214,7 @@
       <div class="tree-scroll" id="tree-chopping" hidden></div>
       <div class="tree-scroll" id="tree-fishing" hidden></div>
       <div class="tree-scroll" id="tree-smithing" hidden></div>
+      <div class="tree-scroll" id="tree-alchemy" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->
@@ -235,27 +241,6 @@
       <p class="foot-note">Odds move with <b>Smithing</b>, on the Skills tab.
         Dungeon <b>keys</b> are forged there too.<br>
         <span id="set-status"></span></p>
-    </div>
-
-    <!-- tab: the cauldron. Alchemy's bench and its tree, out of Smithing's
-         workshop the day the bench grew a progression of its own. -->
-    <div class="pane" id="pane-cauldron">
-      <div class="pane__head">
-        <span class="pane__points" id="alch-points"></span>
-        <button class="link" id="btn-respec-alch" type="button">respec</button>
-      </div>
-      <div class="skillbar">
-        <div class="xpbar" role="progressbar" aria-label="Alchemy experience">
-          <div class="xpbar__fill xpbar__fill--ore" id="alch-xp-fill"></div>
-          <span class="xpbar__text" id="alch-xp-text">0 / 30</span>
-        </div>
-      </div>
-      <p class="pane__detail" id="alch-detail">
-        The cauldron levels <b>Alchemy</b>: every brew pays experience, and
-        shrines on the road teach it a little too.
-      </p>
-      <div class="keys" id="cauldron"></div>
-      <div class="tree-scroll" id="tree-alchemy"></div>
     </div>
 
     <!-- tab 5: pets. The slime is free; the rest are objectives. -->

@@ -184,7 +184,7 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The seven tabs
+### The six tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three webs behind one switch at the top. All three are the
@@ -196,12 +196,11 @@ it.
      an awakening takes it.
    - *Souls*, the awakening web, paid with **souls**. Survives everything.
      The switch only appears once an awakening has paid for it.
-3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
+3. **Skills**: the five skills behind one switch — Mining, Chopping and
+   Fishing on the line, Smithing at the workshop, Alchemy at the cauldron.
 4. **Forge**: only appears after the first rebirth.
-5. **Cauldron**: the brew bench and the Alchemy skill that grew out of it.
-   See *The cauldron, feats and Bloodmoons*.
-6. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
-7. **Ascend**: the two reset layers behind one switch.
+5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
+6. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
@@ -463,7 +462,7 @@ live DOM.
 
 ### The cauldron, feats and Bloodmoons
 
-- **Cauldron** (its own tab): three potions, each drinking one line's
+- **Cauldron** (Skills tab, the Alchemy switch): three potions, each drinking one line's
   surplus. Time Draught (planks, +20s on every boss clock), Fury Tonic
   (bars, +25% damage), Lucky Brew (dust, +50% gold). Ten minutes each,
   bankable to thirty; prices scale with the deepest material band seen.
@@ -488,7 +487,7 @@ live DOM.
   their feed, Green Thumb and Quick Hands reach every gathering line at once.
   All four are crossings, so they cost a lane change to reach.
 
-### Skills: Mining, Chopping, Fishing and Smithing
+### Skills: Mining, Chopping, Fishing, Smithing and Alchemy
 
 Nodes spawn on the same line the hero already walks. It stops, works them,
 and moves on, with no input from you. The three gathering skills run on
