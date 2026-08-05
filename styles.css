@@ -728,15 +728,31 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
-/* The contract board rides at the top of the shop list and scrolls with it. */
-.quests { display: grid; gap: 4px; }
+/* The contract board rides at the top of the shop list and scrolls with it.
+   The shop turns multi-column on wide panels, so anything that is not an
+   upgrade row must span the whole track list -- as a plain cell it becomes
+   the widest thing in column one and squeezes every other column. */
+.quests { display: grid; gap: 4px; grid-column: 1 / -1; }
 .sect--quests { display: flex; align-items: center; gap: 4px; margin: 2px 2px 0; }
 .quests__next { margin-left: auto; font-style: normal; font-size: 9px; color: #b9a17a; }
 .quest.is-done { opacity: .55; }
 
+/* A path card carries four trade-off clauses; two abreast clips them, so
+   the list stays one column even where .keys goes to two. */
+#path-list { grid-template-columns: 1fr; }
+.pathrow { grid-template-columns: auto minmax(0, 1fr) 46px; }
+.pathrow .key__what { white-space: normal; }
+
+/* Contract and enchant rows carry sentences where the keys carry counts:
+   the text cell takes the slack and ellipsizes, because `auto` would size
+   the column to the sentence and stretch the whole shop past the panel. */
+.quest, .ench { grid-template-columns: auto minmax(0, 1fr) auto 46px; }
+.quest .key__what, .ench .key__what { overflow: hidden; text-overflow: ellipsis; }
+
 /* Shelf headers: the six upgrades a rebirth unlocks (and the three an
    awakening does) announce where they came from. Hidden with their shelf. */
 .shop__shelf {
+  grid-column: 1 / -1;
   margin-top: 4px;
   font-size: 9px;
   font-weight: 700;

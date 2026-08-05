@@ -210,9 +210,12 @@ function migrate(data) {
     // that arrives here already has. Without this the most invested player
     // is the one who can never collect it: someone who had cleared every
     // tier before gems existed would start on zero and stay behind a fresh
-    // save forever. `deepestKey` is monotone, so this can only run once.
+    // save forever. ONLY for saves from before gems existed (v12): a later
+    // save earned its bounty live, and re-paying it here would mint ten
+    // gems out of every version bump -- which is exactly what happened the
+    // first time v14 joined this branch.
     const deepest = data.deepestKey ?? -1;
-    if (deepest >= 0) {
+    if (data.version < 12 && deepest >= 0) {
       out.gems = (data.gems ?? 0)
         + GEM_FIRST.slice(0, deepest + 1).reduce((sum, n) => sum + n, 0);
     }
