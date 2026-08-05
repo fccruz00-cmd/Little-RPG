@@ -3,9 +3,11 @@ import {
 } from '../data/balance.js';
 import { LEVELS, xpToNext } from '../data/levels.js';
 import {
-  RELIC_TREE, SOUL_TREE, BONUS_KEYS, FRENZY_CAP, relicCost, soulCost,
+  BONUS_KEYS, FRENZY_CAP, relicCost, soulCost,
 } from '../data/talents.js';
-import { WEB, webUnlocked } from '../data/skilltree.js';
+import {
+  TALENT_WEB, RELIC_WEB, SOUL_WEB, SKILL_WEBS, webUnlocked,
+} from '../data/skilltree.js';
 import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import {
@@ -260,9 +262,9 @@ export class GameState {
       else if (node.mode === 'less') b[node.key] *= Math.max(0.1, 1 - amount);
       else b[node.key] += amount;
     };
-    for (const n of WEB) apply(n, this.talents[n.id] ?? 0);
-    for (const branch of RELIC_TREE) for (const n of branch.nodes) apply(n, this.relicTalents[n.id] ?? 0);
-    for (const branch of SOUL_TREE) for (const n of branch.nodes) apply(n, this.soulTalents[n.id] ?? 0);
+    for (const n of TALENT_WEB.nodes) apply(n, this.talents[n.id] ?? 0);
+    for (const n of RELIC_WEB.nodes) apply(n, this.relicTalents[n.id] ?? 0);
+    for (const n of SOUL_WEB.nodes) apply(n, this.soulTalents[n.id] ?? 0);
 
     // Gear comes in through the same path: a slot is just one more bonus
     // source, with the value pinned by rarity.
@@ -425,25 +427,12 @@ export class GameState {
 
   // --- trees --------------------------------------------------------
   /**
-   * COLUMN trees (relics, souls, gathering): a node opens once the previous
-   * one in the branch has 1+ point -- except a KEYSTONE, which wants the one
-   * before it FULL. That is the whole reason keystones feel earned: the cost
-   * is a committed branch, not a spare point.
-   */
-  isUnlocked(branch, index, ranksOf) {
-    if (index === 0) return true;
-    const prev = branch.nodes[index - 1];
-    const have = ranksOf[prev.id] ?? 0;
-    return branch.nodes[index].needs === 'max' ? have >= prev.max : have > 0;
-  }
-
-  /**
-   * The TALENT WEB is a graph, not a column, so there is no "previous node":
-   * a node opens because something touching it is already yours. Addressed by
-   * node rather than by (branch, index) for the same reason.
+   * Every tree is a WEB, not a column, so there is no "previous node": a node
+   * opens because something touching it is already yours. That is why all of
+   * these are addressed by node and not by (branch, index).
    */
   talentUnlocked(node) {
-    return webUnlocked(node, this.talents);
+    return webUnlocked(TALENT_WEB, node, this.talents);
   }
 
   canBuyTalent(node) {
@@ -460,17 +449,15 @@ export class GameState {
     return true;
   }
 
-  canBuyRelic(branch, index) {
-    const node = branch.nodes[index];
+  canBuyRelic(node) {
     const ranks = this.relicTalents[node.id] ?? 0;
     return ranks < node.max
       && this.relics >= relicCost(node, ranks)
-      && this.isUnlocked(branch, index, this.relicTalents);
+      && webUnlocked(RELIC_WEB, node, this.relicTalents);
   }
 
-  buyRelic(branch, index) {
-    if (!this.canBuyRelic(branch, index)) return false;
-    const node = branch.nodes[index];
+  buyRelic(node) {
+    if (!this.canBuyRelic(node)) return false;
     const ranks = this.relicTalents[node.id] ?? 0;
     this.relics -= relicCost(node, ranks);
     this.relicTalents[node.id] = ranks + 1;
@@ -521,17 +508,15 @@ export class GameState {
     return gained;
   }
 
-  canBuySkillTalent(id, branch, index) {
-    const node = branch.nodes[index];
+  canBuySkillTalent(id, node) {
     const ranks = this.skillTalents[id][node.id] ?? 0;
     return ranks < node.max
       && this.skillFree(id) > 0
-      && this.isUnlocked(branch, index, this.skillTalents[id]);
+      && webUnlocked(SKILL_WEBS[id], node, this.skillTalents[id]);
   }
 
-  buySkillTalent(id, branch, index) {
-    if (!this.canBuySkillTalent(id, branch, index)) return false;
-    const node = branch.nodes[index];
+  buySkillTalent(id, node) {
+    if (!this.canBuySkillTalent(id, node)) return false;
     this.skillTalents[id][node.id] = (this.skillTalents[id][node.id] ?? 0) + 1;
     this.invalidateBonus();
     return true;
@@ -1066,17 +1051,15 @@ export class GameState {
     return Object.values(this.soulTalents).reduce((sum, r) => sum + r, 0);
   }
 
-  canBuySoul(branch, index) {
-    const node = branch.nodes[index];
+  canBuySoul(node) {
     const ranks = this.soulTalents[node.id] ?? 0;
     return ranks < node.max
       && this.souls >= soulCost(node, ranks)
-      && this.isUnlocked(branch, index, this.soulTalents);
+      && webUnlocked(SOUL_WEB, node, this.soulTalents);
   }
 
-  buySoul(branch, index) {
-    if (!this.canBuySoul(branch, index)) return false;
-    const node = branch.nodes[index];
+  buySoul(node) {
+    if (!this.canBuySoul(node)) return false;
     const ranks = this.soulTalents[node.id] ?? 0;
     this.souls -= soulCost(node, ranks);
     this.soulTalents[node.id] = ranks + 1;

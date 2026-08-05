@@ -151,15 +151,15 @@ it.
 ### The six tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
-2. **Talents**: three trees behind one switch at the top.
-   - *Talents*, paid with **level points** (one per level). A **web**, not a
-     column — see below. Wiped on rebirth, and you can respec at any time.
-   - *Relics*, the prestige tree, paid with **relics**. Survives rebirth, and
+2. **Talents**: three webs behind one switch at the top. All three are the
+   same shape — three lanes, links between them — and a node opens because
+   something touching it is already yours. See *Every tree is a web*.
+   - *Talents*, paid with **level points** (one per level). Wiped on rebirth,
+     and you can respec at any time.
+   - *Relics*, the prestige web, paid with **relics**. Survives rebirth, and
      an awakening takes it.
-   - *Souls*, the awakening tree, paid with **souls**. Survives everything.
+   - *Souls*, the awakening web, paid with **souls**. Survives everything.
      The switch only appears once an awakening has paid for it.
-   - In the two prestige trees a node opens once the previous one in its
-     branch has a point.
 3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
 4. **Forge**: only appears after the first rebirth.
 5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
@@ -220,15 +220,6 @@ whole design:
 | **Guard** | Thorns | throws a share of the damage you take back at whatever hit you |
 | **Fortune** | Treasure | a chance for any kill to pay double gold |
 
-Node ids are save keys, and every id the old three-column tree used is still
-in the web, so a save from before it keeps every point it bought.
-
-The coordinates in `skilltree.js` are grid units, not pixels, and the track
-weights (`COL_W`, `ROW_H`) drive **both** the CSS grid and the SVG wire
-endpoints. That is the only reason a wire lands on a node centre from a 300px
-panel to a 620px one — put a track size in the stylesheet instead and the two
-halves drift apart.
-
 Frenzy is capped on purpose. An uncapped streak would hand you an unbounded
 multiplier for parking on a stage you had already outgrown, which is the
 opposite of a reward for pushing. Thorns is measured off the damage that
@@ -236,8 +227,49 @@ opposite of a reward for pushing. Thorns is measured off the damage that
 goes in — off the raw hit, the tankiest build would be paid most for being
 hit hardest, which is backwards.
 
-The relic tree has six branches: **Power**, **Wealth**, **Essence**,
-**Automation**, **Skills** and **Time**.
+### Every tree is a web
+
+The same silhouette runs through all seven trees in the game — talents,
+relics, souls, and one for each gathering skill. `web.js` holds the machinery
+and `skilltree.js` holds nothing but topology; a node's data (`max`, `cost`,
+`key`, `mode`, `per`) stays in the file that owns its tree, so there is one
+place to change what a node *does*.
+
+Three lanes and not four is a layout fact, not a taste: the panel gives a tree
+about 200px of height on the phone this game is built for, and five rows of
+node is exactly what fits. What differs between the webs is how much a link
+costs.
+
+| web | shape | crossing |
+|---|---|---|
+| **Talents** | 3 × 7, 25 nodes, 204 points | four nodes, and keystones at the ends |
+| **Relics** | 3 × 7ish, 24 nodes | Veteran, Respite, Forager, Anvil — the four things every build wants |
+| **Souls** | 3 × 4, 16 nodes | Menagerie and Harvest *became* the crossings: pets and gathering sit between the pillars |
+| **Mining / Chopping / Fishing / Smithing** | 3 × 4, 12 nodes | none — the lanes link directly |
+
+The six relic branches became three lanes, and the two-node soul branches
+became crossings, because a lane you can only reach through another lane is
+what makes a web a web. Nothing was renamed: **node ids are save keys**, and
+every id the old columns used is still there.
+
+That relayout does mean a node that used to be a *branch head* — Herald,
+Respite, Pack Leader, Green Thumb — now sits in the middle of somebody else's
+lane. So `webUnlocked` opens a node you have **already bought**, always. Without
+that, an old save would keep its points and its bonus but be unable to add to
+them, which reads as the game eating a purchase. It cannot be exploited: the
+*first* point in a node still needs a path to it.
+
+Keystones stayed out of the prestige webs on purpose. Making an existing node
+demand a *full* neighbour would lock points people had already spent.
+
+Coordinates are grid units, not pixels, and the track weights (`cols()`,
+`ROW_H`) drive **both** the CSS grid and the SVG wire endpoints. That is the
+only reason a wire lands on a node centre from a 190px panel to a 620px one —
+put a track size in the stylesheet instead and the two halves drift apart.
+
+The **shop** is not a web and should not be: its twelve upgrades are
+repeatable purchases on a gold curve with no prerequisites between them.
+A graph needs something to gate.
 
 Three things live outside the tabs entirely, all in the HUD:
 
@@ -261,13 +293,15 @@ look like part of the first.
 
 Souls are roughly an order of magnitude scarcer than relics: one at 50 relics
 earned, seven at 260, seventeen at 500. So the tree is short, expensive and
-made only of things the relic tree cannot reach. Three branches:
+made only of things the relic tree cannot reach. Three lanes and four
+crossings:
 
-| branch | what it buys |
+| lane | what it buys |
 |---|---|
 | **Ascendant** | Soulfire (+40% damage a rank), Rend, Annihilate, Cataclysm |
 | **Eternity**  | Memory (start +3 stages), Bloodline, Aegis, Eternal Hour |
 | **Dominion**  | Avarice (+45% gold a rank), Epiphany, Hoard, Conquest |
+| *crossings*   | Pack Leader and Keeper's Table (pets), Green Thumb and Quick Hands (gathering) |
 
 A point costs `node cost + ranks already in it`, the same ramp as relics; the
 nodes are shallower instead, because souls arrive in ones and twos. The whole
@@ -351,14 +385,15 @@ live DOM.
 - **Forge set bonus**: wearing all seven slots at one rarity or better pays
   a bonus keyed to the LOWEST slot, up to +50% damage and health plus
   +25% gold for a full Mythic board.
-- **Soul tree**: five branches now; Menagerie amplifies pets and cheapens
-  their feed, Harvest reaches every gathering line at once.
+- **Soul web**: Pack Leader and Keeper's Table amplify pets and cheapen
+  their feed, Green Thumb and Quick Hands reach every gathering line at once.
+  All four are crossings, so they cost a lane change to reach.
 
 ### Skills: Mining, Chopping, Fishing and Smithing
 
 Nodes spawn on the same line the hero already walks. It stops, works them,
 and moves on, with no input from you. The three gathering skills run on
-identical rails, each with its own level, its own 84 point tree and its own
+identical rails, each with its own level, its own 84 point web and its own
 five resources gated by depth (stages 1, 8, 20, 36 and 55). **Smithing** is
 the fourth, and it has no line at all: see below.
 
@@ -373,7 +408,7 @@ the fourth, and it has no line at all: see below.
 skill's nodes spawn. Slice 1 measured that stopping to swing costs zero stage
 progress, because enemies walk toward you and travel is never the bottleneck,
 so gathering needed a real cost and this is it: time on ore is time not on
-wood. Equipping is one tap on the Skills tab, and browsing a skill's tree
+wood. Equipping is one tap on the Skills tab, and browsing a skill's web
 does not change what you are carrying.
 
 **Tools lock the skills together.** Every tool is a head and a handle, so
@@ -530,7 +565,7 @@ is what it was missing. It has no nodes and no tool; it levels from the two
 things it does: **refining** (which works from stage 1) and **forging**
 (which only opens after the first rebirth), so it never sits idle.
 
-Its tree does three things:
+Its web does three things:
 
 - **Mastery** moves the rarity odds. Each tier's weight is multiplied by
   `(1 + quality)` once per step up the ladder, then normalised. Quality 0
@@ -549,7 +584,7 @@ Its tree does three things:
 - **Furnace** cuts raw-per-unit in **every** skill, not just its own. That is
   the one bonus in the game that reaches sideways, and it is why the
   multiplier is applied on top of each skill's own rather than living in
-  their trees.
+  their webs.
 
 The odds table on the Forge tab is live: it shows what your Smithing is
 actually giving you, not the base numbers.
@@ -651,8 +686,8 @@ The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 room for two columns. Pane internals switch on a **container query** against
 the panel itself, because once the arena takes 42% the viewport width stops
 meaning anything to them: the shop, forge, pets and feats go to two columns
-at 520px of panel and three at 820px, and the relic tree's six branches go
-from two rows of three to one row of six.
+at 470px of panel and three at 820px. The webs do not switch at all: they
+are three lanes at every width, and only the cell size changes.
 
 **Portrait still works** and is still the whole original stylesheet. A phone
 held upright gets a "turn your phone sideways" prompt; a narrow *desktop*
