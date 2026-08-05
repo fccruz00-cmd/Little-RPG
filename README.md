@@ -53,7 +53,12 @@ python3 tools/build_single_file.py
 - **Losing a boss holds the stage.** The boss used to respawn on a 1.2 s
   timer, which turned a wall into an unwatchable loop of dying to the same
   boss forever. Now mobs keep coming so the run still earns, and the boss
-  waits behind a **Try boss** button in the arena until you say go.
+  waits behind a **Try boss** button in the arena until you say go — or
+  until **60 seconds pass**, when it walks back in on its own. The hold
+  fixed the watched game and broke the idle one: a player who closed the
+  app on a held boss farmed the same stage forever, because nobody was
+  there to press the button. Retrying is free either way, so the timer
+  only costs an idle run its cadence.
 - **Combat** has the hero walk into range, stop, and swing at the pace of the
   Attack Speed stat. Enemies do the same. When the hero falls it gets up in 2 s.
 - **Gold** drops from every kill and scales with the stage. Mini bosses pay 5x,
@@ -81,7 +86,7 @@ count the same growth twice and dump the second count straight onto the
 timer. The hell bosses ramp `dmg` instead, which is threat the player can
 answer with health and regen.
 
-### The shop: twelve upgrades, not eight
+### The shop: twelve upgrades, then two more shelves
 
 Eight was what fitted a phone column. A landscape panel shows twelve without
 scrolling, and the early game — the part you sit and watch — had nothing left
@@ -106,7 +111,37 @@ Two of them share a bonus key with a talent node, so `GameState` sums the
 shop level and the tree bonus in one getter (`state.lifesteal`,
 `state.doubleHit`) and `battle.js` reads *those*. Reading `bonus.x` directly
 would have silently ignored the shop level the moment the tree granted the
-same thing.
+same thing. (Barbs joined that club later: `state.thorns` sums the shop
+level with the Thorns keystone.)
+
+The shop then went quiet exactly when the player had the most gold
+multipliers to spend, so two more shelves open with the reset layers
+(`gate` in `balance.js`, enforced in `bulkFor` so a locked stat cannot be
+bought even by script). **Six with the first rebirth:**
+
+| upgrade | what it does | cap |
+|---|---|---|
+| **Giant Slayer** | more damage to bosses and mini bosses | +100% |
+| **Barbs** | throws damage taken back (sums with the Thorns keystone) | 24% |
+| **Overkill** | excess of a killing blow lands on the next enemy | 50% |
+| **Dust Magnet** | more dust chance | +24% |
+| **Second Wind** | faster to get up | 40% |
+| **War Chest** | more gold from bosses and mini bosses | +120% |
+
+**And three with the first awakening**, allowed to bend combat rules a
+little because everything above them already exists:
+
+| upgrade | what it does | cap |
+|---|---|---|
+| **Ascendant Might** | damage *and* health together | +40% |
+| **Reap** | non-bosses below the threshold die outright | 10% |
+| **Phoenix Heart** | chance a killing blow leaves you at 30% instead | 30% |
+
+The rebirth shelf honours `awakens` too — `prestiges` resets to zero on an
+awakening, and the player who went deepest must not watch six upgrades
+vanish. Reap exempts bosses on purpose: their timer *is* the fight, and no
+shop row is allowed to shave it. Overkill's carry is floored at 1 hp so a
+cascade can never chain-kill on its own.
 
 ### Reading the screen
 
@@ -138,9 +173,10 @@ Three details make it hold together:
   its frames throttled without ever firing `visibilitychange`, so a frame gap
   longer than 250 ms is caught up the same way instead of being clamped away.
 - **Anything nobody simulated still pays.** If the browser froze the tab or
-  the machine slept, that span is banked as gold at 50%, capped at 8 hours,
-  which is also what happens while the game is fully closed. Gold only:
-  there is no fight to read kills, experience or dust from.
+  the machine slept, that span is banked as gold at 50% (100% once the
+  Gilded Idol is owned), capped at 8 hours, which is also what happens while
+  the game is fully closed. Gold only: there is no fight to read kills,
+  experience or dust from.
 
 The catch that made this work at all: gold per second is measured against a
 **simulation clock**, not the wall clock. A background wake plays a minute of
@@ -167,7 +203,10 @@ it.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
-     the same depth does not pay twice.
+     the same depth does not pay twice. The pane also keeps the **sprint**:
+     the deepest stage inside a run's first 30 minutes of game time — a
+     personal time-trial with no server behind it, because "how fast does my
+     build open" is the question each rebirth actually answers.
    - *Awaken* is the layer above: it wipes everything Rebirth wipes **plus
      relics, the relic tree, rebirths, dust and gear**, and pays **souls**.
      Souls are measured against every relic the ascension earned, from all
@@ -267,9 +306,10 @@ Coordinates are grid units, not pixels, and the track weights (`cols()`,
 only reason a wire lands on a node centre from a 190px panel to a 620px one —
 put a track size in the stylesheet instead and the two halves drift apart.
 
-The **shop** is not a web and should not be: its twelve upgrades are
-repeatable purchases on a gold curve with no prerequisites between them.
-A graph needs something to gate.
+The **shop** is not a web and should not be: its upgrades are repeatable
+purchases on a gold curve with no prerequisites *between them* — the two
+gated shelves gate on the reset layers, not on each other. A graph needs
+something to gate.
 
 Three things live outside the tabs entirely, all in the HUD:
 
@@ -306,6 +346,21 @@ crossings:
 A point costs `node cost + ranks already in it`, the same ramp as relics; the
 nodes are shallower instead, because souls arrive in ones and twos. The whole
 tree is about 226 souls, which is many awakenings deep on purpose.
+
+**Paths.** Before paths, the second ascension was the first one again,
+faster. Each awakening now grants **one free choice** of a build lens on the
+Awaken pane — real tradeoffs, folded like any other bonus source:
+
+| path | grants |
+|---|---|
+| **Berserker** | +25% damage, +15% attack speed, **−20% health** |
+| **Sentinel** | +30% health, +30% regen, +10% thorns, **−10% damage** |
+| **Plunderer** | +30% gold, +15% XP, +10% dust chance, **−10% damage** |
+
+The choice is spent when you pick and returned by the next awakening —
+without that rule the picker is a free stat toggle you flip before every
+boss, which is a chore pretending to be a choice. Saves that had already
+awakened when paths shipped get their pick on load.
 
 ### Pets
 
@@ -385,9 +440,14 @@ live DOM.
 - **Champions**: one mob in ~40 arrives tinted and named. GILDED pays 5x
   gold, SOULBOUND always drops dust (only spawns once the forge exists),
   FLEET is frail, fast and worth three kills of experience.
-- **The road**: some stages carry a chest (a pile of gold, sometimes dust)
-  or a shrine (90 free seconds of a random brew). Rolled on genuine stage
-  entry only, never on reload.
+- **The road**: some stages carry something on it, rolled on genuine stage
+  entry only, never on reload. A **chest** (a pile of gold, sometimes dust);
+  a **shrine** (90 free seconds of a random brew); a **merchant** under a
+  striped awning, who reforges your weakest slot on the house — same rules
+  as the forge, so a bad roll pays a pinch of dust instead of a downgrade,
+  and before the forge exists he pays gold; or an **ambushed caravan**,
+  whose rescue makes the next five kills pay double gold and double XP.
+  All four are hand-pixelled in the renderer, like the gathering nodes.
 - **Export/Import save** (gear, top right): the whole save as one line of text,
   for backups and moving between browsers. Garbage and future versions are
   rejected on import.
@@ -513,16 +573,22 @@ dungeon clears and go back in as gold, as time, or as gear. The purse and the
 shop behind it are hidden until a run pays the first one, so the shop
 introduces itself by handing you something.
 
-The faucet is full clears only, never partial runs, and the **first time a
-clear takes you deeper than the save ever has** pays a one-off bounty on top.
-Five tiers, 150 bounty gems: enough to meet the shop properly without ever
-opening a wallet.
+The faucet has two taps. **Dungeons**: full clears only, never partial runs,
+and the first time a clear takes you deeper than the save ever has pays a
+one-off bounty on top — five tiers, 150 bounty gems. **Contracts**: three
+dailies and one weekly, pinned above the shop list, worth roughly 10–15 gems
+a day. Progress is a *stats delta* against a snapshot taken when the board
+rolled, so the lifetime counters do all the bookkeeping and no kill site
+changed; the UTC day index deals the board deterministically, so there is
+nothing to re-roll by clearing data, and skipping a day by clock forfeits
+that day's gems — the exploit priced at exactly what it pays.
 
 | ware | costs | gives |
 |---|---:|---|
 | Coin Cache   | 20 | an hour of your best gold rate, paid now |
 | Hourglass    | 30 | two hours of fight, really simulated, in about half a second |
 | Mythic Chest | 60 | your weakest slot reforged **Mythic**, guaranteed |
+| Gilded Idol  | 150 | **once, forever**: offline gold at the full rate instead of half |
 
 The game is **free**, and the shop is the only thing that ever asks for
 money. Three rules hold it together, and `data/gems.js` exists to keep them:
@@ -541,6 +607,12 @@ money. Three rules hold it together, and `data/gems.js` exists to keep them:
 The chest also caps its own takings. It targets the **weakest** slot, so it
 walks a board up one slot at a time and then refuses: seven purchases is
 everything it will ever sell you.
+
+The Idol is the one **permanent** ware, and it stays inside rule 2 on
+purpose: it buys pace — the offline discount, lifted for good — never power,
+it survives both reset layers, and it sells exactly once. It is the honest
+version of the genre's "permanent offer", priced like the long-term purchase
+it is.
 
 Awakening wipes gear, Mythic included — the same bargain the Ascend tab has
 always offered. Since a Mythic slot may have been paid for, the awaken
@@ -643,6 +715,16 @@ so chasing the top is expensive on purpose.
 The **Automation** branch buys upgrades for you (*Herald*) and forges for you
 (*Anvil*); the **Skills** branch adds double strikes, lifesteal, extra damage
 against wounded targets and a bonus on the first hit.
+
+**Enchants.** A Rare-or-better roll also carries one small affix — Keen
+(crit), Gilded (gold), Wise (XP), Hungry (lifesteal), Dusty (dust) or Swift
+(attack speed), at tier I/II/III (55/30/15) — and a bench on the Forge tab
+rerolls it for about 60% of that slot's forge price. Rarity is a ladder you
+climb once; an enchant is a slot you argue with, which is the decision the
+forge was missing and a dust sink that outlives a full board. The affix
+belongs to the *item*: a new piece brings its own or none, the Mythic Chest
+rolls one too, and the values are a fraction of a rarity step so a lucky
+affix never beats an unlucky rarity — orange still always beats purple.
 
 ### Levels and experience
 
