@@ -11,18 +11,11 @@ const TARGET_WORLD_H = 92;
 // The CSS pins the canvas to a wide box so this rarely binds; it is here so a
 // future layout change cannot starve the camera without anyone noticing.
 const MIN_WORLD_W = 100;
-// And the CEILING, which is the one that bites on a desktop. Zoom is derived
-// from canvas HEIGHT, so a 1920px band at a height-derived zoom of 4 shows
-// 480 units of road -- four times a phone's. Nothing is wrong with the fight,
-// but the hero is a stamp pinned to the right edge by the anchor clamp (the
-// walk-in is 91 units, and 91 of 480 is a fifth of the screen) with a
-// thousand pixels of empty ground behind. Past this the canvas zooms IN
-// rather than showing more ground nobody walks on.
-const MAX_WORLD_W = 200;
-// The floor the zoom-in may not cross. The ground takes 16 and the far hills
-// stand up to 46 above it, so under this the parallax closes over the sky and
-// the blood moon has nowhere to hang.
-const MIN_WORLD_H = 64;
+// There is deliberately NO ceiling to go with that floor. A wide band shows a
+// lot of road -- 480 units on a 1920px screen against a phone's 117 -- and
+// zooming in to fix it was tried and reverted: it made the sprites huge and,
+// because band height is what buys the zoom, it ate the panel. The framing
+// on a wide screen is a trade with no free side; see LAYOUT in the README.
 const GROUND_FROM_BOTTOM = 16;
 
 /** Deterministic noise: same input, same scenery, no popping. */
@@ -118,16 +111,7 @@ export class Renderer {
     // MIN_WORLD_W, which is the number the term exists to protect.
     const byHeight = Math.round(cssH / TARGET_WORLD_H);
     const byWidth = Math.floor(cssW / MIN_WORLD_W);
-    const base = Math.min(byHeight, byWidth);
-    // The zoom-in only ever raises the scale, and only when the canvas is
-    // both wide enough to be showing waste and tall enough to afford the
-    // crop. Written as a MAX over the base so no screen can come out of here
-    // more zoomed out than it was.
-    const zoomIn = Math.min(
-      Math.ceil(cssW / MAX_WORLD_W),
-      Math.floor(cssH / MIN_WORLD_H),
-    );
-    this.scale = Math.min(16, Math.max(2, base, zoomIn));
+    this.scale = Math.min(6, Math.max(2, Math.min(byHeight, byWidth)));
 
     this.canvas.width = Math.round(cssW * this.dpr);
     this.canvas.height = Math.round(cssH * this.dpr);
@@ -144,12 +128,12 @@ export class Renderer {
   /**
    * Snap a world coordinate to the screen's pixel grid, not the world's.
    *
-   * Everything used to round to whole world units, which is invisible at
-   * zoom 3 -- a step is three screen pixels -- and awful at zoom 10, where
-   * the hero covers about half a unit per frame and therefore stands still
-   * for a frame and then jumps ten pixels. It reads as a dropped frame; it is
-   * not one. Rounding to DEVICE pixels instead makes the step one screen
-   * pixel at every zoom.
+   * Everything used to round to whole world units, so the world only moved on
+   * the frames where it had accumulated a whole unit -- 50 distinct positions
+   * over 120 frames, on every screen. It reads as a stutter and it is not
+   * one; the fight is running at 60. Rounding to DEVICE pixels instead makes
+   * the step one screen pixel, which is 87 positions over the same 120
+   * frames and is what "smooth" means here.
    *
    * It costs no sharpness. `grid` is dpr x scale, so a snapped sprite origin
    * lands on a whole device pixel and each source pixel still covers exactly

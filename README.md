@@ -681,69 +681,52 @@ A wide view now shows more of the road *behind* you — corpses, the pets, the
 scenery you came through — rather than more empty ground to cross. Measured
 after: 36-40 kills at every viewport.
 
-**And then a desktop turned out not to be a big tablet.** The zoom comes from
-canvas *height*, so a 1920px band at a height-derived zoom of 4 showed **480
-units of road** — four times a phone's. Nothing was wrong with the fight; the
-problem was framing. `heroAnchor` is `1 - WALK_IN / viewWidth`, so 91 units
-of 480 put the hero at 0.81, clamped to 0.78: pinned to the right edge with a
-thousand pixels of dead ground behind him, every sprite the size of a stamp.
+**A wide screen is a trade with no free side, and it was tried.** The zoom
+comes from canvas *height*, so a 1920px band shows **480 units of road** —
+four times a phone's — and since `heroAnchor` is `1 - WALK_IN / viewWidth`,
+91 units of 480 puts the hero at 0.81, clamped to 0.78: near the right edge
+with a lot of empty ground behind.
 
-So the renderer gained a ceiling to go with its floor. `MAX_WORLD_W = 200`
-makes a wide canvas zoom **in** rather than show more ground nobody walks on,
-capped by `MIN_WORLD_H = 64` so the crop never closes the parallax over the
-sky, and written as a `max` over the old term so no screen can come out more
-zoomed out than before.
+Zooming in fixes the framing and costs the other two things on the screen.
+Band height is what buys the zoom (the world keeps the canvas's aspect ratio
+at every scale, so 192 units across 1920px needs 10x, and 10x needs
+`10 x 64 = 640px` of band), so a centred hero meant **doubled sprites and a
+panel squeezed to a strip**. It was built, measured and reverted. The camera
+that ships is the one the game was balanced on.
 
-**Band height is what buys the zoom.** The world keeps the canvas's aspect
-ratio whatever the scale, so 192 units across 1920px needs 10x, and 10x needs
-`10 x 64 = 640px` of band before the sky closes over. Hence
-`clamp(240px, min(60vh, 100vh - 400px), 900px)`: `60vh` is what puts the hero
-in the middle of a 1080p screen, and `100vh - 400px` is the panel's half of
-the bargain — without it an 800px window gave the arena 480 and left the
-skills pane 202px, which is less than its own tool bar and stock row.
+The three ways out, for whoever picks this up next:
 
-| screen | before | after |
-|---|---|---|
-| 844x390 phone | 117x88 @3, anchor 0.30 | unchanged |
-| 1180x820 tablet | 393x103 @3, anchor 0.77 | 197x70 @6, anchor **0.54** |
-| 1440x900 | 360x86 @4, anchor 0.75 | 206x71 @7, anchor **0.56** |
-| 1920x1080 | 480x95 @4, anchor 0.78 | 192x65 @10, anchor **0.53** |
-| 2560x1440 | 480x95 @6, anchor 0.78 | 197x66 @13, anchor **0.54** |
+| | hero | sprites | panel | arena |
+|---|---|---|---|---|
+| **band, as it ships** | 0.78 | 4x | full | full width |
+| zoom in | 0.53 | 10x | strip | full width |
+| narrow the canvas | 0.54 | 4x | full | 800 of 1920px, sides framed |
+| two columns on wide screens | 0.32 | 6x | full height, 1114px wide | 804x757 |
 
-Kills a minute did not move: 63-69 over four simulated minutes at all nine
-viewports, phone included. The count is noisy enough (crits, drops, mid-run
-level-ups) to be worth a third either way over two minutes, so the assertion
-that actually holds the line is the deterministic one underneath it — the gap
-an enemy spawns across, `viewWidth x (1 - anchor)`, which is 91 units on every
-screen whose anchor is free, 72 where the 0.3 clamp binds and 106 where 0.78
-does.
+**The anchor clamp is a tax on very wide screens**, and it is worth naming.
+At 0.78 the gap an enemy walks stops being `WALK_IN` and starts being
+`viewWidth x 0.22`: 106 units at 1920, 141 at 2560, against 91 everywhere the
+anchor is free. Measured over four simulated minutes, a 2560px screen earns
+**54 kills against a phone's 66**. It predates all of the above; the fix is
+to spawn at a pinned distance from the hero rather than off the right edge,
+which costs a visible spawn point.
 
-**The zoom-in had a cost, and it took a bug report to find it.** Positions
-rounded to whole *world* units, which is invisible at zoom 3 — a step is
-three screen pixels — and awful at zoom 10, where the scenery covers about
-half a unit per frame and therefore stands still for a frame and then jumps
-ten pixels. Measured: the world took **50 distinct screen positions over 120
-frames**. It reads as a dropped frame; it is not one. `Renderer.q()` now
-rounds to DEVICE pixels (`dpr x scale`) instead, so the step is one screen
-pixel at every zoom (87 positions over the same 120 frames) — and it costs no
-sharpness, because a snapped origin still lands on a whole device pixel and
-each source pixel still covers exactly `dpr x scale` of them.
+**The HUD grows, and that part stayed.** Every size in it was picked for a
+390px phone, where 48px of wood carrying two rows is a tenth of the screen;
+on a 1080p monitor the same 48px are a twentieth and the row that runs the
+game reads as trim. From `900x700` up the type and the experience bar scale
+(68px of HUD, 20px gold) while the wood, the frames and the pixel art stay
+exactly what they were. Icons step 16 -> 24 and not 16 -> 20, because the
+sheet is 16px a cell and 1.5x is the step the rest of the game already uses.
 
-**A wide but SHORT window is the one case this cannot fix**, and it is worth
-saying why rather than leaving it looking like a bug. A canvas keeps its
-aspect ratio whatever the zoom, so a 1920x300 band is a 6:1 world at every
-scale: 192 units of width would mean 30 of height, which is less than the
-ground plus a character. A 700px-tall window cannot give the band 640px
-without starving the panel, so `100vh - 400px` holds it back and that shape
-keeps the camera it always had.
-
-**The HUD grows too.** Every size in it was picked for a 390px phone, where
-48px of wood carrying two rows is a tenth of the screen; on a 1080p monitor
-the same 48px are a twentieth and the row that runs the game reads as trim.
-From `900x700` up the type and the experience bar scale (68px of HUD, 20px
-gold) while the wood, the frames and the pixel art stay exactly what they
-were. Icons step 16 -> 24 and not 16 -> 20, because the sheet is 16px a cell
-and 1.5x is the step the rest of the game already uses.
+**And the world moves a screen pixel at a time.** Positions used to round to
+whole *world* units, so the scenery only moved on the frames where it had
+accumulated a whole one: **50 distinct screen positions over 120 frames**, on
+every screen, including the phone. It reads as a stutter and it is not one —
+the fight is running at 60. `Renderer.q()` rounds to DEVICE pixels
+(`dpr x scale`) instead, which is 87 positions over the same 120 frames, and
+it costs no sharpness: a snapped origin still lands on a whole device pixel
+and each source pixel still covers exactly `dpr x scale` of them.
 
 The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 `orientation: landscape`, which fires on a 600x500 desktop window that has no

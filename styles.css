@@ -1914,25 +1914,10 @@ body { display: flex; justify-content: center; }
   .panel { flex: 1 1 auto; min-height: 0; }
 }
 
-/* A desktop is not a big tablet. The 380px cap on the band was sized for a
-   820px-tall screen, and on a 1080p monitor it left the panel with three
-   hundred pixels of dead wood under the shop while the arena stayed a strip.
-   Height here is what BUYS the zoom-in: the camera may only crop the sky
-   down to 72 units, so more band means a tighter shot and a hero that is not
-   glued to the right edge. */
-/* How tall the band is IS how far in the camera gets to zoom: the world keeps
-   the canvas's aspect ratio whatever the scale, so 240 units of width across
-   1920px needs 1920/240 = 8x, and 8x needs 8 x 64 = 512px of band before the
-   sky closes over. `60vh` is what puts the hero near the middle of a 1080p
-   screen instead of pinned to its right edge.
-
-   `100vh - 400px` is the panel's half of that bargain. Without it a 800px
-   window gave the arena 480 and left the skills pane 202px, which is less
-   than its own tool bar and stock row; with it the panel keeps ~280 and the
-   camera takes whatever is left over. */
-@media (min-width: 900px) and (min-height: 640px) {
-  .arena { height: clamp(240px, min(60vh, 100vh - 400px), 900px); }
-}
+/* The band's 380px cap stays a cap. It was raised once, to 60vh, to buy the
+   camera enough height to zoom in and bring the hero off the right edge --
+   and that is exactly what made the sprites huge and left the panel a strip.
+   Band height is the panel's height. Spend it there. */
 
 /* ============================================================
    The HUD on a screen that has room
