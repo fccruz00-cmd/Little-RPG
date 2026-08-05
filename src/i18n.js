@@ -229,6 +229,25 @@ const PT = {
   'Tame: ': 'Domar: ',
   ' · next: ': ' · próximo: ',
 
+  // --- contracts ---
+  'Contracts': 'Contratos',
+  'Daily': 'Diária',
+  'Weekly': 'Semanal',
+  'claim': 'coletar',
+  'paid': 'pago',
+  'new in {0}': 'novos em {0}',
+  'defeat 300 enemies': 'derrote 300 inimigos',
+  'bring down 5 bosses': 'derrube 5 chefes',
+  'forge 10 times': 'forje 10 vezes',
+  'refine 40 units': 'refine 40 unidades',
+  'feed your pets 3 times': 'alimente seus pets 3 vezes',
+  'brew 2 potions': 'prepare 2 poções',
+  'clear a dungeon': 'limpe uma masmorra',
+  'defeat 2,500 enemies': 'derrote 2.500 inimigos',
+  'bring down 40 bosses': 'derrube 40 chefes',
+  'clear 3 dungeons': 'limpe 3 masmorras',
+  'forge 60 times': 'forje 60 vezes',
+
   // --- feats ---
   'kill 100 enemies': 'mate 100 inimigos',
   'kill 5,000 enemies': 'mate 5.000 inimigos',

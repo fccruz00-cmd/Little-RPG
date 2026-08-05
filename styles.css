@@ -728,6 +728,12 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
+/* The contract board rides at the top of the shop list and scrolls with it. */
+.quests { display: grid; gap: 4px; }
+.sect--quests { display: flex; align-items: center; gap: 4px; margin: 2px 2px 0; }
+.quests__next { margin-left: auto; font-style: normal; font-size: 9px; color: #b9a17a; }
+.quest.is-done { opacity: .55; }
+
 /* Shelf headers: the six upgrades a rebirth unlocks (and the three an
    awakening does) announce where they came from. Hidden with their shelf. */
 .shop__shelf {

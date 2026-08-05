@@ -25,6 +25,9 @@ import {
   WARE_BY_ID, GEM_FIRST, CACHE_SECONDS, SKIP_SECONDS, CHEST_FLOOR,
 } from '../data/gems.js';
 import { FEATS, featDone, emptyStats } from '../data/feats.js';
+import {
+  dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
+} from '../data/quests.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -33,7 +36,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 14;
+const SAVE_VERSION = 15;
 const SAVE_EVERY = 5; // seconds
 const REDEEMED_KEPT = 50; // purchase tokens kept against double-crediting
 
@@ -94,6 +97,10 @@ function defaults() {
     // lifetime counters, the raw material of feats. Nothing resets them.
     stats: emptyStats(),
 
+    // contracts: the daily/weekly board. Progress is stats deltas against
+    // the snapshot taken when the board rolled; see data/quests.js.
+    quests: null,
+
     // dungeons
     keys: {},         // key tier -> how many are held
     deepestKey: -1,   // deepest key tier fully cleared
@@ -151,7 +158,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 13) {
+  if (data.version >= 1 && data.version <= 14) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -168,6 +175,9 @@ function migrate(data) {
     // tracked one, and the purse is back-paid for clears already made, below.
     // v13: before store purchases. An empty ledger is right: a save from
     // before billing existed cannot have a purchase owed to it.
+    // v14: before contracts, enchants, paths, the sprint and the idol. All
+    // of them start empty via defaults; the constructor rolls the first
+    // quest board from live stats, so day one asks for a day's work.
     const out = {
       ...defaults(),
       ...data,
@@ -224,6 +234,8 @@ export class GameState {
     this.potions = { ...(data.potions ?? {}) };
     this.redeemed = Array.isArray(data.redeemed) ? [...data.redeemed] : [];
     this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
+    this.quests = data.quests ?? null;
+    this.rollQuests();
     // Unlocks read live state, so a save from before pets existed walks out
     // of load with everything it already earned, the slime included. Silent
     // on purpose: the battle announces tames that happen live, not backlog.
@@ -1026,6 +1038,53 @@ export class GameState {
     return this.grantGems(amount);
   }
 
+  // --- contracts ------------------------------------------------------
+  /**
+   * Rolls the board over when the UTC day or week has moved on. Idempotent
+   * and cheap, so the UI calls it before every read: a session that crosses
+   * midnight flips its board live instead of on the next launch.
+   */
+  rollQuests(now = Date.now()) {
+    const day = dayIndex(now);
+    const week = weekIndex(now);
+    if (!this.quests || this.quests.day !== day) {
+      this.quests = {
+        ...(this.quests ?? {}),
+        day, snap: { ...this.stats }, claimed: [],
+      };
+    }
+    if (this.quests.week !== week) {
+      Object.assign(this.quests, {
+        week, weekSnap: { ...this.stats }, weekClaimed: false,
+      });
+    }
+  }
+
+  /** Today's three contracts and the week's one, freshly rolled over. */
+  questBoard(now = Date.now()) {
+    this.rollQuests(now);
+    return {
+      dailies: dailyQuests(this.quests.day),
+      weekly: weeklyQuest(this.quests.week),
+    };
+  }
+
+  canClaimQuest(quest, weekly = false) {
+    const snap = weekly ? this.quests.weekSnap : this.quests.snap;
+    const claimed = weekly ? this.quests.weekClaimed : this.quests.claimed.includes(quest.id);
+    return !claimed && questDone(quest, this.stats, snap ?? {});
+  }
+
+  /** Pays a finished contract, once. Returns the gems, 0 when it refused. */
+  claimQuest(quest, weekly = false) {
+    if (!this.canClaimQuest(quest, weekly)) return 0;
+    if (weekly) this.quests.weekClaimed = true;
+    else this.quests.claimed.push(quest.id);
+    // Through the one door money also comes through, so a contract gem and
+    // a bought gem are indistinguishable everywhere downstream.
+    return this.grantGems(quest.gems);
+  }
+
   // --- prestige -----------------------------------------------------
   get pendingRelics() {
     return Math.max(0, relicsEarnedAt(this.maxStage) - this.relicsEarned);
@@ -1197,7 +1256,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      gems, bestGps, redeemed,
+      quests, gems, bestGps, redeemed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1208,7 +1267,7 @@ export class GameState {
       dust, gear, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, stats,
-      gems, bestGps, redeemed,
+      quests, gems, bestGps, redeemed,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

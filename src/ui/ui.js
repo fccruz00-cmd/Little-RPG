@@ -15,6 +15,7 @@ import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
+import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { GEM_WARES, WARE_BY_ID } from '../data/gems.js';
 import { Billing } from '../store/billing.js';
 import { SPRITES, FRAME } from '../data/sprites.js';
@@ -99,6 +100,7 @@ export class UI {
       toast: $('toast'),
       tabs: $('tabs'),
       shop: $('shop-list'), buyMax: $('buy-max'),
+      quests: $('quests'), questsTitle: $('quests-title'), questsNext: $('quests-next'),
       treeSwitch: $('tree-switch'), treePoints: $('tree-points'), treeDetail: $('tree-detail'),
       respec: $('btn-respec'),
       treeTalents: $('tree-talents'), treeRelics: $('tree-relics'),
@@ -161,6 +163,7 @@ export class UI {
     this.slots = new Map();
 
     this.buildShop();
+    this.buildQuests();
     this.buildWeb(this.el.treeTalents, TALENT_WEB, 'talent');
     this.buildWeb(this.el.treeRelics, RELIC_WEB, 'relic');
     this.buildWeb(this.el.treeSouls, SOUL_WEB, 'soul');
@@ -375,6 +378,59 @@ export class UI {
       frag.append(li);
     }
     this.el.shop.append(frag);
+  }
+
+  /**
+   * The contract board: three dailies and the week's one, pinned above the
+   * shop. Four fixed rows; what changes daily is what each row SAYS, so the
+   * refresh writes text instead of rebuilding.
+   */
+  buildQuests() {
+    setText(this.el.questsTitle, t('Contracts'));
+    this.questRows = [];
+    for (let i = 0; i < DAILIES_PER_DAY + 1; i++) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key quest';
+      row.dataset.quest = String(i);
+      row.innerHTML = `
+        <span class="ore__name"></span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b> <i class="ico ico--sm ico--gem"></i></span>
+        <span class="ore__smelt"></span>`;
+      this.el.quests.append(row);
+      this.questRows.push({
+        row, entry: null,
+        name: row.querySelector('.ore__name'),
+        what: row.querySelector('.key__what'),
+        have: row.querySelector('b'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+  }
+
+  refreshQuests() {
+    const { state } = this;
+    const { dailies, weekly } = state.questBoard();
+    const list = [...dailies.map((q) => ({ q, weekly: false })), { q: weekly, weekly: true }];
+    for (let i = 0; i < this.questRows.length; i++) {
+      const r = this.questRows[i];
+      const { q, weekly: isWeek } = list[i];
+      r.entry = list[i];
+      const snap = (isWeek ? state.quests.weekSnap : state.quests.snap) ?? {};
+      const claimed = isWeek ? state.quests.weekClaimed : state.quests.claimed.includes(q.id);
+      const can = state.canClaimQuest(q, isWeek);
+      setText(r.name, t(isWeek ? 'Weekly' : 'Daily'));
+      setHtml(r.what, `${t(q.desc)} &middot; ${fmt(questProgress(q, state.stats, snap))}/${fmt(q.need)}`);
+      setText(r.have, `+${q.gems}`);
+      setText(r.action, claimed ? t('paid') : can ? t('claim') : t('need'));
+      r.row.disabled = !can;
+      r.row.classList.toggle('can-smelt', can);
+      r.row.classList.toggle('is-done', claimed);
+    }
+    // when the board turns over, so nobody has to guess the reset hour
+    const left = (86400000 - (Date.now() % 86400000)) / 1000;
+    setText(this.el.questsNext, t('new in {0}', duration(left)));
   }
 
   /**
@@ -629,6 +685,17 @@ export class UI {
       this.sfx.play('jingle');
       this.toast({ text: t('{0} FORGED', KEYS[tier].name.toUpperCase()) });
       this.refreshSkills();
+    });
+
+    el.quests.addEventListener('click', (e) => {
+      const row = e.target.closest('.quest');
+      const entry = row && this.questRows[Number(row.dataset.quest)]?.entry;
+      if (!entry) return;
+      const gems = state.claimQuest(entry.q, entry.weekly);
+      if (!gems) return;
+      this.sfx.play('jingle');
+      this.toast({ text: t('+{0} GEM(S)', gems) });
+      this.refreshQuests();
     });
 
     el.actBoss.addEventListener('click', () => { battle.tryBoss(); state.save(); });
@@ -1150,6 +1217,7 @@ export class UI {
         : `${Math.min(100, (state.gold / state.costOf(key)) * 100).toFixed(1)}%`;
     }
 
+    this.refreshQuests();
     this.refreshStatbar();
     if (affordable > 0) {
       setText(el.shopHint, t('{0} upgrade(s) available', affordable));

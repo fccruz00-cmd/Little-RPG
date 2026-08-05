@@ -108,7 +108,7 @@
       </button>
     </nav>
 
-    <!-- tab 1: gold upgrades -->
+    <!-- tab 1: gold upgrades, with the day's contracts pinned on top -->
     <div class="pane is-on" id="pane-upgrades">
       <div class="pane__head">
         <span class="pane__hint" id="shop-hint"></span>
@@ -117,7 +117,14 @@
           <span>Buy max</span>
         </label>
       </div>
-      <ul class="shop" id="shop-list"></ul>
+      <ul class="shop" id="shop-list">
+        <li class="quests" id="quests-wrap">
+          <h3 class="sect sect--quests"><i class="ico ico--sm ico--gem"></i>
+            <span id="quests-title">Contracts</span>
+            <em class="quests__next" id="quests-next"></em></h3>
+          <div class="keys" id="quests"></div>
+        </li>
+      </ul>
     </div>
 
     <!-- tab 2: skill trees (levels and relics) -->
