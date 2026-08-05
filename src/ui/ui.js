@@ -1,4 +1,5 @@
 import { UPGRADES } from '../data/upgrades.js';
+import { STATS, statUnlocked } from '../data/balance.js';
 import { GameState } from '../game/state.js';
 import { describeNode, relicCost, soulCost } from '../data/talents.js';
 import {
@@ -47,6 +48,17 @@ const SCORE = {
   lifesteal:  [(s) => s.dps * (1 + s.lifesteal * 4), 0.5],
   ferocity:   [(s) => s.dps * (1 + s.doubleHit), 1],
   insight:    [(s) => s.xpGain, 0.4],
+  // The gated shelves. Rough proxies on purpose: the star only has to rank
+  // a purchase against the others, not price it exactly.
+  bossDamage: [(s) => s.dps * (1 + s.bossDamage * 0.25), 0.8],
+  thorns:     [(s) => 1 + s.thorns, 0.3],
+  overkill:   [(s) => 1 + s.overkill, 0.5],
+  dustFind:   [(s) => 1 + s.dustFind, 0.4],
+  respawn:    [(s) => 1 / Math.max(0.05, s.respawnMul), 0.2],
+  warChest:   [(s) => s.goldGain * (1 + s.warChest * 0.3), 0.6],
+  might:      [(s) => s.dps, 1],
+  reap:       [(s) => s.dps * (1 + s.reap * 2), 0.9],
+  phoenix:    [(s) => 1 + s.phoenix, 0.3],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -324,7 +336,18 @@ export class UI {
   // --- building -----------------------------------------------------
   buildShop() {
     const frag = document.createDocumentFragment();
+    // The two gated shelves each get a header row, hidden with the shelf, so
+    // the six upgrades that appear on the first rebirth introduce themselves.
+    this.shelves = new Map();
     for (const up of UPGRADES) {
+      const gate = STATS[up.key].gate;
+      if (gate && !this.shelves.has(gate)) {
+        const head = document.createElement('li');
+        head.className = 'shop__shelf';
+        head.textContent = t(gate === 'awaken' ? 'Unlocked by awakening' : 'Unlocked by rebirth');
+        frag.append(head);
+        this.shelves.set(gate, head);
+      }
       const li = document.createElement('li');
       li.innerHTML = `
         <button class="up" type="button" data-key="${up.key}">
@@ -342,7 +365,7 @@ export class UI {
       const button = li.querySelector('button');
       button.querySelector('.up__name').textContent = t(up.name);
       this.rows.set(up.key, {
-        up, button,
+        up, button, li,
         effect: button.querySelector('.up__effect'),
         lvl: button.querySelector('.up__lvl'),
         cost: button.querySelector('.up__cost'),
@@ -1065,7 +1088,7 @@ export class UI {
     let bestScore = 0;
     for (const up of UPGRADES) {
       const key = up.key;
-      if (state.isMaxed(key)) continue;
+      if (!statUnlocked(key, state) || state.isMaxed(key)) continue;
       const price = state.costOf(key);
       if (price > state.gold) continue;
 
@@ -1090,8 +1113,15 @@ export class UI {
     let affordable = 0;
     let cheapest = Infinity;
 
+    for (const [gate, head] of this.shelves) {
+      head.hidden = gate === 'awaken' ? state.awakens <= 0
+        : state.prestiges <= 0 && state.awakens <= 0;
+    }
     for (const row of this.rows.values()) {
       const key = row.up.key;
+      const open = statUnlocked(key, state);
+      if (row.li.hidden !== !open) row.li.hidden = !open;
+      if (!open) continue;
       const lvl = state.levels[key];
       const maxed = state.isMaxed(key);
       const n = state.bulkFor(key);

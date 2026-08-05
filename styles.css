@@ -728,6 +728,20 @@ body { display: flex; justify-content: center; }
   align-content: start;
 }
 
+/* Shelf headers: the six upgrades a rebirth unlocks (and the three an
+   awakening does) announce where they came from. Hidden with their shelf. */
+.shop__shelf {
+  margin-top: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #b9a17a;
+  border-bottom: 1px solid #00000055;
+  padding: 2px 2px 3px;
+}
+.shop__shelf[hidden] { display: none; }
+
 /* Upgrade button: 9-sliced from the pack, on the thin frame (--px:2) so more
    rows fit without losing the pack's look. */
 .up {

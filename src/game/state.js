@@ -1,5 +1,6 @@
 import {
-  STATS, statValue, statCost, statCostBulk, statMaxLevel, affordableLevels, OFFLINE,
+  STATS, statValue, statCost, statCostBulk, statMaxLevel, affordableLevels,
+  statUnlocked, OFFLINE,
 } from '../data/balance.js';
 import { LEVELS, xpToNext } from '../data/levels.js';
 import {
@@ -342,7 +343,10 @@ export class GameState {
   }
 
   // --- derived stats ------------------------------------------------
-  get damage()     { return statValue('damage', this.levels.damage) * this.bonus.dmgMul * this.potionMul('fury'); }
+  get damage()     {
+    return statValue('damage', this.levels.damage) * this.bonus.dmgMul
+      * this.potionMul('fury') * (1 + statValue('might', this.levels.might));
+  }
   get attackRate() {
     return statValue('attackRate', this.levels.attackRate) * this.bonus.atkSpeedMul * this.frenzyMul;
   }
@@ -358,7 +362,10 @@ export class GameState {
   }
   get critChance() { return Math.min(0.95, statValue('critChance', this.levels.critChance) + this.bonus.critAdd); }
   get critPower()  { return statValue('critPower', this.levels.critPower) + this.bonus.critPowerAdd; }
-  get maxHp()      { return statValue('maxHp', this.levels.maxHp) * this.bonus.hpMul; }
+  get maxHp()      {
+    return statValue('maxHp', this.levels.maxHp) * this.bonus.hpMul
+      * (1 + statValue('might', this.levels.might));
+  }
   get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul * this.fedRegenMul; }
   get goldGain()   { return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul * this.potionMul('lucky'); }
   get moveSpeed()  { return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul; }
@@ -373,7 +380,18 @@ export class GameState {
   // tree granted the same thing.
   get lifesteal()  { return this.bonus.lifesteal + statValue('lifesteal', this.levels.lifesteal); }
   get doubleHit()  { return this.bonus.doubleHit + statValue('ferocity', this.levels.ferocity); }
-  get respawnMul() { return this.bonus.respawnMul; }
+  get thorns()     { return this.bonus.thorns + statValue('thorns', this.levels.thorns); }
+  get respawnMul() { return this.bonus.respawnMul * (1 - statValue('respawn', this.levels.respawn)); }
+
+  // The gated shelves. Each of these is read by battle.js at its one hook
+  // site; the getter exists so the shop's best-buy probe can measure a bump
+  // the same way it measures every other stat.
+  get bossDamage() { return statValue('bossDamage', this.levels.bossDamage); }
+  get overkill()   { return statValue('overkill', this.levels.overkill); }
+  get warChest()   { return statValue('warChest', this.levels.warChest); }
+  get dustFind()   { return statValue('dustFind', this.levels.dustFind); }
+  get reap()       { return statValue('reap', this.levels.reap); }
+  get phoenix()    { return statValue('phoenix', this.levels.phoenix); }
 
   /** Regular mobs before the final encounter, Scout included. */
   get killsPerStage() {
@@ -816,7 +834,7 @@ export class GameState {
     const mul = this.bonus.dustMul;
     if (kind === 'boss') return Math.round(DUST.bossAmount * mul);
     if (kind === 'elite') return Math.round(DUST.eliteAmount * mul);
-    const chance = DUST.mobChance + this.bonus.dustChance;
+    const chance = DUST.mobChance + this.bonus.dustChance + this.dustFind;
     return Math.random() < chance ? Math.max(1, Math.round(DUST.mobAmount * mul)) : 0;
   }
 
@@ -1131,7 +1149,9 @@ export class GameState {
 
   /** How many levels this purchase takes (1, or as many as affordable). */
   bulkFor(key) {
-    if (this.isMaxed(key)) return 0;
+    // Every purchase path funnels through here, so the shelf gate lives here
+    // too: a locked stat cannot be bought, not even by script or by Herald.
+    if (!statUnlocked(key, this) || this.isMaxed(key)) return 0;
     if (!this.buyMax) return this.gold >= this.costOf(key) ? 1 : 0;
     return affordableLevels(key, this.levels[key], this.gold);
   }

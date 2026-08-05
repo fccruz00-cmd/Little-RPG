@@ -23,6 +23,14 @@ const CORPSE_TIME = 1.1;   // how long a corpse stays on screen
 const LOOT_PAUSE = 0.35;   // breather between one enemy and the next
 const NODE_REACH = 5;      // world px either side of a node the hero can work
 
+// Seconds a held boss waits before walking back in on its own. The hold
+// exists so a wall is not an unwatchable death loop -- but for the player
+// who closed the game on a held boss it became a different wall: the run
+// farmed the same stage forever, because nobody was there to press the
+// button. Retrying is free (the hero heals to full either way), so the only
+// thing the timer costs an idle run is the retry cadence.
+const BOSS_RETRY = 60;
+
 let nextId = 1;
 
 /** An actor in the arena: hero, enemy or corpse. */
@@ -81,6 +89,8 @@ export class Battle {
     this.spawnTimer = 0;
     this.bossTimer = 0;
     this.burnTimer = 0;   // Scorch: seconds of regen still snuffed out
+    this.retryTimer = 0;  // seconds a held boss has been waiting
+    this.overflow = 0;    // Overkill: excess damage owed to the next enemy
 
     // Gathering nodes live on the same line as everything else. `nextNodeX`
     // walks forward with the hero so a node is placed once and never twice.
@@ -183,6 +193,7 @@ export class Battle {
     this.nextNodeX = this.hero.x + GATHER.spacing * 0.5;
     this.spawnTimer = 0.4;
     this.bossTimer = 0;
+    this.overflow = 0;
     this.props.length = 0;
     // The road sometimes has something on it. keepKills marks a reload, and
     // a reload must not re-roll the dice: that is a slot machine with F5.
@@ -311,14 +322,16 @@ export class Battle {
     this.state.hp = this.hero.hp = this.hero.maxHp;
     this.spawnTimer = 1.2;
     this.state.bossHeld = true;
+    this.retryTimer = 0;
     this.emit('toast', { text: reason, bad: true });
     this.emit('bossHeld', true);
   }
 
-  /** The button. Sends the boss back in. */
+  /** The button. Sends the boss back in; a held minute presses it unasked. */
   tryBoss() {
     if (!this.state.bossHeld) return false;
     this.state.bossHeld = false;
+    this.retryTimer = 0;
     this.enemy = null;
     this.spawnTimer = 0.3;
     this.state.hp = this.hero.hp = this.hero.maxHp;
@@ -476,6 +489,16 @@ export class Battle {
     actor.gold = enemyGold(stage, stats.gold);
     actor.period = stats.period;
     actor.attackTimer = actor.period * 0.6;
+
+    // Overkill: the excess of the last killing blow lands on whoever walks
+    // in next, floored so a carry can never kill on its own -- the shop
+    // shelf buys pace on the trash line, not a cascade.
+    if (this.overflow > 0) {
+      const hit = Math.min(this.overflow, actor.maxHp - 1);
+      actor.hp -= hit;
+      this.overflow = 0;
+      this.pushFloater(actor, hit, 'hit');
+    }
 
     // One mob in ~40 walks in as a champion: louder colour, its own prize.
     if (kind === 'mob' && Math.random() < CHAMPION_CHANCE) {
@@ -655,6 +678,14 @@ export class Battle {
     this.updateCorpses(dt);
     this.updateFloaters(dt);
 
+    // A held boss retries itself once a minute. The manual button still
+    // works and still says AGAIN; this is only the finger of whoever is not
+    // in the room, so an idle night stops parking on one failed fight.
+    if (state.bossHeld && !this.run && !hero.dead) {
+      this.retryTimer += dt;
+      if (this.retryTimer >= BOSS_RETRY) this.tryBoss();
+    }
+
     if (this.enemy?.isBoss && !hero.dead) {
       this.bossTimer -= dt;
       if (this.bossTimer <= 0) {
@@ -755,6 +786,7 @@ export class Battle {
         dealt *= 1 + state.bonus.ambush;
       }
       if (target.hp / target.maxHp <= 0.3) dealt *= 1 + state.bonus.executeMul;
+      if (target.isBoss || target.isElite) dealt *= 1 + state.bossDamage;
 
       if (target.trait) {
         target.hitsTaken += 1;
@@ -764,6 +796,7 @@ export class Battle {
         }
       }
 
+      const before = target.hp;
       const killed = target.hurt(dealt);
       this.pushFloater(target, dealt, crit ? 'crit' : 'hit');
 
@@ -773,6 +806,19 @@ export class Battle {
 
       this.emit('hit', { target, damage: dealt, crit });
       if (killed) {
+        if (state.overkill > 0 && dealt > before) {
+          this.overflow += (dealt - before) * state.overkill;
+        }
+        this.killEnemy(target);
+        return;
+      }
+
+      // Reap: whatever survives the swing below the threshold dies anyway.
+      // Bosses are exempt -- their timer is the fight, and a shelf upgrade
+      // must not shave it -- but dungeon rooms and mini bosses are fair game.
+      if (state.reap > 0 && !target.isBoss && target.hp <= target.maxHp * state.reap) {
+        this.pushFloater(target, target.hp, 'hit');
+        target.hurt(target.hp);
         this.killEnemy(target);
         return;
       }
@@ -806,7 +852,10 @@ export class Battle {
     // any other coin, so the offline payout and every gold multiplier see it
     // exactly as they see a good stage.
     const lucky = state.bonus.treasure > 0 && Math.random() < state.bonus.treasure;
-    const gold = state.earn(target.gold * (lucky ? 2 : 1));
+    // War Chest tops up the two encounter kinds that pay flat multiples, so
+    // it scales the stage's PUNCTUATION rather than the whole income line.
+    const spoils = target.isBoss || target.isElite ? 1 + state.warChest : 1;
+    const gold = state.earn(target.gold * (lucky ? 2 : 1) * spoils);
     this.pushFloater(target, gold, 'gold');
 
     let dust = state.rollDust(target.kind);
@@ -899,7 +948,16 @@ export class Battle {
       if (trait.kind === 'burn') this.burnTimer = trait.power;
     }
     const taken = enemy.damage * power * this.state.damageTaken;
-    const killed = hero.hurt(taken);
+    let killed = hero.hurt(taken);
+    // Phoenix Heart: the blow that would have landed you on the floor
+    // sometimes leaves you at a third instead. Checked before anything
+    // reads `killed`, so the streak, the death counter and the boss hold
+    // all see a hit that simply hurt.
+    if (killed && Math.random() < this.state.phoenix) {
+      killed = false;
+      hero.hp = hero.maxHp * 0.3;
+      this.emit('toast', { text: 'PHOENIX HEART' });
+    }
     this.emit('heroHurt', { killed });
     this.pushFloater(hero, taken, 'player');
     if (trait?.kind === 'leech' && !enemy.dead) {
@@ -908,7 +966,7 @@ export class Battle {
     // Thorns. Off the damage that actually landed, so armour and Carapace
     // cut what comes back as well as what goes in -- the alternative pays
     // the tankiest build the most for being hit hardest, which is backwards.
-    const thorns = this.state.bonus.thorns;
+    const thorns = this.state.thorns;
     if (thorns > 0 && !enemy.dead && taken > 0) {
       const back = taken * thorns;
       if (enemy.hurt(back)) { this.pushFloater(enemy, back, 'hit'); this.killEnemy(enemy); }
