@@ -425,7 +425,14 @@ export class UI {
     }
   }
 
-  refreshQuests() {
+  refreshQuests(force = true) {
+    // Contract progress moves when stats move and the countdown only needs
+    // seconds, but this used to re-deal and re-write the board on every
+    // 0.15s shop tick -- measurable at 6x CPU throttle, where those ticks
+    // were the p95 frames. One repaint a second is plenty.
+    const now = performance.now();
+    if (!force && now - (this._questsAt ?? 0) < 1000) return;
+    this._questsAt = now;
     const { state } = this;
     const { dailies, weekly } = state.questBoard();
     const list = [...dailies.map((q) => ({ q, weekly: false })), { q: weekly, weekly: true }];
@@ -1353,13 +1360,19 @@ export class UI {
         ? 'MAX'
         : `<i class="ico ico--gold"></i> ${fmt(price)}`);
 
-      // "how much is missing" bar on rows you cannot afford yet
-      row.meter.style.width = can || maxed
+      // "how much is missing" bar on rows you cannot afford yet. Written
+      // only on change: at 21 rows a tick, same-value style writes were a
+      // real slice of the slow-device frame budget.
+      const width = can || maxed
         ? '0%'
         : `${Math.min(100, (state.gold / state.costOf(key)) * 100).toFixed(1)}%`;
+      if (row.meterW !== width) {
+        row.meterW = width;
+        row.meter.style.width = width;
+      }
     }
 
-    this.refreshQuests();
+    this.refreshQuests(false);
     this.refreshStatbar();
     if (affordable > 0) {
       setText(el.shopHint, t('{0} upgrade(s) available', affordable));
