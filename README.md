@@ -653,10 +653,9 @@ portrait's 130x84 at 3), and the space left under it is where the action
 buttons live: off the game world, and low enough to reach one-handed.
 
 **With height to spare, the arena becomes a band instead.** From a 640px-tall
-viewport up — tablets, desktop — the two columns give way to the shape the
-game is drawn for: a full-width strip of world across the top, big sky and a
-blood moon, the enemy walking in from a long way off, with the panel spread
-underneath in three columns.
+viewport up — tablets, small desktop windows — the two columns give way to the
+shape the game is drawn for: a strip of world across the top, big sky and a
+blood moon, with the panel spread underneath.
 
 That threshold is not a taste call. The band is `38vh` tall and the zoom is
 `round(height / 92)`, so the zoom holds at 3 only while `38vh >= 230px` —
@@ -668,18 +667,17 @@ sprite size does not.
 A phone in landscape is 375-430px tall, so it always gets the columns — a
 band there would be a 140px strip with one row of shop under it.
 
-**The band cost something that was not obvious, and it had to be paid for.**
-An enemy spawns just off the right edge, so the hero walks the gap in front
-of him — and with `heroAnchor` a flat 0.3, that gap was a fixed *share* of
-the view. Invisible while every screen showed ~130 units of road. The moment
-a tablet showed 393, the walk tripled: **19 kills in two minutes against a
-phone's 38.** A camera setting had become a balance setting.
+**And past 1280px wide the columns come back**, for the opposite reason. A
+band is the right answer while width is the thing in short supply; once there
+is 1920px of it, splitting gives the fight a 996px column and the panel a
+922px one, and both are bigger than either gets stacked. So there are three
+shapes, and each threshold is the point where the previous one stops paying:
 
-So the gap is pinned in world units (`WALK_IN = 91`, measured off the
-portrait camera the game was balanced on) and the anchor is derived from it.
-A wide view now shows more of the road *behind* you — corpses, the pets, the
-scenery you came through — rather than more empty ground to cross. Measured
-after: 36-40 kills at every viewport.
+| | shape | why |
+|---|---|---|
+| under 640px tall | columns | no room for a band without dropping the zoom |
+| 640 tall, under 1280 wide | band, arena a 2.2:1 window in it | height to spare, width in short supply |
+| 1280 wide and up | columns | enough width that both halves get a real one |
 
 **A wide band needed a window, not a wider camera.** The zoom comes from
 canvas *height*, so a band stretched edge to edge on a 1920px screen showed
@@ -689,31 +687,29 @@ canvas *height*, so a band stretched edge to edge on a 1920px screen showed
 behind him.
 
 Zooming in fixes the framing and bills the other two things on the screen for
-it. Band height is what buys the zoom — the world keeps the canvas's aspect
-ratio at every scale, so 192 units across 1920px needs 10x, and 10x needs
-`10 x 64 = 640px` of band — so a centred hero meant **doubled sprites and a
-panel squeezed to a strip**. It was built, measured and reverted.
+it: band height is what buys the zoom, so a centred hero meant **doubled
+sprites and a panel squeezed to a strip**. It was built, measured and
+reverted. What works is narrowing the **box** — `.arena` is
+`aspect-ratio: 2.2 / 1`, centred, with the cabinet's wood either side and a
+bevel around it. The ratio is arithmetic: worldWidth is worldHeight times the
+canvas ratio and the zoom holds worldHeight near 92, so 2.2 is ~200 units of
+road and stands the hero at 0.55, with the zoom untouched and the panel whole.
 
-What works instead is narrowing the **box**: `.arena` is
-`aspect-ratio: 2.2 / 1`, centred, with the wood of the cabinet either side of
-it and a bevel around it. The ratio is not a taste call — worldWidth is
-worldHeight times the canvas ratio and the zoom holds worldHeight at about
-92, so 2.2 is ~200 units of road and stands the hero at 0.55. The zoom is
-untouched and the panel keeps every pixel, because neither of them was paying
-for the framing.
+It also closed a leak that predated it. The 0.78 clamp is what kept the hero
+on screen, and past ~420 units of road it quietly stopped the gap being
+`WALK_IN` as well: 106 units at 1920 wide, **141 at 2560**, against 91
+wherever the anchor is free. A 2560px screen was earning **54 kills in four
+simulated minutes against a phone's 66**. Freeing the anchor put every screen
+back on 91, and that one back to 65.
 
-| 1920x880 | hero | sprites | panel | arena |
-|---|---|---|---|---|
-| band edge to edge | 0.78 | 4x | 425px | 1920x334 |
-| zoomed in | 0.51 | 10x | strip | 1920x520 |
-| **window, as it ships** | **0.51** | **4x** | **423px** | **736x334** |
-
-It also closed a leak nobody had noticed. The 0.78 clamp is what stopped the
-hero leaving the screen, and past ~420 units of road it quietly stopped the
-gap being `WALK_IN` too: 106 units at 1920 wide, **141 at 2560**, against 91
-everywhere the anchor is free. A 2560px screen was earning **54 kills in four
-simulated minutes against a phone's 66**. With the window the anchor is free
-on every band, the gap is 91 everywhere, and that screen earns 65.
+**The parallax fills the sky it is given.** Its heights were literals — 46
+units of far hill over a 72-unit ground line — which is two thirds of a
+phone's sky and a fifth of a 1440p column's, so a tall arena was mostly empty
+gradient. They are fractions of `groundY` now, floored at the phone's values
+so nothing ever gets *less* scenery than the art was drawn with. Height
+scales; horizontal spacing does not — scaling the tree span too thinned the
+treeline out, because the same one-in-three filter over a longer stride is
+half the trees across the same stretch of road.
 
 **The HUD grows, and that part stayed.** Every size in it was picked for a
 390px phone, where 48px of wood carrying two rows is a tenth of the screen;

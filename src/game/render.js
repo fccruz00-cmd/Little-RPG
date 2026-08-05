@@ -17,6 +17,9 @@ const MIN_WORLD_W = 100;
 // because band height is what buys the zoom, it ate the panel. The framing
 // on a wide screen is a trade with no free side; see LAYOUT in the README.
 const GROUND_FROM_BOTTOM = 16;
+// The ground line of the world the scenery was drawn against: 92 tall less
+// the 16 under the ground. Every parallax height below is a fraction of this.
+const REFERENCE_GROUND_Y = TARGET_WORLD_H - GROUND_FROM_BOTTOM;
 
 /** Deterministic noise: same input, same scenery, no popping. */
 function hash(n) {
@@ -91,7 +94,8 @@ export class Renderer {
     this.width = 200;
     this.height = 64;
     this.dpr = 1;
-    this.grid = 3;   // resize() owns this; a sane value until it first runs
+    this.grid = 3;   // resize() owns these; sane values until it first runs
+    this.sky = 1;
 
     // scratch canvas for the white hit flash
     this.scratch = document.createElement('canvas');
@@ -122,6 +126,13 @@ export class Renderer {
     this.groundY = this.height - GROUND_FROM_BOTTOM;
     // Device pixels per world unit: the grid everything that MOVES snaps to.
     this.grid = this.dpr * this.scale;
+    // How much sky there is to fill, against the world the art was drawn for.
+    // The parallax heights were literals -- 46 units of far hill over a 72
+    // unit ground line -- which is two thirds of a phone's sky and a fifth of
+    // a 1440p column's. The bands scale with the sky instead, so the same
+    // silhouette sits at the same HEIGHT in the frame at any size. Floored at
+    // 1 so no screen ever gets less scenery than the phone was drawn with.
+    this.sky = Math.max(1, Math.min(2, this.groundY / REFERENCE_GROUND_Y));
     return this.width;
   }
 
@@ -205,12 +216,14 @@ export class Renderer {
     ctx.fillStyle = tier.moon;
     ctx.globalAlpha = 0.85;
     ctx.beginPath();
-    ctx.arc(moonX + W * 0.7, 12, 5, 0, Math.PI * 2);
+    ctx.arc(moonX + W * 0.7, 12 * this.sky, 5 * this.sky, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    this.drawHills(camX * 0.15, groundY + 2, 26, 46, biome.far, 26);
-    this.drawHills(camX * 0.38, groundY + 2, 16, 31, biome.mid, 16);
+    // The seeds stay 26 and 16: they are what makes the two bands different
+    // silhouettes, and they must not move when the heights do.
+    this.drawHills(camX * 0.15, groundY + 2, 26 * this.sky, 46 * this.sky, biome.far, 26);
+    this.drawHills(camX * 0.38, groundY + 2, 16 * this.sky, 31 * this.sky, biome.mid, 16);
     this.drawTrees(camX * 0.62, groundY, biome.tree);
 
     // ground
@@ -269,6 +282,11 @@ export class Renderer {
     ctx.fill();
   }
 
+  /**
+   * Height scales with the sky; SPACING does not. Scaling the span too
+   * thinned the treeline out -- the same one-in-three filter over a stride
+   * half again as long is half the trees across the same stretch of road.
+   */
   drawTrees(offset, baseY, color) {
     const { ctx, width: W } = this;
     const span = 26;
@@ -277,7 +295,7 @@ export class Renderer {
       const r = hash(k * 13 + 101);
       if (r > 0.6) continue;
       const x = this.q(k * span - offset + r * 12);
-      const h = 12 + Math.round(r * 14);
+      const h = Math.round((12 + r * 14) * this.sky);
       ctx.fillRect(x, baseY - h, 2, h);
       ctx.beginPath();
       ctx.moveTo(x - 5, baseY - h + 4);

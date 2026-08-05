@@ -924,10 +924,13 @@ body { display: flex; justify-content: center; }
      the .8 frame leaves 29px inside for a 24px icon. Under this the icon
      starts eating its own frame. */
   min-height: 176px;
-  max-height: 330px;
-  margin-inline: auto;
+  max-height: 470px;
+  /* `margin: auto` and not `align-items: center` on the scroller: centring a
+     flex item that overflows makes its top unreachable, and a web that does
+     not fit is exactly when you need to scroll to the top of it. */
+  margin: auto;
 }
-.tree-scroll { overflow-x: auto; }
+.tree-scroll { display: flex; overflow-x: auto; }
 
 .web__wires {
   position: absolute;
@@ -974,8 +977,8 @@ body { display: flex; justify-content: center; }
   position: relative;
   z-index: 1;
   place-self: center;
-  width: min(100%, 54px);
-  height: min(100%, 54px);
+  width: min(100%, 62px);
+  height: min(100%, 62px);
   justify-content: center;
   gap: 0;
   padding: 0;
@@ -1002,8 +1005,8 @@ body { display: flex; justify-content: center; }
    colour. */
 .node--cross {
   --accent: #9d8fb8;
-  width: min(100%, 40px);
-  height: min(100%, 40px);
+  width: min(100%, 46px);
+  height: min(100%, 46px);
 }
 .node--cross .ico--lg {
   width: 16px; height: 16px;
@@ -1885,7 +1888,7 @@ body { display: flex; justify-content: center; }
    from a 640px-tall viewport up. One pixel under that, the zoom drops to 2,
    the visible road doubles, and the band is the wrong answer again.
    ============================================================ */
-@media (min-width: 560px) and (min-aspect-ratio: 1/1) and (min-height: 640px) {
+@media (min-width: 560px) and (max-width: 1279px) and (min-aspect-ratio: 1/1) and (min-height: 640px) {
   #app {
     display: flex;
     flex-direction: column;
