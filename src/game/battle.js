@@ -244,13 +244,19 @@ export class Battle {
     const key = tamed.map((p) => p.id).join(',');
     if (key === this._petKey) return;
     this._petKey = key;
+    // The parade tightens as it grows. At nine units apart ten pets trail 95
+    // behind the hero, and the road behind him is 35 units on a phone and 75
+    // in a desktop column -- so the last of them would be tamed, fed and
+    // permanently off screen. Closing up overlaps them slightly, which reads
+    // as a crowd rather than a queue.
+    this.petStep = Math.max(6, 9 - Math.max(0, tamed.length - 5) * 0.6);
     this.petActors = tamed.map((pet, i) => {
       // The sprite is a roster mob; hover comes from its own def so the bat
       // pet flies exactly as high as the bat it used to be.
       const mob = MOBS.find((m) => m.id === pet.sprite);
       const def = { id: pet.sprite, petId: pet.id, hover: mob?.hover ?? 0, reach: 0, speed: 0, hit: 0 };
       const actor = new Actor(def, this.sheets[pet.sprite], {
-        x: this.hero.x - 14 - i * 9, facing: 1,
+        x: this.hero.x - 13 - i * this.petStep, facing: 1,
       });
       actor.scale = 0.5;
       return actor;
@@ -279,7 +285,7 @@ export class Battle {
     const walking = this.hero.anim.name === 'walk';
     for (let i = 0; i < this.petActors.length; i++) {
       const actor = this.petActors[i];
-      actor.x = this.hero.x - 14 - i * 9;
+      actor.x = this.hero.x - 13 - i * this.petStep;
       actor.anim.play(walking ? 'walk' : 'idle', { fps: walking ? 10 : 8 });
       actor.anim.update(dt);
     }

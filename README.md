@@ -309,7 +309,7 @@ tree is about 226 souls, which is many awakenings deep on purpose.
 
 ### Pets
 
-Five companions. The slime is with you from the start; the other four are
+Ten companions. The slime is with you from the start; the other nine are
 locked behind **objectives, one per pillar of the game**, so the collection
 doubles as a tour of the systems. Objectives are checked against live state
 every tick, a tame lands the moment it is earned, and nothing ever comes
@@ -322,11 +322,33 @@ all their buffs stack. The choice lives in the taming, not in a slot.
 
 | pet | tamed by | eats | buff per level |
 |---|---|---|---|
-| Pocket Slime   | with you from the start | Minnows  | +4% health |
-| Belfry Bat     | Mining level 10         | Carp     | +1.5% attack speed |
-| Little Watcher | first rebirth           | Salmon   | +0.4% crit chance |
-| Hellpup        | clearing any dungeon    | Trout    | +4% damage |
-| Cinder Slime   | first awakening         | Sturgeon | +5% gold |
+| Pocket Slime   | with you from the start   | Minnows  | +4% health |
+| Belfry Bat     | Mining level 10           | Carp     | +1.5% attack speed |
+| Little Watcher | first rebirth             | Salmon   | +0.4% crit chance |
+| Hellpup        | clearing any dungeon      | Trout    | +4% damage |
+| Cinder Slime   | first awakening           | Sturgeon | +5% gold |
+| Bone Buddy     | falling in battle 25 times| Minnows  | +6% regeneration |
+| Wisp           | Fishing level 15          | Carp     | +3% XP |
+| Bloodling      | a blood moon clear        | Trout    | +0.2% lifesteal |
+| Ember Golem    | forging a legendary       | Salmon   | +4% dust |
+| Imp            | reaching stage 100        | Sturgeon | +0.4% to strike twice |
+
+**Two rules hold the roster together**, and they are worth keeping if it
+grows again. No two pets carry the same bonus key, so a pet is never a
+smaller copy of another one; and the sprite must be a mob or boss the loader
+already fetches (`allActorIds`), or the pet is invisible in both the parade
+and its own row. Both are asserted in the tests.
+
+The second five sit at about two thirds of the first five's `per` values.
+Ten pets should be a wider collection than five, not twice the power — and
+Pack Leader, on the soul web, multiplies all ten. Their objectives point at
+the three systems the first five missed (fishing, the forge, the blood moon)
+plus the two things every player accumulates and was never paid for: deaths,
+and the push past stage 100.
+
+The parade tightens as it grows: nine units apart, ten pets trail 95 behind
+the hero, and the road behind him is 35 units on a phone. The step closes to
+six, which overlaps them slightly and reads as a crowd rather than a queue.
 
 Levels are bought with **raw fish of the pet's own tier**. Meals always cook
 from the best fish first, so the lower tiers pile up as dead stock the moment

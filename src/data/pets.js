@@ -71,6 +71,74 @@ export const PETS = [
       now: (s) => Math.min(1, s.awakens), need: 1,
     },
   },
+
+  // --- the second five ---------------------------------------------------
+  // Same rule as the first five and it is the whole design: one pillar each,
+  // and no two carry the same bonus key. Between them they now point at the
+  // three systems the first five did not -- fishing, the forge, and the blood
+  // moon -- plus the two events every player has plenty of and no reward for:
+  // dying, and pushing past stage 100.
+  //
+  // Their `per` values sit around two thirds of the first five's on purpose.
+  // Ten pets should be a wider collection than five, not twice the power, and
+  // Pack Leader multiplies all ten.
+  {
+    id: 'bones', name: 'Bone Buddy', sprite: 'skeleton', accent: '#d8d4c0',
+    fishTier: 0,
+    key: 'regenMul', mode: 'mul', per: 0.06,
+    blurb: 'keeps picking you back up',
+    unlock: {
+      // The one counter every idle player runs up without trying, and the
+      // only one the game never paid anything for.
+      desc: 'fall in battle 25 times',
+      test: (s) => s.stats.deaths >= 25,
+      now: (s) => s.stats.deaths, need: 25,
+    },
+  },
+  {
+    id: 'wisp', name: 'Wisp', sprite: 'ghostfire', accent: '#8fd4ff',
+    fishTier: 1,
+    key: 'xpMul', mode: 'mul', per: 0.03,
+    blurb: 'lights the way to the next level',
+    unlock: {
+      desc: 'reach Fishing level 15',
+      test: (s) => s.skills.fishing.level >= 15,
+      now: (s) => s.skills.fishing.level, need: 15,
+    },
+  },
+  {
+    id: 'bloodling', name: 'Bloodling', sprite: 'blood_monster_a', accent: '#b74132',
+    fishTier: 2,
+    key: 'lifesteal', mode: 'add', per: 0.002,
+    blurb: 'drinks what you spill',
+    unlock: {
+      desc: 'clear a blood moon dungeon',
+      test: (s) => s.stats.bloodWins >= 1,
+      now: (s) => Math.min(1, s.stats.bloodWins), need: 1,
+    },
+  },
+  {
+    id: 'ember', name: 'Ember Golem', sprite: 'flame_golem', accent: '#e67146',
+    fishTier: 3,
+    key: 'dustMul', mode: 'mul', per: 0.04,
+    blurb: 'grinds the leftovers back into dust',
+    unlock: {
+      desc: 'forge a legendary',
+      test: (s) => s.stats.legendaries >= 1,
+      now: (s) => Math.min(1, s.stats.legendaries), need: 1,
+    },
+  },
+  {
+    id: 'imp', name: 'Imp', sprite: 'demon_a', accent: '#c79ae8',
+    fishTier: 4,
+    key: 'doubleHit', mode: 'add', per: 0.004,
+    blurb: 'sneaks in a second swing',
+    unlock: {
+      desc: 'reach stage 100',
+      test: (s) => s.bestStage >= 100,
+      now: (s) => s.bestStage, need: 100,
+    },
+  },
 ];
 
 export const PET_BY_ID = Object.fromEntries(PETS.map((p) => [p.id, p]));
