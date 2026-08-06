@@ -7,6 +7,6 @@
 // makes zero network calls, and everything else works exactly as before.
 // Fill both in (Supabase dashboard -> Settings -> API) to light it up.
 export const LEADERBOARD = {
-  url: '',    // e.g. 'https://abcdefghijkl.supabase.co'
-  anon: '',   // the "anon / public" API key, NOT the service role key
+  url: 'https://pnfnkvgztatcdjgkdjnf.supabase.co',
+  anon: 'sb_publishable_PuN8RjQKDGp9S_PkGU2NDA_1KpStOZk',
 };

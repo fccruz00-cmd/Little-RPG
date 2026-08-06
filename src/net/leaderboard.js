@@ -38,6 +38,13 @@ function cfg() {
 }
 
 export function hasBackend() {
+  // A dev server stays silent unless a test opts in through __LB_CONFIG:
+  // the headless battery boots this game hundreds of times, and not one of
+  // those boots may ever write to the real board.
+  if (!globalThis.__LB_CONFIG && typeof location !== 'undefined'
+      && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    return false;
+  }
   const { url, anon } = cfg();
   return Boolean(url && anon);
 }
