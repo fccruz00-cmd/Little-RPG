@@ -206,6 +206,16 @@ export class Renderer {
     const cssW = Math.max(1, rect.width);
     const cssH = Math.max(1, rect.height);
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Safari silently blanks any canvas whose backing store passes about
+    // 16.7M pixels -- no throw, no warning, just a black rectangle where
+    // the game should be. A big Retina window (4K fullscreen at dpr 2)
+    // walks straight into it. Give the cap a margin and pay for oversized
+    // frames with resolution instead of with a black screen.
+    const MAX_AREA = 15e6;
+    const area = cssW * cssH * this.dpr * this.dpr;
+    if (area > MAX_AREA) {
+      this.dpr = Math.max(1, Math.sqrt(MAX_AREA / (cssW * cssH)));
+    }
     // Height picks the zoom; width vetoes it. `floor` on the width term, not
     // `round`: rounding UP is exactly the case that lands the world under
     // MIN_WORLD_W, which is the number the term exists to protect.
@@ -260,7 +270,21 @@ export class Renderer {
     ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
 
-    this.drawBackground(camX, biome, tier, time);
+    // If the image-layer path fails on some browser or driver, drop the
+    // layers for good and let the procedural scenery carry the frame: a
+    // plainer sky beats a black screen, permanently and loudly.
+    try {
+      this.drawBackground(camX, biome, tier, time);
+    } catch (err) {
+      if (this.layers) {
+        console.warn('scenery layers failed, falling back to procedural', err);
+        this.layers = null;
+        this._tintCache.clear();
+        this.drawBackground(camX, biome, tier, time);
+      } else {
+        throw err;
+      }
+    }
     this.drawProps(battle, camX, time);
     this.drawNodes(battle, camX);
 

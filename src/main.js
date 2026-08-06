@@ -136,7 +136,25 @@ async function boot() {
     requestAnimationFrame(slice);
   });
 
+  // One bad frame must not end the game. An uncaught throw anywhere in the
+  // loop used to kill the rAF chain outright: the canvas froze on whatever
+  // was last painted -- solid black, if a resize had just cleared it -- while
+  // the DOM sat there looking alive. Log the first failure loudly, skip the
+  // frame, keep the chain going.
+  let frameFailures = 0;
   function frame(now) {
+    try {
+      frameBody(now);
+    } catch (err) {
+      frameFailures += 1;
+      if (frameFailures <= 3) console.error('frame failed, skipping', err);
+      last = now;
+      accumulator = 0;
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function frameBody(now) {
     const raw = Math.max(0, (now - last) / 1000);
     last = now;
 
@@ -167,8 +185,6 @@ async function boot() {
     state.tickAutosave(elapsed);
     renderer.draw(battle, now / 1000);
     ui.update(elapsed);
-
-    rafId = requestAnimationFrame(frame);
   }
 
   // --- hidden tab -----------------------------------------------------
