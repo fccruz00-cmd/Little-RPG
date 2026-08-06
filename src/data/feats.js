@@ -48,6 +48,11 @@ export function emptyStats() {
     kills: 0, bossKills: 0, deaths: 0, forges: 0, legendaries: 0,
     refines: 0, feeds: 0, brews: 0, cooks: 0, dungeonWins: 0, bloodWins: 0,
     rebirths: 0, contracts: 0,
+    // The leaderboard-league ledger. `paidPacks` counts real-money packs,
+    // `gemPower` counts gem buys that hand over POWER (chest, idol) and
+    // `gemQoL` the ones that only buy pace (coin, hourglass). Lifetime and
+    // one-way, because a league you can wash out of is not a league.
+    paidPacks: 0, gemPower: 0, gemQoL: 0,
   };
 }
 

@@ -322,6 +322,16 @@ export class GameState {
     // Unlocks read live state, so a save from before pets existed walks out
     // of load with everything it already earned, the slime included. Silent
     // on purpose: the battle announces tames that happen live, not backlog.
+    // The league ledger arrived after purchases did, so old saves seed it
+    // from what they can prove: a redeemed token is a real-money pack, and
+    // the idol in hand is a gem-power buy. Chest history is unprovable and
+    // stays unseeded -- a veteran can only be placed too PURELY, never too
+    // harshly, and the counters are one-way from here.
+    if (!this.stats.paidPacks && this.redeemed.length) {
+      this.stats.paidPacks = this.redeemed.length;
+    }
+    if (!this.stats.gemPower && this.idolOwned) this.stats.gemPower = 1;
+
     this.tamePets();
     // The companion has to be a tamed pet; anything else falls back to the
     // slime, who is always with you.
@@ -1234,6 +1244,11 @@ export class GameState {
     const ware = WARE_BY_ID[id];
     this.gems -= ware.cost;
 
+    // The league ledger: chest and idol are POWER, coin and hourglass are
+    // pace. What separates the second and third leaderboard leagues.
+    if (id === 'chest' || id === 'idol') this.stats.gemPower += 1;
+    else this.stats.gemQoL += 1;
+
     if (id === 'coin') {
       const gold = this.bestGold * CACHE_SECONDS;
       // Straight onto the pile, deliberately NOT through earn(): this is not
@@ -1262,6 +1277,21 @@ export class GameState {
     if (rolled >= LEGENDARY) this.stats.legendaries += 1;
     this.invalidateBonus();
     return { id, slotId, rolled };
+  }
+
+  /**
+   * Which leaderboard league this save competes in. Three, split by how it
+   * was funded, and one-way by design:
+   *  - 'patron': real money was ever spent;
+   *  - 'gilded': no money, but gems bought POWER (a chest or the idol);
+   *  - 'pure':   at most pace was bought (coin cache, hourglass) -- gold
+   *              and a timeskip change when you got here, not how strong
+   *              you are once you did.
+   */
+  get spendTier() {
+    if (this.stats.paidPacks > 0) return 'patron';
+    if (this.stats.gemPower > 0) return 'gilded';
+    return 'pure';
   }
 
   /** Slots currently wearing the top rarity. Awakening is about to take them. */
@@ -1323,6 +1353,7 @@ export class GameState {
     if (this.redeemed.length > REDEEMED_KEPT) {
       this.redeemed = this.redeemed.slice(-REDEEMED_KEPT);
     }
+    this.stats.paidPacks += 1;   // the first league is forever
     return this.grantGems(amount);
   }
 
