@@ -231,21 +231,21 @@
       <div class="tree-scroll" id="tree-cooking" hidden></div>
     </div>
 
-    <!-- tab: the cosmos (shows up after the first awakening). One body
-         under observation at a time; each discovery automates one thing. -->
+    <!-- tab: the cosmos (shows up after the first awakening). Two catalogs
+         share one telescope: planets automate, constellations empower. -->
     <div class="pane" id="pane-cosmos">
       <div class="pane__head">
-        <span class="pane__hint" id="cosmos-hint"></span>
+        <div class="segmented" id="cosmos-switch">
+          <button class="is-on" data-sky="planetarium" type="button">Planetarium</button>
+          <button data-sky="constellations" type="button" id="sky-stars">Constellations</button>
+        </div>
         <span class="pane__points">
           <i class="ico ico--sm ico--telescope"></i> <b id="planets-found">0/8</b>
         </span>
       </div>
-      <p class="pane__detail" id="cosmos-detail">
-        The observatory watches <b>one body at a time</b>, on game time.
-        A discovered planet is yours forever — it survives rebirth and
-        awakening — and <b>automates one thing</b> you were doing by hand.
-      </p>
-      <div class="keys" id="planets"></div>
+      <p class="pane__detail" id="cosmos-detail"></p>
+      <div class="skyline" id="planetarium"></div>
+      <div class="skyline" id="constellations" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->

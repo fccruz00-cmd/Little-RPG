@@ -17,7 +17,9 @@ import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { DISHES } from '../data/dishes.js';
-import { PLANETS, observeTime, describePlanet } from '../data/cosmos.js';
+import {
+  PLANETS, CONSTELLATIONS, CONSTELLATION_BY_ID, observeTime,
+} from '../data/cosmos.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { PATHS, describePath } from '../data/paths.js';
@@ -144,7 +146,9 @@ export class UI {
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
       tabCosmos: $('tab-cosmos'), pipCosmos: $('pip-cosmos'),
-      planets: $('planets'), planetsFound: $('planets-found'), cosmosHint: $('cosmos-hint'),
+      planetsFound: $('planets-found'), cosmosDetail: $('cosmos-detail'),
+      cosmosSwitch: $('cosmos-switch'), skyStars: $('sky-stars'),
+      planetarium: $('planetarium'), constellations: $('constellations'),
       pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
@@ -260,6 +264,8 @@ export class UI {
       ['[data-skill="farming"]', 'Farming'], ['[data-skill="cooking"]', 'Cooking'],
       ['[data-asc="rebirth"]', 'Rebirth'], ['[data-asc="awaken"]', 'Awaken'],
       ['[data-asc="feats"]', 'Feats'],
+      ['[data-sky="planetarium"]', 'Planetarium'],
+      ['[data-sky="constellations"]', 'Constellations'],
       ['#btn-respec', 'respec'], ['#btn-respec-skill', 'respec'],
       ['#act-boss', 'Try boss'], ['#act-blood', 'Bloodmoon'], ['#act-leave', 'Leave'],
       ['#pane-upgrades .toggle span', 'Buy max'],
@@ -310,7 +316,6 @@ export class UI {
       ['.statbar div:nth-child(3) dt', `<i class="ico ico--sm ico--crit"></i>${t('crit')}`],
       ['.statbar div:nth-child(4) dt', `<i class="ico ico--sm ico--gold"></i>${t('gold')}`],
       ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos te seguem, todos os buffs somam, e os níveis sobrevivem a <b>tudo</b>, renascimento e despertar.'],
-      ['#cosmos-detail', 'O observatório assiste <b>um corpo por vez</b>, em tempo de jogo. Um planeta descoberto é seu para sempre — sobrevive ao renascer e ao despertar — e <b>automatiza uma coisa</b> que você fazia na mão.'],
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
@@ -733,12 +738,18 @@ export class UI {
       this.refreshSkills();
     });
 
-    el.planets.addEventListener('click', (e) => {
-      const row = e.target.closest('.planet');
-      if (!row || !state.observePlanet(row.dataset.planet)) return;
+    el.cosmosSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button && !button.disabled) this.showSky(button.dataset.sky);
+    });
+    const aimTelescope = (e) => {
+      const card = e.target.closest('.pcard');
+      if (!card || !state.observePlanet(card.dataset.body)) return;
       this.sfx.play('buy');
       this.refreshCosmos();
-    });
+    };
+    el.planetarium.addEventListener('click', aimTelescope);
+    el.constellations.addEventListener('click', aimTelescope);
 
     el.kitchen.addEventListener('click', (e) => {
       const row = e.target.closest('[data-dish]');
@@ -1277,8 +1288,9 @@ export class UI {
     el.tabForge.hidden = !state.forgeUnlocked;
     el.tabCosmos.hidden = !state.cosmosOpen;
     // The sky nags only while the telescope sits idle with bodies left.
-    el.pipCosmos.hidden = !state.cosmosOpen || state.cosmos.target != null
-      || state.cosmos.found.length >= PLANETS.length;
+    const skyLeft = PLANETS.some((p) => !state.planetFound(p.id))
+      || (state.starsOpen && CONSTELLATIONS.some((c) => !state.planetFound(c.id)));
+    el.pipCosmos.hidden = !state.cosmosOpen || state.cosmos.target != null || !skyLeft;
     el.pipCosmos.classList.add('pip--gold');
     el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
     el.pipForge.classList.add('pip--gold');
@@ -1650,47 +1662,84 @@ export class UI {
     }
   }
 
-  /** The observatory: one row per body, nearest first. */
+  /**
+   * The observatory: each catalog is a sideways-scrolling row of card
+   * portraits, joined O → O → O in discovery-ladder order. One click aims
+   * the telescope; the card carries its own progress bar.
+   */
   buildCosmos() {
-    this.planetRows = new Map();
-    for (const planet of PLANETS) {
-      const row = document.createElement('button');
-      row.type = 'button';
-      row.className = 'ore key planet';
-      row.dataset.planet = planet.id;
-      row.style.setProperty('--ore', planet.accent);
-      row.innerHTML = `
-        <span class="ore__name"><i class="ico ico--sm ico--${planet.icon}"></i> ${t(planet.name)}</span>
-        <span class="key__what">${describePlanet(planet)}</span>
-        <span class="ore__have"><b></b></span>
-        <span class="ore__smelt"></span>`;
-      this.el.planets.append(row);
-      this.planetRows.set(planet.id, {
-        planet, row,
-        left: row.querySelector('b'),
-        action: row.querySelector('.ore__smelt'),
+    this.skyView = 'planetarium';
+    this.bodyCards = new Map();
+    const build = (host, list) => {
+      list.forEach((body, i) => {
+        if (i) {
+          const link = document.createElement('span');
+          link.className = 'pcard__link';
+          link.textContent = '→';
+          host.append(link);
+        }
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'pcard';
+        card.dataset.body = body.id;
+        card.style.setProperty('--accent', body.accent);
+        card.innerHTML = `
+          <i class="ico pbody ico--${body.icon}"></i>
+          <span class="pcard__name">${t(body.name)}</span>
+          <span class="pcard__what">${t(body.blurb)}</span>
+          <span class="pcard__meter"><i></i></span>
+          <span class="pcard__state"></span>`;
+        host.append(card);
+        this.bodyCards.set(body.id, {
+          body, card,
+          meter: card.querySelector('.pcard__meter i'),
+          state: card.querySelector('.pcard__state'),
+        });
       });
+    };
+    build(this.el.planetarium, PLANETS);
+    build(this.el.constellations, CONSTELLATIONS);
+  }
+
+  showSky(view) {
+    this.skyView = view;
+    for (const button of this.el.cosmosSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.sky === view);
     }
+    this.el.planetarium.hidden = view !== 'planetarium';
+    this.el.constellations.hidden = view !== 'constellations';
+    this.refreshCosmos();
   }
 
   refreshCosmos() {
     const { state, el } = this;
-    setText(el.planetsFound, `${state.cosmos.found.length}/${PLANETS.length}`);
-    setText(el.cosmosHint, state.cosmos.target
-      ? t('the telescope is watching')
-      : t('point the telescope at a body'));
-    for (const { planet, row, left, action } of this.planetRows.values()) {
-      const found = state.planetFound(planet.id);
-      const watching = state.cosmos.target === planet.id;
-      const done = state.cosmos.progress[planet.id] ?? 0;
-      const need = observeTime(planet);
-      row.classList.toggle('is-done', found);
-      row.classList.toggle('can-smelt', !found && watching);
-      row.disabled = found;
-      setText(left, found ? '' : watching || done > 0 ? duration(Math.max(1, need - done)) : duration(need));
-      setText(action, found ? '✓'
-        : watching ? `${Math.floor((done / need) * 100)}%`
-        : t('observe'));
+    const stars = this.skyView === 'constellations';
+    const list = stars ? CONSTELLATIONS : PLANETS;
+    const found = list.filter((b) => state.planetFound(b.id)).length;
+    setText(el.planetsFound, `${found}/${list.length}`);
+    // The stars stay dark until the first planet lands.
+    el.skyStars.disabled = !state.starsOpen;
+    setHtml(el.cosmosDetail, stars
+      ? state.starsOpen
+        ? t('The stars share the one telescope with the planets. A charted constellation is a <b>permanent buff</b> to your skills or your gear.')
+        : t('Discover your <b>first planet</b> to read the stars.')
+      : t('One body at a time, on game time. A discovered planet is yours forever — through rebirth and awakening — and <b>automates one thing</b> you were doing by hand.'));
+
+    for (const { body, card, meter, state: stateEl } of this.bodyCards.values()) {
+      const isFound = state.planetFound(body.id);
+      const watching = state.cosmos.target === body.id;
+      const locked = CONSTELLATION_BY_ID[body.id] != null && !state.starsOpen;
+      const done = state.cosmos.progress[body.id] ?? 0;
+      const need = observeTime(body);
+      card.classList.toggle('is-done', isFound);
+      card.classList.toggle('is-watching', watching);
+      card.classList.toggle('is-locked', locked);
+      card.disabled = isFound || locked;
+      meter.style.width = isFound ? '100%' : `${Math.min(100, (done / need) * 100).toFixed(1)}%`;
+      setText(stateEl, isFound ? '✓'
+        : watching ? `${Math.floor((done / need) * 100)}% · ${duration(Math.max(1, need - done))}`
+        : done > 0 ? `${t('observe')} · ${duration(need - done)}`
+        : `${t('observe')} · ${duration(need)}`);
     }
   }
 

@@ -68,6 +68,63 @@ export const PLANETS = [
 
 export const PLANET_BY_ID = Object.fromEntries(PLANETS.map((p) => [p.id, p]));
 
+/**
+ * Constellations: the second catalog, unlocked by the FIRST planet.
+ *
+ * They share the one telescope with the planets, which is the whole
+ * decision: an hour spent charting The Sword is an hour Jupiter is not
+ * being found. Where a planet automates, a constellation EMPOWERS -- four
+ * reach the skills, four reach the equipment -- and a charted sky is as
+ * permanent as a discovered planet.
+ */
+export const CONSTELLATIONS = [
+  {
+    id: 'sword', name: 'The Sword', icon: 'sword', accent: '#e6dccb',
+    hours: 0.5, key: 'gearPower', per: 0.10,
+    blurb: 'every equipped item +10% stronger',
+  },
+  {
+    id: 'plough', name: 'The Plough', icon: 'plough', accent: '#8fbf4a',
+    hours: 1, key: 'yieldAll', per: 0.10,
+    blurb: '+10% yield, every gathering skill',
+  },
+  {
+    id: 'owl', name: 'The Owl', icon: 'owl', accent: '#c9a15a',
+    hours: 2, key: 'skillXp', per: 0.15,
+    blurb: '+15% skill XP, every skill',
+  },
+  {
+    id: 'anvilstars', name: 'The Anvil', icon: 'anvilstars', accent: '#e67146',
+    hours: 3, key: 'forgeLuck', per: 0.25,
+    blurb: 'forge odds move up the ladder',
+  },
+  {
+    id: 'chalice', name: 'The Chalice', icon: 'chalice', accent: '#b072c9',
+    hours: 5, key: 'benchPower', per: 0.10,
+    blurb: 'potions and dishes +10% stronger',
+  },
+  {
+    id: 'river', name: 'The River', icon: 'river', accent: '#5aa9c9',
+    hours: 7, key: 'workAll', per: 0.08,
+    blurb: '8% faster work, every gathering skill',
+  },
+  {
+    id: 'twins', name: 'The Twins', icon: 'twins', accent: '#9fd4d4',
+    hours: 9, key: 'enchantPower', per: 0.30,
+    blurb: 'enchants +30% stronger',
+  },
+  {
+    id: 'crownstars', name: 'The Crown', icon: 'crownstars', accent: '#ebb85b',
+    hours: 12, key: 'setPower', per: 0.30,
+    blurb: 'the set bonus +30% stronger',
+  },
+];
+
+export const CONSTELLATION_BY_ID = Object.fromEntries(CONSTELLATIONS.map((c) => [c.id, c]));
+
+/** Every body the telescope can point at, planets and stars alike. */
+export const BODY_BY_ID = { ...PLANET_BY_ID, ...CONSTELLATION_BY_ID };
+
 export const COSMOS = {
   // Seconds of game time between automation ticks. Gathering planets grant
   // one full node's yield per tick; a hand on the tool works a node every

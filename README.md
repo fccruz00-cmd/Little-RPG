@@ -199,11 +199,15 @@ it.
 3. **Skills**: the seven skills behind one switch — Mining, Chopping,
    Fishing and Farming on the line; Smithing at the workshop, Alchemy at
    the cauldron, Cooking at the kitchen.
-4. **Cosmos**: only appears after the first awakening. The observatory
-   watches **one body at a time** on game time (the speed toggle turns the
-   sky faster), keeps partial progress per planet, and each discovery is
-   permanent — it survives rebirth *and* awakening. Each of the eight
-   automates one thing you were doing by hand:
+4. **Cosmos**: only appears after the first awakening. Two catalogs behind
+   one switch — the **Planetarium** and the **Constellations** — drawn as
+   sideways-scrolling rows of card portraits joined O → O → O, sharing
+   **one telescope**: an hour spent charting The Sword is an hour Jupiter
+   is not being found, and that is the whole decision. Observation runs on
+   game time (the speed toggle turns the sky faster), partial progress is
+   kept per body, and every discovery is permanent — it survives rebirth
+   *and* awakening. Each of the eight planets automates one thing you were
+   doing by hand:
 
    | body | hours | automates |
    |---|---:|---|
@@ -223,6 +227,21 @@ it.
    and nothing happens when the materials are not there. The endgame
    automates the early friction, the same bargain Herald, Anvil and
    Forager already made.
+
+   The **first planet discovered opens the Constellations**: where a
+   planet automates, a charted constellation *empowers* — four reach the
+   skills and four reach the equipment, all permanent:
+
+   | constellation | hours | grants |
+   |---|---:|---|
+   | The Sword   | 0.5 | every equipped item +10% stronger |
+   | The Plough  | 1   | +10% yield, every gathering skill |
+   | The Owl     | 2   | +15% skill XP, every skill |
+   | The Anvil   | 3   | +0.25 forge quality (odds up the ladder) |
+   | The Chalice | 5   | potions *and* dishes +10% stronger |
+   | The River   | 7   | 8% faster work, every gathering skill |
+   | The Twins   | 9   | enchants +30% stronger |
+   | The Crown   | 12  | the set bonus +30% stronger |
 5. **Forge**: only appears after the first rebirth.
 6. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
 7. **Ascend**: the two reset layers behind one switch.
@@ -1052,8 +1071,9 @@ The game uses crops from four third-party packs:
 - **Premium - Raven Fantasy Icons**, upgrade and item icons
 
 The eight farm-and-kitchen icons (seedling, hoe, crate, cookpot, stew, pie,
-rations, jam — cells 39–46 of the icon strip) and the nine night-sky icons
-(the eight bodies plus the telescope — cells 47–55) were generated with
+rations, jam — cells 39–46 of the icon strip), the nine night-sky icons
+(the eight bodies plus the telescope — cells 47–55) and the eight
+constellation charts (cells 56–63) were generated with
 [PixelLab](https://pixellab.ai) on this project's own account and carry no
 third-party redistribution question.
 

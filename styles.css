@@ -95,7 +95,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 56;
+  --n: 64;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -165,6 +165,15 @@ body { display: flex; justify-content: center; }
 .ico--uranus        { --i: 53; }
 .ico--neptune       { --i: 54; }
 .ico--telescope     { --i: 55; }
+/* the charted constellations */
+.ico--sword         { --i: 56; }
+.ico--plough        { --i: 57; }
+.ico--owl           { --i: 58; }
+.ico--anvilstars    { --i: 59; }
+.ico--chalice       { --i: 60; }
+.ico--river         { --i: 61; }
+.ico--twins         { --i: 62; }
+.ico--crownstars    { --i: 63; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
@@ -748,6 +757,69 @@ body { display: flex; justify-content: center; }
   gap: 4px;
   align-content: start;
 }
+
+/* --- the cosmos: a sky you scroll sideways --------------------------- */
+/* Each catalog is one row of card portraits joined by little arrows;
+   overflow-x is the point -- the sky is wider than any panel. */
+.skyline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 10px 6px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wood-dk) transparent;
+}
+.skyline::-webkit-scrollbar { height: 6px; }
+.skyline::-webkit-scrollbar-thumb { background: var(--wood-dk); }
+/* display:flex beats the UA's [hidden] rule; say it explicitly */
+.skyline[hidden] { display: none; }
+
+.pcard {
+  flex: 0 0 auto;
+  width: 126px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 9px 6px 7px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  background: #171322;   /* night sky behind the portrait */
+  border-style: solid;
+  border-width: 6px 6px 7px;
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.pcard:not(:disabled):active { transform: translateY(1px); }
+.pcard.is-watching { background: #221c31; }
+.pcard.is-done { cursor: default; }
+.pcard.is-locked { cursor: default; filter: grayscale(.8); opacity: .55; }
+
+/* The portrait: the same icon strip, blown up to 64px and kept pixelated.
+   Rides the .ico var(--i)/var(--n) machinery at a bigger cell. */
+.pbody {
+  width: 64px;
+  height: 64px;
+  background-size: calc(var(--n) * 64px) 64px;
+  background-position: calc(var(--i) * -64px) 0;
+}
+.pcard__name { font-size: 11px; font-weight: 700; color: var(--accent, var(--cream)); }
+.pcard__what {
+  font-size: 9px;
+  color: var(--ink-dim);
+  text-align: center;
+  min-height: 22px;
+}
+.pcard__meter { width: 100%; height: 3px; background: #150f0d; }
+.pcard__meter i { display: block; height: 100%; width: 0%; background: var(--accent, var(--gold)); }
+.pcard__state { font-size: 10px; font-weight: 700; color: var(--ink-mute); white-space: nowrap; }
+.pcard.is-watching .pcard__state { color: var(--gold); }
+.pcard.is-done .pcard__state { color: #6dba79; }
+
+.pcard__link { flex: 0 0 auto; padding: 0 3px; font-weight: 700; color: #b9a17a; }
 
 /* The speed toggle wears its state as its label: x1 quiet, x2/x3 gold. */
 .hud__btn--speed {

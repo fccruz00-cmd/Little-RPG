@@ -10,7 +10,7 @@ import {
   SKILLS, GATHER_IDS, GATHER, ALCH, rollResource, nodeYield, workTime, bestForStage,
 } from '../data/gathering.js';
 import { DISHES } from '../data/dishes.js';
-import { PLANET_BY_ID, COSMOS } from '../data/cosmos.js';
+import { PLANET_BY_ID, CONSTELLATION_BY_ID, COSMOS } from '../data/cosmos.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { RARITIES } from '../data/gear.js';
 import { PETS } from '../data/pets.js';
@@ -713,7 +713,11 @@ export class Battle {
     const { state } = this;
     if (!state.cosmosOpen) return;
     const found = state.tickCosmos(dt);
-    if (found) this.emit('toast', { text: `${found.name.toUpperCase()} DISCOVERED!` });
+    if (found) {
+      this.emit('toast', { text: CONSTELLATION_BY_ID[found.id]
+        ? `${found.name.toUpperCase()} CHARTED!`
+        : `${found.name.toUpperCase()} DISCOVERED!` });
+    }
     if (!state.cosmos.found.length) return;
 
     this.cosmosTimer = (this.cosmosTimer ?? 0) + dt;
@@ -722,6 +726,9 @@ export class Battle {
 
     for (const pid of state.cosmos.found) {
       const planet = PLANET_BY_ID[pid];
+      // Constellations sit in the same found list; their work is passive
+      // (they fold into the bonuses), so the automation loop skips them.
+      if (!planet) continue;
       if (planet.auto === 'skill') {
         const skill = planet.skill;
         if (state.tool === skill) continue;

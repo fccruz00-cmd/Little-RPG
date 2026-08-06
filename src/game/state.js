@@ -32,7 +32,9 @@ import {
   dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
 } from '../data/quests.js';
 import { PATH_BY_ID } from '../data/paths.js';
-import { PLANET_BY_ID, observeTime } from '../data/cosmos.js';
+import {
+  PLANET_BY_ID, CONSTELLATION_BY_ID, BODY_BY_ID, observeTime,
+} from '../data/cosmos.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -327,11 +329,13 @@ export class GameState {
     for (const n of SOUL_WEB.nodes) apply(n, this.soulTalents[n.id] ?? 0);
 
     // Gear comes in through the same path: a slot is just one more bonus
-    // source, with the value pinned by rarity.
+    // source, with the value pinned by rarity. The Sword constellation
+    // multiplies every worn value.
+    const gearPower = 1 + (this.constPowers.gearPower ?? 0);
     for (const slot of SLOTS) {
       const rarity = this.gear[slot.id];
       if (rarity == null) continue;
-      const amount = gearValue(slot, rarity);
+      const amount = gearValue(slot, rarity) * gearPower;
       if (slot.mode === 'mul') b[slot.key] *= 1 + amount;
       else if (slot.mode === 'less') b[slot.key] *= Math.max(0.1, 1 - amount);
       else b[slot.key] += amount;
@@ -340,11 +344,12 @@ export class GameState {
     // Enchants ride their item: no item in the slot, no affix. Values are a
     // fraction of a rarity step by design, so they colour a board rather
     // than carry one.
+    const enchantPower = 1 + (this.constPowers.enchantPower ?? 0);
     for (const slot of SLOTS) {
       const mod = this.gearMods[slot.id];
       const def = mod && this.gear[slot.id] != null ? ENCHANT_BY_ID[mod.id] : null;
       if (!def) continue;
-      const amount = def.per * mod.tier;
+      const amount = def.per * mod.tier * enchantPower;
       if (def.mode === 'mul') b[def.key] *= 1 + amount;
       else b[def.key] += amount;
     }
@@ -353,8 +358,9 @@ export class GameState {
     // by the LOWEST rarity worn: the whole board has to rise together.
     const setLevel = setRarity(this.gear);
     if (setLevel != null && SET_BONUS[setLevel]) {
+      const setPower = 1 + (this.constPowers.setPower ?? 0);
       for (const [key, amount] of Object.entries(SET_BONUS[setLevel])) {
-        b[key] *= 1 + amount;
+        b[key] *= 1 + amount * setPower;
       }
     }
 
@@ -392,6 +398,7 @@ export class GameState {
   invalidateBonus() {
     this._bonus = null;
     this._gatherBonus = {};
+    this._constPowers = null;
   }
 
   /**
@@ -416,9 +423,11 @@ export class GameState {
       }
     }
     // The Harvest branch of the soul tree is the one bonus source outside
-    // the skill's own tree: it reaches every line at once.
-    b.yieldMul *= 1 + this.bonus.yieldAll;
-    b.gatherSpeed *= this.bonus.workAll;
+    // the skill's own tree: it reaches every line at once. The charted sky
+    // reaches the same way -- Plough, River and Owl touch every skill.
+    b.yieldMul *= 1 + this.bonus.yieldAll + (this.constPowers.yieldAll ?? 0);
+    b.gatherSpeed *= this.bonus.workAll * (1 - (this.constPowers.workAll ?? 0));
+    b.gatherXpMul *= 1 + (this.constPowers.skillXp ?? 0);
     this._gatherBonus[skillId] = b;
     return b;
   }
@@ -670,7 +679,7 @@ export class GameState {
   // --- smithing -----------------------------------------------------
   /** How far the forge odds have been pushed up the ladder. */
   get forgeQuality() {
-    return this.gatherBonus('smithing').forgeLuck;
+    return this.gatherBonus('smithing').forgeLuck + (this.constPowers.forgeLuck ?? 0);
   }
 
   /** Lowest rarity the forge will produce (Standards). */
@@ -836,7 +845,8 @@ export class GameState {
 
   dishMul(id) {
     if (!this.dishActive(id)) return 1;
-    return 1 + DISH_BY_ID[id].amount * (1 + this.gatherBonus('cooking').dishPower);
+    const power = this.gatherBonus('cooking').dishPower + (this.constPowers.benchPower ?? 0);
+    return 1 + DISH_BY_ID[id].amount * (1 + power);
   }
 
   get activeDishes() {
@@ -855,13 +865,15 @@ export class GameState {
 
   potionMul(id) {
     if (!this.potionActive(id)) return 1;
-    return 1 + POTION_BY_ID[id].amount * (1 + this.gatherBonus('alchemy').potionPower);
+    const power = this.gatherBonus('alchemy').potionPower + (this.constPowers.benchPower ?? 0);
+    return 1 + POTION_BY_ID[id].amount * (1 + power);
   }
 
   /** Seconds the Time Draught adds to a boss clock set right now. */
   get potionBossTime() {
     if (!this.potionActive('time')) return 0;
-    return POTION_BY_ID.time.amount * (1 + this.gatherBonus('alchemy').potionPower);
+    const power = this.gatherBonus('alchemy').potionPower + (this.constPowers.benchPower ?? 0);
+    return POTION_BY_ID.time.amount * (1 + power);
   }
 
   get activePotions() {
@@ -1266,25 +1278,52 @@ export class GameState {
     return this.cosmos.found.includes(id);
   }
 
-  /** Points the telescope at a body. Partial progress is kept per planet. */
+  /** Constellations open once ANY planet has been discovered. */
+  get starsOpen() {
+    return this.cosmos.found.some((id) => PLANET_BY_ID[id] != null);
+  }
+
+  /**
+   * Points the telescope at a body -- planet or constellation, one at a
+   * time, which is the whole decision. Partial progress is kept per body.
+   */
   observePlanet(id) {
-    if (!this.cosmosOpen || this.planetFound(id) || !PLANET_BY_ID[id]) return false;
+    if (!this.cosmosOpen || this.planetFound(id) || !BODY_BY_ID[id]) return false;
+    if (CONSTELLATION_BY_ID[id] && !this.starsOpen) return false;
     this.cosmos.target = this.cosmos.target === id ? null : id;
     this.save();
     return true;
   }
 
-  /** Advances the sky by `dt`. Returns the planet discovered, or null. */
+  /** Advances the sky by `dt`. Returns the body discovered, or null. */
   tickCosmos(dt) {
     const id = this.cosmos.target;
     if (!this.cosmosOpen || !id) return null;
     const progress = this.cosmos.progress;
     progress[id] = (progress[id] ?? 0) + dt;
-    if (progress[id] < observeTime(PLANET_BY_ID[id])) return null;
+    if (progress[id] < observeTime(BODY_BY_ID[id])) return null;
     this.cosmos.found.push(id);
     this.cosmos.target = null;
+    // A charted constellation is a live buff from that same frame.
+    this.invalidateBonus();
     this.save();
-    return PLANET_BY_ID[id];
+    return BODY_BY_ID[id];
+  }
+
+  /**
+   * Summed constellation grants, one number per key. Cached with the main
+   * fold because two of the readers (potionMul via the damage getter) run
+   * many times a frame.
+   */
+  get constPowers() {
+    if (this._constPowers) return this._constPowers;
+    const powers = {};
+    for (const id of this.cosmos.found) {
+      const star = CONSTELLATION_BY_ID[id];
+      if (star) powers[star.key] = (powers[star.key] ?? 0) + star.per;
+    }
+    this._constPowers = powers;
+    return powers;
   }
 
   // --- game speed -----------------------------------------------------
