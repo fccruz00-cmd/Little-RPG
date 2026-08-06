@@ -126,14 +126,11 @@ export class Renderer {
     Promise.all([
       one('assets/bg/far.png'), one('assets/bg/mid.png'), one('assets/bg/trees.png'),
       one('assets/bg/ground.png'), one('assets/bg/moon.png'),
-      one('assets/bg/node_vein.png'), one('assets/bg/node_tree.png'),
-      one('assets/bg/node_pool.png'), one('assets/bg/node_plot.png'),
-    ]).then(([far, mid, trees, ground, moon, vein, tree, pool, plot]) => {
+      one('assets/bg/node_tree.png'),
+    ]).then(([far, mid, trees, ground, moon, tree]) => {
       if (far && mid && trees && ground && moon) {
         this.layers = { far, mid, trees, ground, moon };
-        if (vein && tree && pool && plot) {
-          this.layers.nodes = { vein, tree, pool, plot };
-        }
+        if (tree) this.layers.nodes = { tree };
       }
     });
   }
@@ -514,16 +511,14 @@ export class Renderer {
         continue;
       }
 
-      if (this.layers?.nodes) {
-        // PixelLab sprites, tinted to the resource through the magenta key.
-        // A locked node greys out instead of taking its colour.
+      // Only the TREE wears PixelLab art (green canopy, tier-coloured
+      // fruit); the vein, pool and plot keep the original hand-pixelled
+      // drawings, which read better at ten pixels than any generated
+      // sprite did -- measured by the only judge that counts.
+      if (node.kind === 'tree' && this.layers?.nodes) {
         const color = node.locked ? '#4a4842' : node.resource.color;
-        const sprite = this.nodeSprite(node.kind, color);
         ctx.globalAlpha = node.locked ? 0.6 : 1;
-        if (node.kind === 'tree') ctx.drawImage(sprite, bx - 7, groundY - 25, 26, 26);
-        else if (node.kind === 'vein') ctx.drawImage(sprite, bx - 2, groundY - 13, 14, 14);
-        else if (node.kind === 'plot') ctx.drawImage(sprite, bx - 2, groundY - 13, 14, 14);
-        else ctx.drawImage(sprite, bx - 3, groundY - 10, 16, 16);   // pool sinks in
+        ctx.drawImage(this.nodeSprite('tree', color), bx - 7, groundY - 25, 26, 26);
         ctx.globalAlpha = 1;
       } else if (node.kind === 'vein') this.drawVein(bx, groundY, node);
       else if (node.kind === 'tree') this.drawTreeNode(bx, groundY, node);
