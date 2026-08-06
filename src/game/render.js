@@ -126,11 +126,49 @@ export class Renderer {
     Promise.all([
       one('assets/bg/far.png'), one('assets/bg/mid.png'), one('assets/bg/trees.png'),
       one('assets/bg/ground.png'), one('assets/bg/moon.png'),
-    ]).then(([far, mid, trees, ground, moon]) => {
+      one('assets/bg/node_vein.png'), one('assets/bg/node_tree.png'),
+      one('assets/bg/node_pool.png'), one('assets/bg/node_plot.png'),
+    ]).then(([far, mid, trees, ground, moon, vein, tree, pool, plot]) => {
       if (far && mid && trees && ground && moon) {
         this.layers = { far, mid, trees, ground, moon };
+        if (vein && tree && pool && plot) {
+          this.layers.nodes = { vein, tree, pool, plot };
+        }
       }
     });
+  }
+
+  /**
+   * Gathering-node sprite tinted to a RESOURCE. The tintable part ships
+   * keyed in two magentas (lit #ff00ff, shaded #b000b0); this swaps them
+   * for the resource's colour and a darker cut of it, once per pair.
+   */
+  nodeSprite(kind, color) {
+    const key = `node|${kind}|${color}`;
+    let out = this._tintCache.get(key);
+    if (out) return out;
+    const img = this.layers.nodes[kind];
+    out = document.createElement('canvas');
+    out.width = img.width;
+    out.height = img.height;
+    const c = out.getContext('2d');
+    c.drawImage(img, 0, 0);
+    const data = c.getImageData(0, 0, out.width, out.height);
+    const px = data.data;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] === 0) continue;
+      if (px[i] === 255 && px[i + 1] === 0 && px[i + 2] === 255) {
+        px[i] = r; px[i + 1] = g; px[i + 2] = b;
+      } else if (px[i] === 176 && px[i + 1] === 0 && px[i + 2] === 176) {
+        px[i] = (r * 0.62) | 0; px[i + 1] = (g * 0.62) | 0; px[i + 2] = (b * 0.62) | 0;
+      }
+    }
+    c.putImageData(data, 0, 0);
+    this._tintCache.set(key, out);
+    return out;
   }
 
   /** A mask filled with `color`, cached per (layer, colour). */
@@ -476,7 +514,18 @@ export class Renderer {
         continue;
       }
 
-      if (node.kind === 'vein') this.drawVein(bx, groundY, node);
+      if (this.layers?.nodes) {
+        // PixelLab sprites, tinted to the resource through the magenta key.
+        // A locked node greys out instead of taking its colour.
+        const color = node.locked ? '#4a4842' : node.resource.color;
+        const sprite = this.nodeSprite(node.kind, color);
+        ctx.globalAlpha = node.locked ? 0.6 : 1;
+        if (node.kind === 'tree') ctx.drawImage(sprite, bx - 7, groundY - 25, 26, 26);
+        else if (node.kind === 'vein') ctx.drawImage(sprite, bx - 2, groundY - 13, 14, 14);
+        else if (node.kind === 'plot') ctx.drawImage(sprite, bx - 2, groundY - 13, 14, 14);
+        else ctx.drawImage(sprite, bx - 3, groundY - 10, 16, 16);   // pool sinks in
+        ctx.globalAlpha = 1;
+      } else if (node.kind === 'vein') this.drawVein(bx, groundY, node);
       else if (node.kind === 'tree') this.drawTreeNode(bx, groundY, node);
       else if (node.kind === 'plot') this.drawPlot(bx, groundY, node);
       else this.drawPool(bx, groundY, node);
