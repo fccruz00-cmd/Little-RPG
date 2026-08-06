@@ -146,6 +146,10 @@ function defaults() {
     // pet's buff stays on, the parade just stopped being a traffic jam.
     companion: 'slime',
 
+    // The name worn on the leaderboards. Lives in the save (it is the
+    // player's, and travels with an export); the DEVICE id does not.
+    nick: '',
+
     // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
     // rebirth and not awakening, because a purse you can also be sold must
     // never be emptied by a button the game asks you to press.
@@ -338,6 +342,7 @@ export class GameState {
     if (typeof this.companion !== 'string' || !this.pets[this.companion]) {
       this.companion = 'slime';
     }
+    if (typeof this.nick !== 'string') this.nick = '';
     if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
     this._bonus = null;
@@ -1820,7 +1825,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos, ancestors, companion,
+      cosmos, ancestors, companion, nick,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1832,7 +1837,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos, ancestors, companion,
+      cosmos, ancestors, companion, nick,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

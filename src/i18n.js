@@ -535,6 +535,30 @@ const PT = {
   'with you': 'com você',
   '{0} WALKS WITH YOU': '{0} ANDA COM VOCÊ',
 
+  // --- the boards ---
+  'Leaderboards': 'Placares',
+  'Pure': 'Pura',
+  'Gilded': 'Dourada',
+  'Patron': 'Mecenas',
+  'Weekly sprint': 'Sprint da semana',
+  'Best stage': 'Melhor fase',
+  'Save name': 'Salvar nome',
+  'your name': 'seu nome',
+  'PICK A CLEANER NAME': 'ESCOLHA UM NOME MAIS LIMPO',
+  'reading the board...': 'lendo o placar...',
+  'nobody here yet — be the first': 'ninguém aqui ainda — seja o primeiro',
+  'stage {0}': 'fase {0}',
+  'your rank: #{0}': 'sua posição: #{0}',
+  'offline — showing the last copy': 'offline — mostrando a última cópia',
+  'No real money and no gem-bought power. Gold and timeskips do not count.':
+    'Sem dinheiro real e sem poder comprado com gemas. Ouro e pulos de tempo não contam.',
+  'No real money — but power was bought with earned gems.':
+    'Sem dinheiro real — mas poder foi comprado com gemas ganhas.',
+  'Real money was spent here. Thank you for keeping the lights on.':
+    'Dinheiro real foi gasto aqui. Obrigado por manter as luzes acesas.',
+  'Scores are claims sent by each device; absurd ones get pruned. Only your name and your best runs ever leave the game.':
+    'Placares são declarações de cada aparelho; absurdos são podados. Só seu nome e seus melhores runs saem do jogo.',
+
   // --- misc / hud / offline ---
   'Stage {0}': 'Fase {0}',
   '+{0} chance a node pays twice': '+{0} de chance do nó pagar dobrado',

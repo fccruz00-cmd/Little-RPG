@@ -1489,6 +1489,42 @@ body { display: flex; justify-content: center; }
 
 .spirit__up[hidden] { display: none; }
 
+/* --- the boards: three leagues, two ladders, one modal --- */
+.segmented--ranks { margin: 4px 0 2px; }
+.segmented--ranks button { flex: 1 1 0; min-width: 0; }
+/* the league this save competes in wears gold even when not selected */
+.segmented--ranks button.is-mine:not(.is-on) { color: var(--gold); }
+
+.ranklist { display: grid; gap: 2px; margin: 6px 0; }
+.rank {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 6px;
+  background: #0003;
+  border-radius: 3px;
+}
+.rank b { color: var(--gold); }
+.rank__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank__value { color: var(--cream); white-space: nowrap; }
+.rank.is-me { outline: 1px solid var(--gold); background: #3a2d17; }
+.rank--empty { grid-template-columns: 1fr; text-align: center; color: var(--ink-dim); }
+
+.rank-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--cream);
+  background: #201826;
+  border: 1px solid #4a4258;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+.rank-name:focus-visible { outline: 2px solid var(--gold); }
+
 /* --- tab 4: forge --- */
 .forge {
   flex: 1 1 auto;

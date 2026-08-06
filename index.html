@@ -36,6 +36,10 @@
              awakening; a tap past the gate says which door is shut. -->
         <button class="hud__btn hud__btn--speed" id="btn-speed" type="button"
                 aria-label="Game speed">x1</button>
+        <!-- The boards. Only exists when a backend is configured
+             (src/net/config.js); an unconfigured build stays fully offline. -->
+        <button class="hud__btn" id="btn-ranks" type="button" hidden
+                aria-label="Leaderboards"><i class="ico ico--crown"></i></button>
         <button class="hud__btn" id="btn-store" type="button"
                 aria-label="Store"><i class="ico ico--shop"></i></button>
         <button class="hud__btn" id="btn-options" type="button"
@@ -471,6 +475,34 @@
       </p>
     </div>
     <button class="act-btn" id="gemshop-close" type="button">Close</button>
+  </div>
+</div>
+
+<!-- The boards: three leagues split by how the save was funded, two boards
+     each. Scores are honest claims, not proofs -- see src/net/leaderboard.js
+     for the trust model, supabase/schema.sql for the server's manners. -->
+<div class="modal" id="ranks" hidden>
+  <div class="modal__box">
+    <h3 class="sect" id="ranks-title"><i class="ico ico--sm ico--crown"></i> Leaderboards</h3>
+    <div class="modal__scroll">
+      <div class="segmented segmented--ranks" id="league-switch">
+        <button data-league="pure" type="button">Pure</button>
+        <button data-league="gilded" type="button">Gilded</button>
+        <button data-league="patron" type="button">Patron</button>
+      </div>
+      <div class="segmented segmented--ranks" id="board-switch">
+        <button class="is-on" data-board="sprint" type="button">Weekly sprint</button>
+        <button data-board="best" type="button">Best stage</button>
+      </div>
+      <p class="opt-note" id="ranks-note"></p>
+      <div class="ranklist" id="rank-list"></div>
+      <div class="opt-row opt-row--buttons">
+        <input class="rank-name" id="rank-name" maxlength="16" autocomplete="off">
+        <button class="equip" id="rank-save" type="button">Save name</button>
+      </div>
+      <p class="opt-note" id="ranks-foot"></p>
+    </div>
+    <button class="act-btn" id="ranks-close" type="button">Close</button>
   </div>
 </div>
 

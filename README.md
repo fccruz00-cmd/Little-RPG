@@ -861,6 +861,31 @@ costs 204 points, which a single run does not reach — you spend a run choosing
 a shape, not completing a checklist. *Veteran*, on the relic tree, adds extra
 points that survive rebirth.
 
+## Leaderboards
+
+Three leagues, split by how the save was funded, so nobody competes against
+a wallet: **Patron** (real money was ever spent), **Gilded** (no money, but
+gems bought *power* — a Mythic Chest or the Gilded Idol) and **Pure** (at
+most pace was bought; the Coin Cache and Hourglass do not count). The
+league only hardens — pure → gilded → patron, never back — and survives
+every reset; `spendTier` in `state.js` is the classifier, fed by lifetime
+counters that seed from what an old save can prove.
+
+Each league ranks two boards: the **weekly sprint** (deepest stage inside a
+run's first 30 minutes, keyed to the UTC week) and the all-time **best
+stage**. The trophy button in the HUD only exists when a backend is
+configured in `src/net/config.js` (a Supabase project URL and anon key —
+both public by design); unconfigured builds make **zero network calls**.
+`supabase/schema.sql` is the whole server: one table readable by anyone,
+writable only through one function that clamps, keeps maxima, hardens
+leagues and refuses more than one write per row per 20 s.
+
+The trust model, honestly: this is a fully client-side idle game, so a
+score is a **claim, not a proof** — the server's manners make vandalism
+inconvenient, not impossible. Names pass a courtesy filter on both ends;
+submissions queue offline and flush on the next boot; boards read from a
+local cache when the network is away.
+
 ## Layout
 
 **Little RPG is a landscape game.** Turned sideways, the HUD keeps the full

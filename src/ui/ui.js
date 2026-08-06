@@ -32,6 +32,10 @@ import {
   describeGatherNode,
 } from '../data/gathering.js';
 import { fmt, pct, mult, duration, oddsPct } from '../format.js';
+import {
+  hasBackend, deviceId, cleanName, submit, flushQueue, fetchBoard,
+  envelope, rememberMine,
+} from '../net/leaderboard.js';
 import { SFX } from '../engine/sfx.js';
 import { t, lang, setLang } from '../i18n.js';
 import { Music } from '../engine/music.js';
@@ -169,6 +173,10 @@ export class UI {
       options: $('btn-options'), optionsModal: $('options'),
       optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
       langSwitch: $('lang-switch'), optionsClose: $('options-close'),
+      ranksBtn: $('btn-ranks'), ranks: $('ranks'), ranksClose: $('ranks-close'),
+      ranksTitle: $('ranks-title'), ranksNote: $('ranks-note'), ranksFoot: $('ranks-foot'),
+      leagueSwitch: $('league-switch'), boardSwitch: $('board-switch'),
+      rankList: $('rank-list'), rankName: $('rank-name'), rankSave: $('rank-save'),
     };
 
     this.tab = 'upgrades';
@@ -238,6 +246,15 @@ export class UI {
     // Called either way: the store has something to say when it is empty.
     this.billing.connect().then(() => this.refreshPacks());
 
+    // The boards. No backend configured means no button, no calls, and a
+    // game exactly as offline as it always was. A failed submit from a past
+    // session flushes quietly here.
+    this.league = null;             // which league the modal is showing
+    this.board = 'sprint';
+    this.el.ranksBtn.hidden = !hasBackend();
+    this.el.rankName.placeholder = t('your name');
+    if (hasBackend()) flushQueue();
+
     this.music = new Music(this.sfx, () => !this.state.musicOff);
     const moodFor = (stage) => (stage >= 150 ? 2 : stage >= 64 ? 1 : 0);
     this.music.setMood(moodFor(state.stage));
@@ -273,6 +290,10 @@ export class UI {
       ['[data-asc="feats"]', 'Feats'],
       ['[data-sky="planetarium"]', 'Planetarium'],
       ['[data-sky="constellations"]', 'Constellations'],
+      ['[data-league="pure"]', 'Pure'], ['[data-league="gilded"]', 'Gilded'],
+      ['[data-league="patron"]', 'Patron'],
+      ['[data-board="sprint"]', 'Weekly sprint'], ['[data-board="best"]', 'Best stage'],
+      ['#rank-save', 'Save name'], ['#ranks-close', 'Close'],
       ['#btn-respec', 'respec'], ['#btn-respec-skill', 'respec'],
       ['#act-boss', 'Try boss'], ['#act-blood', 'Bloodmoon'], ['#act-leave', 'Leave'],
       ['#pane-upgrades .toggle span', 'Buy max'],
@@ -310,6 +331,7 @@ export class UI {
       ['#kitchen-title', 'Kitchen'],
       ['#gem-title', 'Gem shop'],
       ['#store-title', 'Store'],
+      ['#ranks-title', 'Leaderboards'],
     ];
     for (const [sel, key] of TAIL) {
       const el = this.pick(sel);
@@ -1096,6 +1118,8 @@ export class UI {
       if (state.spiritCount > spiritsBefore) {
         this.toast({ text: t('AN ANCESTOR WAKES') });
       }
+      // The run just closed is exactly what the sprint board ranks.
+      this.sendScore();
     });
 
     el.awkGo.addEventListener('click', () => {
@@ -1129,6 +1153,45 @@ export class UI {
       this.showTab('talents');
       this.showTree('souls');
       this.toast({ text: t('AWAKENED: +{0} SOUL(S)', gain) });
+      this.sendScore();
+    });
+
+    // --- the boards ---
+    const openRanks = (open) => {
+      el.ranks.hidden = !open;
+      if (!open) return;
+      // First open lands on the player's own league: the one they compete in.
+      if (!this.league) this.league = state.spendTier;
+      el.rankName.value = state.nick;
+      this.sendScore();
+      this.refreshRanks();
+    };
+    el.ranksBtn.addEventListener('click', () => openRanks(true));
+    el.ranksClose.addEventListener('click', () => openRanks(false));
+    el.ranks.addEventListener('click', (e) => { if (e.target === el.ranks) openRanks(false); });
+    el.leagueSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      this.league = button.dataset.league;
+      this.refreshRanks();
+    });
+    el.boardSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      this.board = button.dataset.board;
+      this.refreshRanks();
+    });
+    el.rankSave.addEventListener('click', () => {
+      const name = cleanName(el.rankName.value);
+      if (!name) {
+        this.toast({ text: t('PICK A CLEANER NAME') });
+        return;
+      }
+      state.nick = name;
+      state.save();
+      el.rankName.value = name;
+      this.sendScore();
+      this.refreshRanks();
     });
 
     // --- gem shop ---
@@ -1993,6 +2056,57 @@ export class UI {
       row.disabled = !can;
       row.classList.toggle('can-smelt', can);
     }
+  }
+
+  // --- the boards ------------------------------------------------------
+  /** Fire-and-forget submit of the live claim. Quiet on every failure. */
+  sendScore() {
+    if (!hasBackend()) return;
+    const { state } = this;
+    rememberMine(envelope(state, state.nick || 'Hero'));
+    submit(state, state.nick || 'Hero');
+  }
+
+  async refreshRanks() {
+    const { state, el } = this;
+    for (const button of el.leagueSwitch.querySelectorAll('button')) {
+      const league = button.dataset.league;
+      button.classList.toggle('is-on', league === this.league);
+      // The player's own league wears a mark: it is the one they play in.
+      button.classList.toggle('is-mine', league === state.spendTier);
+    }
+    for (const button of el.boardSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.board === this.board);
+    }
+    setText(el.ranksNote, {
+      pure: t('No real money and no gem-bought power. Gold and timeskips do not count.'),
+      gilded: t('No real money — but power was bought with earned gems.'),
+      patron: t('Real money was spent here. Thank you for keeping the lights on.'),
+    }[this.league]);
+
+    setHtml(el.rankList, `<div class="rank rank--empty">${t('reading the board...')}</div>`);
+    const { rows, rank, stale } = await fetchBoard(this.league, this.board);
+    // The modal may have moved on while the fetch ran; the late answer
+    // must not paint over the newer question.
+    if (el.ranks.hidden) return;
+
+    const mine = deviceId();
+    const value = (r) => (this.board === 'sprint' ? r.sprint : r.best_stage);
+    const html = rows.length === 0
+      ? `<div class="rank rank--empty">${t('nobody here yet — be the first')}</div>`
+      : rows.map((r, i) => `
+        <div class="rank${r.device === mine ? ' is-me' : ''}">
+          <b>#${i + 1}</b>
+          <span class="rank__name">${r.name.replace(/</g, '&lt;')}</span>
+          <span class="rank__value">${t('stage {0}', fmt(value(r)))}</span>
+        </div>`).join('');
+    setHtml(el.rankList, html);
+
+    const bits = [];
+    if (rank > 100) bits.push(t('your rank: #{0}', fmt(rank)));
+    if (stale) bits.push(t('offline — showing the last copy'));
+    bits.push(t('Scores are claims sent by each device; absurd ones get pruned. Only your name and your best runs ever leave the game.'));
+    setText(el.ranksFoot, bits.join(' · '));
   }
 
   // --- gem shop -------------------------------------------------------
