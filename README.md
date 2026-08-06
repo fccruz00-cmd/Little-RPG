@@ -269,6 +269,13 @@ it.
    forge session. Same law as Herald and Anvil: a spirit only does what a
    finger could — the shelf gates hold, capped rows stop at their caps,
    and everything comes out of the one purse.
+
+   The hall also sells the **Ancestral Bounty** (750 then 3,000 dust, two
+   levels): every gather pays **the same haul again in the line's other
+   types** — work a pine and the oak comes along, then the ash. It reaches
+   *up* while the tool allows and falls back down after, because the dead
+   widen your hands but cannot sharpen your axe. The blessing is a rule of
+   gathering itself, so the Cosmos' planets work with blessed hands too.
 7. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
 8. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
@@ -442,9 +449,12 @@ against live state every tick, a tame lands the moment it is earned, and
 nothing ever comes undone: an old save walks out of load with everything it
 already qualifies for.
 
-**Every tamed pet is active at once.** All of them trail the hero in a
-little parade, drawn from the enemy roster's own sheets at pet scale, and
-all their buffs stack. The choice lives in the taming, not in a slot.
+**Every tamed pet's buff is active at once** — the choice never moved into
+a slot. What did move is the road: **one pet, your pick, walks beside the
+hero** (the `follow` button on any tamed row), drawn from the enemy
+roster's own sheets at pet scale. Twenty-two of them was a traffic jam
+that buried the fight; the buffs never left, the parade just stopped
+being one.
 
 | pet | tamed by | eats | buff per level |
 |---|---|---|---|
@@ -485,10 +495,6 @@ The third dozen's objectives point at everything built since the first ten
 Ancestors), and they sit a real distance out on purpose: the collection was
 filling up faster than the game could grow.
 
-The parade tightens as it grows: nine units apart, ten pets trail 95 behind
-the hero, and the road behind him is 35 units on a phone. The step closes
-down to four, which overlaps them slightly and reads as a crowd rather than
-a queue — a full parade of twenty-two still fits a desktop column's road.
 
 Levels are bought with **raw fish of the pet's own tier**. Meals always cook
 from the best fish first, so the lower tiers pile up as dead stock the moment

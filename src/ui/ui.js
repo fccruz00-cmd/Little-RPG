@@ -14,7 +14,7 @@ import {
   SLOTS, RARITIES, SET_BONUS, setRarity, describeGear, rarityOdds, describeEnchant,
 } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
-import { PETS } from '../data/pets.js';
+import { PETS, PET_BY_ID } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { DISHES } from '../data/dishes.js';
 import {
@@ -148,6 +148,7 @@ export class UI {
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
       tabHall: $('tab-hall'), pipHall: $('pip-hall'),
       hallList: $('hall-list'), hallDetail: $('hall-detail'),
+      hallBless: $('hall-bless'),
       spiritsN: $('spirits-n'), reserveSwitch: $('reserve-switch'),
       hallReserveLabel: $('hall-reserve-label'),
       tabCosmos: $('tab-cosmos'), pipCosmos: $('pip-cosmos'),
@@ -321,7 +322,7 @@ export class UI {
       ['.statbar div:nth-child(2) dt', `<i class="ico ico--sm ico--health"></i>${t('health')}`],
       ['.statbar div:nth-child(3) dt', `<i class="ico ico--sm ico--crit"></i>${t('crit')}`],
       ['.statbar div:nth-child(4) dt', `<i class="ico ico--sm ico--gold"></i>${t('gold')}`],
-      ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos te seguem, todos os buffs somam, e os níveis sobrevivem a <b>tudo</b>, renascimento e despertar.'],
+      ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos os buffs somam e os níveis sobrevivem a <b>tudo</b> — e <b>um deles, à sua escolha, anda do seu lado</b>.'],
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
@@ -497,7 +498,10 @@ export class UI {
           <span class="pet__name">${pet.name} <em class="pet__lvl"></em></span>
           <span class="pet__effect"></span>
         </span>
-        <button class="equip pet__feed" type="button">Feed</button>`;
+        <span class="pet__acts">
+          <button class="equip pet__feed" type="button">Feed</button>
+          <button class="equip pet__walk" type="button"></button>
+        </span>`;
       this.drawPetThumb(row.querySelector('canvas'), pet.sprite);
       frag.append(row);
       this.petRows.set(pet.id, {
@@ -505,6 +509,7 @@ export class UI {
         lvl: row.querySelector('.pet__lvl'),
         effect: row.querySelector('.pet__effect'),
         feed: row.querySelector('.pet__feed'),
+        walk: row.querySelector('.pet__walk'),
       });
     }
     this.el.petsList.append(frag);
@@ -535,6 +540,25 @@ export class UI {
   buildHall() {
     setText(this.el.hallDetail, t('Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever — through rebirth and awakening. Dust raises a spirit, buying more levels per visit.'));
     setText(this.el.hallReserveLabel, t('Gold reserve'));
+
+    // The Ancestral Bounty: one board, hall-wide, priced in dust.
+    const bless = document.createElement('button');
+    bless.type = 'button';
+    bless.className = 'ore key';
+    bless.innerHTML = `
+      <span class="ore__name"><i class="ico ico--sm ico--plank"></i> ${t('Ancestral Bounty')}</span>
+      <span class="key__what"></span>
+      <span class="ore__have"><b></b> <i class="ico ico--sm ico--dust"></i></span>
+      <span class="ore__smelt"></span>`;
+    this.el.hallBless.append(bless);
+    this.blessRow = {
+      row: bless,
+      what: bless.querySelector('.key__what'),
+      cost: bless.querySelector('b'),
+      have: bless.querySelector('.ore__have'),
+      action: bless.querySelector('.ore__smelt'),
+    };
+
     const frag = document.createDocumentFragment();
     this.spiritRows = [];
     ANCESTORS.forEach((spirit, i) => {
@@ -587,6 +611,20 @@ export class UI {
       button.classList.toggle('is-on',
         Number(button.dataset.reserve) === state.ancestors.reserve);
     }
+
+    // The bounty board: what a gather pays now, what the next level adds.
+    const bounty = state.bounty;
+    const atMax = state.bountyCost() == null;
+    setHtml(this.blessRow.what,
+      t('each gather pays {0} type(s) of its line at once', bounty + 1)
+      + (atMax ? '' : `${t(' · next: ')}<b>${bounty + 2}</b>`));
+    this.blessRow.have.style.visibility = atMax ? 'hidden' : 'visible';
+    if (!atMax) setText(this.blessRow.cost, fmt(state.bountyCost()));
+    setText(this.blessRow.action,
+      atMax ? t('max') : state.canBuyBounty() ? t('raise') : t('need'));
+    this.blessRow.row.disabled = !state.canBuyBounty();
+    this.blessRow.row.classList.toggle('can-smelt', state.canBuyBounty());
+    this.blessRow.row.classList.toggle('is-done', atMax);
     // The option list only moves when a shelf opens, so it is rebuilt
     // against a signature instead of on every 0.15s tick: an open <select>
     // whose options are replaced under the thumb closes itself on phones.
@@ -902,6 +940,12 @@ export class UI {
       if (!button) return;
       if (state.setReserve(Number(button.dataset.reserve))) this.refreshHall();
     });
+    el.hallBless.addEventListener('click', () => {
+      if (!state.buyBounty()) return;
+      this.sfx.play('jingle');
+      this.toast({ text: t('ANCESTRAL BOUNTY {0}', ['I', 'II'][state.bounty - 1] ?? state.bounty) });
+      this.refreshHall();
+    });
     for (const r of this.spiritRows) {
       r.task.addEventListener('change', () => {
         if (!state.assignSpirit(r.i, r.task.value || null)) {
@@ -986,7 +1030,17 @@ export class UI {
 
     el.petsList.addEventListener('click', (e) => {
       const row = e.target.closest('.pet');
-      if (!row || !e.target.closest('.pet__feed')) return;
+      if (!row) return;
+      // The walk button picks the road companion; the buffs never move.
+      if (e.target.closest('.pet__walk')) {
+        if (!state.setCompanion(row.dataset.pet)) return;
+        battle.syncPets();
+        this.sfx.play('buy');
+        this.toast({ text: t('{0} WALKS WITH YOU', PET_BY_ID[row.dataset.pet].name.toUpperCase()) });
+        this.refreshPets();
+        return;
+      }
+      if (!e.target.closest('.pet__feed')) return;
       if (!state.feedPet(row.dataset.pet)) return;
       state.save();
       this.sfx.play('buy');
@@ -1458,9 +1512,9 @@ export class UI {
     // pip nags for an idle spirit or an affordable rise, same spirit as
     // the forge's "you could do something here".
     el.tabHall.hidden = !state.hallOpen;
-    let hallNag = false;
-    for (let i = 0; i < state.spiritCount; i++) {
-      if (!state.ancestors.assign[i] || state.canUpgradeSpirit(i)) { hallNag = true; break; }
+    let hallNag = state.canBuyBounty();
+    for (let i = 0; i < state.spiritCount && !hallNag; i++) {
+      if (!state.ancestors.assign[i] || state.canUpgradeSpirit(i)) hallNag = true;
     }
     el.pipHall.hidden = el.tabHall.hidden || !hallNag;
     el.pipHall.classList.add('pip--gold');
@@ -2363,6 +2417,15 @@ export class UI {
       feed.disabled = !state.canFeedPet(pet.id);
       setHtml(feed, `${t('Feed')} &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
       feed.classList.toggle('can-buy', !feed.disabled);
+    }
+    // The walker: one pet on the road, chosen here, buffs untouched.
+    for (const { pet, walk } of this.petRows.values()) {
+      const tamed = (state.pets[pet.id] ?? 0) > 0;
+      const walking = state.companion === pet.id;
+      walk.hidden = !tamed;
+      walk.disabled = walking;
+      walk.classList.toggle('is-on', walking);
+      setText(walk, walking ? t('with you') : t('follow'));
     }
   }
 

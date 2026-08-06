@@ -13,7 +13,7 @@ import { DISHES } from '../data/dishes.js';
 import { PLANET_BY_ID, CONSTELLATION_BY_ID, COSMOS } from '../data/cosmos.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { RARITIES } from '../data/gear.js';
-import { PETS } from '../data/pets.js';
+import { PET_BY_ID } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
 
@@ -305,19 +305,18 @@ export class Battle {
     }
   }
 
-  /** Rebuilds the parade when the tamed set changes. */
+  /** Rebuilds the walker when the companion (or its tame) changes. */
   syncPets() {
-    const tamed = PETS.filter((p) => this.state.pets[p.id]);
+    // ONE pet walks: twenty-two of them was a traffic jam that buried the
+    // fight, and the last of the queue lived permanently off screen. The
+    // buffs never left -- every tamed pet still folds in -- the road just
+    // shows the one the player chose on the Pets tab.
+    const pick = PET_BY_ID[this.state.companion];
+    const tamed = pick && this.state.pets[pick.id] ? [pick] : [];
     const key = tamed.map((p) => p.id).join(',');
     if (key === this._petKey) return;
     this._petKey = key;
-    // The parade tightens as it grows. At nine units apart ten pets trail 95
-    // behind the hero, and the road behind him is 35 units on a phone and 75
-    // in a desktop column -- so the last of them would be tamed, fed and
-    // permanently off screen. Closing up overlaps them slightly, which reads
-    // as a crowd rather than a queue; at the four-unit floor a full parade
-    // of twenty-two still fits a desktop column's stretch of road.
-    this.petStep = Math.max(4, 9 - Math.max(0, tamed.length - 5) * 0.6);
+    this.petStep = 9;
     this.petActors = tamed.map((pet, i) => {
       // The sprite is a roster mob; hover comes from its own def so the bat
       // pet flies exactly as high as the bat it used to be.
@@ -678,6 +677,11 @@ export class Battle {
       nodeYield(node.resource, state.tools[skillId], bonus) * double * state.dishMul('stew')));
     state.addRaw(node.resource.id, amount);
     this.pushFloater({ x: node.x, sprite: null, scale: 1 }, amount, 'ore');
+    // The Ancestral Bounty: the same haul again in the line's other types,
+    // reaching up while the tool allows and falling back down after.
+    for (const extraType of state.bountyExtras(skillId, node.resource)) {
+      state.addRaw(extraType.id, amount);
+    }
 
     // The two nodes that pay a gathering skill back into the combat economy.
     // Both are flat per node, so they scale with the kill rate and nothing
@@ -747,6 +751,11 @@ export class Battle {
           : (list.filter((r) => this.level >= r.minStage && r.tier <= state.tools[skill]).at(-1) ?? list[0]);
         const amount = nodeYield(resource, state.tools[skill], state.gatherBonus(skill));
         state.addRaw(resource.id, amount);
+        // The planets work with blessed hands too: the bounty is a rule of
+        // gathering itself, not of who happens to hold the tool.
+        for (const extraType of state.bountyExtras(skill, resource)) {
+          state.addRaw(extraType.id, amount);
+        }
         const levels = state.gainGatherXp(skill, resource.xp * COSMOS.xpShare);
         if (levels) {
           this.emit('toast', { text: `${SKILLS[skill].name.toUpperCase()} ${state.skills[skill].level}!` });

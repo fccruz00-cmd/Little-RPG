@@ -36,7 +36,7 @@ import {
   PLANET_BY_ID, CONSTELLATION_BY_ID, BODY_BY_ID, observeTime,
 } from '../data/cosmos.js';
 import {
-  ANCESTORS, HALL, RESERVES, spiritUpCost, spiritsAwake,
+  ANCESTORS, HALL, RESERVES, BOUNTY, spiritUpCost, spiritsAwake,
 } from '../data/ancestors.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
@@ -138,8 +138,13 @@ function defaults() {
     // The Hall of Ancestors: spirits of past lives, woken by lifetime
     // rebirths (stats.rebirths), each buying one shop row on its own.
     // `assign` maps spirit index -> stat key; `levels` is per spirit;
-    // `reserve` is the slice of the purse the spirits must not touch.
-    ancestors: { assign: {}, levels: {}, reserve: 0.25 },
+    // `reserve` is the slice of the purse the spirits must not touch;
+    // `bounty` is the hall-wide blessing that widens every gather.
+    ancestors: { assign: {}, levels: {}, reserve: 0.25, bounty: 0 },
+
+    // The one pet walking beside the hero. Purely who FOLLOWS: every tamed
+    // pet's buff stays on, the parade just stopped being a traffic jam.
+    companion: 'slime',
 
     // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
     // rebirth and not awakening, because a purse you can also be sold must
@@ -308,6 +313,8 @@ export class GameState {
       // Imports and hand-edited saves: only a preset reserve is trusted.
       reserve: RESERVES.includes(data.ancestors?.reserve)
         ? data.ancestors.reserve : 0.25,
+      bounty: Math.max(0, Math.min(BOUNTY.max,
+        Math.round(data.ancestors?.bounty ?? 0))),
     };
     // A save cannot keep a speed its gates no longer justify (imports,
     // hand-edited saves): clamp instead of trusting the field.
@@ -316,6 +323,11 @@ export class GameState {
     // of load with everything it already earned, the slime included. Silent
     // on purpose: the battle announces tames that happen live, not backlog.
     this.tamePets();
+    // The companion has to be a tamed pet; anything else falls back to the
+    // slime, who is always with you.
+    if (typeof this.companion !== 'string' || !this.pets[this.companion]) {
+      this.companion = 'slime';
+    }
     if (!SKILLS[this.tool]?.gathers) this.tool = 'mining';
     this._gatherBonus = {};
     this._bonus = null;
@@ -752,6 +764,14 @@ export class GameState {
     if (!this.pets[id]) return false;
     const { fish, cost } = this.petFood(id);
     return (this.raw[fish.id] ?? 0) >= cost;
+  }
+
+  /** Picks who walks beside the hero. Cosmetic: every buff stays on. */
+  setCompanion(id) {
+    if (!this.pets[id] || id === this.companion) return false;
+    this.companion = id;
+    this.save();
+    return true;
   }
 
   feedPet(id) {
@@ -1431,6 +1451,51 @@ export class GameState {
     return true;
   }
 
+  // --- the Ancestral Bounty -------------------------------------------
+  /** Extra types each gather pays on top of its own (0, 1 or 2). */
+  get bounty() {
+    return this.ancestors.bounty;
+  }
+
+  /** Dust for the next bounty level, or null at the ceiling. */
+  bountyCost() {
+    return BOUNTY.costs[this.ancestors.bounty] ?? null;
+  }
+
+  canBuyBounty() {
+    const cost = this.bountyCost();
+    return this.hallOpen && cost != null && this.dust >= cost;
+  }
+
+  buyBounty() {
+    if (!this.canBuyBounty()) return false;
+    this.dust -= this.bountyCost();
+    this.ancestors.bounty += 1;
+    this.save();
+    return true;
+  }
+
+  /**
+   * The types a gather of `resource` ALSO pays. Reaching UP first -- the
+   * blessing exists to hand you the better types while you work the lane
+   * you are standing in -- and falling back down when the tool caps out,
+   * because the dead widen your hands but cannot sharpen your axe.
+   */
+  bountyExtras(skillId, resource) {
+    const extra = this.ancestors.bounty;
+    if (!extra || !SKILLS[skillId]?.gathers) return [];
+    const list = SKILLS[skillId].resources;
+    const reach = this.tools[skillId] ?? 0;
+    const out = [];
+    for (let t = resource.tier + 1; t < list.length && out.length < extra; t++) {
+      if (t <= reach) out.push(list[t]);
+    }
+    for (let t = resource.tier - 1; t >= 0 && out.length < extra; t--) {
+      out.push(list[t]);
+    }
+    return out;
+  }
+
   /**
    * One spirit's visit to the shop: up to its level in levels of its one
    * row, paid out of what the reserve leaves free. The shelf gate rides in
@@ -1724,7 +1789,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos, ancestors,
+      cosmos, ancestors, companion,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1736,7 +1801,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos, ancestors,
+      cosmos, ancestors, companion,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

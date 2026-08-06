@@ -1452,6 +1452,13 @@ body { display: flex; justify-content: center; }
 .pet__fish { opacity: .8; }
 .pet__feed.can-buy { animation: nodeGlow 1.8s ease-in-out infinite; }
 
+/* Feed on top, walk below: the whole action column stays one tap wide. */
+.pet__acts { display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
+.pet__walk { justify-content: center; font-size: 9px; padding: 2px 6px 3px; }
+.pet__walk[hidden] { display: none; }
+.pet__walk:disabled { cursor: default; }
+.pet__walk.is-on { color: var(--gold); }
+
 /* --- the Hall of Ancestors: pet boards wearing a ghost --- */
 /* The portrait is the hero's own idle frame, tinted in code; the glow and
    the translucency are what read as "spirit" rather than "another knight". */

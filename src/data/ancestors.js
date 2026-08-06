@@ -41,6 +41,17 @@ export const HALL = {
 /** What the spirits must leave untouched, as a fraction of the purse. */
 export const RESERVES = [0, 0.25, 0.5, 0.75];
 
+// The Ancestral Bounty: a hall-wide blessing, not a spirit. Each level
+// makes every gather pay one MORE type of its line -- work an oak and the
+// pine comes along, then the birch -- bounded by what the tool can reach,
+// because the dead widen your hands but cannot sharpen your axe. Two
+// levels, priced past the last spirit rise: this is what dust is for once
+// the whole parade stands at five.
+export const BOUNTY = {
+  max: 2,
+  costs: [750, 3000],
+};
+
 /** Dust cost to take a spirit from `level` to `level + 1`. */
 export function spiritUpCost(level) {
   return HALL.upgradeBase * Math.pow(HALL.upgradeGrowth, level - 1);

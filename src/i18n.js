@@ -527,6 +527,13 @@ const PT = {
   'wakes at {0} lifetime rebirth(s)': 'desperta com {0} renascimento(s) na vida',
   '{0} RISES TO {1}': '{0} SOBE PARA {1}',
   'AN ANCESTOR WAKES': 'UM ANCESTRAL DESPERTA',
+  'Ancestral Bounty': 'Fartura Ancestral',
+  'each gather pays {0} type(s) of its line at once':
+    'cada coleta paga {0} tipo(s) da linha de uma vez',
+  'raise': 'elevar',
+  'ANCESTRAL BOUNTY {0}': 'FARTURA ANCESTRAL {0}',
+  'with you': 'com você',
+  '{0} WALKS WITH YOU': '{0} ANDA COM VOCÊ',
 
   // --- misc / hud / offline ---
   'Stage {0}': 'Fase {0}',
