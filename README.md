@@ -862,6 +862,17 @@ portrait numbers the game was balanced against (117x88 at scale 3, against
 portrait's 130x84 at 3), and the space left under it is where the action
 buttons live: off the game world, and low enough to reach one-handed.
 
+**Under 480px of height — every landscape phone — the panel goes on a
+diet.** Every 9-sliced control drops its frame scale from 2x to 1x (same
+art, half the border), and the tree panes invert their scrolling: instead
+of the web peering through an 88px porthole under a stack of pinned bars,
+the **pane scrolls as one column** and the web gets a 300px window — the
+whole tree, readable, with the parchment detail strip pinned sticky so a
+tapped node still explains itself. The stock and workshop stop being
+scrollers of their own, so it is one finger, one direction. The tab row
+scrolls sideways when eight tabs outgrow a narrow panel, rather than
+clipping the last two off the screen.
+
 **With height to spare, the arena becomes a band instead.** From a 640px-tall
 viewport up — tablets, small desktop windows — the two columns give way to the
 shape the game is drawn for: a strip of world across the top, big sky and a

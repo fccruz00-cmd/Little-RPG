@@ -521,7 +521,15 @@ body { display: flex; justify-content: center; }
   flex: none;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  /* minmax(max-content, 1fr), NOT 1fr: a 1fr implicit column keeps its
+     min-content floor, so eight tabs in a 340px panel OVERFLOWED the row
+     and clipped "Ascend" off the screen. With the floor spelled out the
+     wide panel still shares space evenly, and the narrow one scrolls
+     sideways instead of amputating its last two tabs. */
+  grid-auto-columns: minmax(max-content, 1fr);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   gap: 3px;
   padding: 2px 3px 3px;
   background-color: var(--wood);
@@ -1866,10 +1874,61 @@ body { display: flex; justify-content: center; }
      web fitted made the SKILLS pane itself scroll -- a scroller inside a
      scroller, which is worse than the web scrolling on its own. The skills
      pane spends 173px on its tool bar, stock row and detail line before the
-     web starts; on a 360px-tall screen there is nothing left to take. */
+     web starts; on a 360px-tall screen there is nothing left to take.
+     (Under 480px this whole tradeoff is replaced: see the block below.) */
   .tree-scroll { min-height: 88px; }
   .skillbar { padding: 3px 8px; }
   .mine-tools { padding: 3px 5px; }
+}
+
+/* ============================================================
+   Landscape phones: the panel on a diet
+
+   A phone turned sideways is 320-430px TALL, and chrome drawn for a 700px
+   column reads gigantic there: every button wears 6-8px of wooden frame,
+   and by the time the Skills pane has paid for its switch, tool bar, stock
+   and detail line, the tree is an 88px porthole showing one row of nodes.
+
+   Two moves, both height-keyed so desktop never sees them:
+
+   1. SAME ART, HALF THE FRAME. Every 9-sliced control drops --px from 2
+      to 1: the slices scale cleanly (they are drawn at 1x), the tap face
+      stays, and each row gives back 6-8px of border.
+
+   2. ONE SCROLLER. On the tree panes the porthole compromise inverts:
+      the PANE scrolls as a single column and the tree gets a 300px window
+      -- the whole web, readable, at the cost of the bench scrolling away
+      above it. The old objection (a scroller inside a scroller) does not
+      apply, because the stock and workshop stop being scrollers
+      themselves: one finger, one direction, everything reachable. The
+      parchment detail strip goes sticky so tapping a node still explains
+      itself with the switch three screens up.
+   ============================================================ */
+@media (max-height: 480px) {
+  .tab { --px: 1; padding: 3px 1px 4px; }
+  .segmented button { --px: 1; padding: 3px 6px 4px; }
+  #skill-switch button, #tree-switch button { padding: 3px 2px 4px; }
+  .equip { --px: 1; padding: 3px 7px 4px; }
+  .up { --px: 1; }
+  .pane__head { padding: 2px 6px 3px; gap: 6px; }
+  .pane__detail { --px: 1; margin: 3px 4px 0; padding: 3px 7px 4px; }
+  .skillbar { gap: 6px; }
+  .workshop { gap: 4px; padding: 4px; }
+  .ore { gap: 6px; }
+
+  /* the one-scroller inversion, tree panes only */
+  #pane-talents.is-on, #pane-skills.is-on { overflow-y: auto; }
+  #pane-talents .tree-scroll, #pane-skills .tree-scroll {
+    flex: none;
+    height: 300px;
+    min-height: 0;
+  }
+  .stock, .workshop { flex: none; max-height: none; overflow-y: visible; }
+  #pane-talents .pane__detail, #pane-skills .pane__detail {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
 }
 
 /* ============================================================
