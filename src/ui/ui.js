@@ -1192,13 +1192,21 @@ export class UI {
   toast({ text, bad = false }) {
     if (this.quiet) return;
     const el = this.el.toast;
+    const now = performance.now();
     el.hidden = false;
     el.textContent = text;
     el.classList.toggle('is-bad', bad);
-    // Restart the animation even if the previous toast is still on screen.
-    el.style.animation = 'none';
-    void el.offsetWidth;
-    el.style.animation = '';
+    // Restarting the pop-in animation needs a forced reflow, and at x3
+    // speed toasts arrive faster than the animation runs -- profiling put
+    // that reflow at a fifth of the simulation. Restart only when the
+    // previous toast has had time to land; a machine-gun toast just swaps
+    // its text, which is all anyone can read at that rate anyway.
+    if (now - (this._toastAt ?? 0) > 250) {
+      el.style.animation = 'none';
+      void el.offsetWidth;
+      el.style.animation = '';
+    }
+    this._toastAt = now;
     clearTimeout(this._toastTimer);
     this._toastTimer = setTimeout(() => { el.hidden = true; }, 900);
   }
@@ -1212,7 +1220,8 @@ export class UI {
     setText(el.level, String(state.level));
 
     const need = state.xpNeeded;
-    el.xpFill.style.width = `${Math.min(100, (state.xp / need) * 100).toFixed(1)}%`;
+    const xpW = `${Math.min(100, (state.xp / need) * 100).toFixed(1)}%`;
+    if (this._xpW !== xpW) { this._xpW = xpW; el.xpFill.style.width = xpW; }
     setText(el.xpText, `${fmt(state.xp)} / ${fmt(need)}`);
 
     const encounter = battle.nextEncounter();
@@ -1232,20 +1241,37 @@ export class UI {
     setText(el.best, String(state.bestStage));
     setText(el.stageFoot, String(state.stage));
 
-    // The purse appears the moment a dungeon has ever paid, and stays after
-    // it is spent: `deepestKey` is the record that a clear happened.
-    el.gemPill.hidden = state.gems <= 0 && (state.deepestKey ?? -1) < 0;
-    if (!el.gemPill.hidden) setText(el.gemCount, fmt(state.gems));
-
-    el.progress.style.width = `${(battle.stageProgress * 100).toFixed(1)}%`;
+    const progressW = `${(battle.stageProgress * 100).toFixed(1)}%`;
+    if (this._progressW !== progressW) {
+      this._progressW = progressW;
+      el.progress.style.width = progressW;
+    }
     el.progress.classList.toggle('is-boss', encounter !== 'mob');
 
     const showTimer = battle.enemy?.isBoss === true;
     el.bossTimer.hidden = !showTimer;
     if (showTimer) setText(el.bossValue, Math.max(0, battle.bossTimer).toFixed(1));
 
+    // Well Fed is a live combat state, so it lives in the HUD, not the tab.
+    el.fed.hidden = !state.fed;
+    if (state.fed) setText(el.fedTime, String(Math.ceil(state.fedTimer)));
+
+    this.tickAutomation(dt);
+
+    this._timer = (this._timer ?? 0) + dt;
+    if (this._timer < 0.15) return;
+    this._timer = 0;
+
+    // Everything below runs at the 0.15s cadence. Pips, tab gates and the
+    // arena buttons are can-I-afford scans across half the state, and no
+    // question they answer needs answering sixty times a second.
     el.stagePrev.disabled = state.stage <= 1;
     el.stageNext.disabled = state.stage >= state.maxStage;
+
+    // The purse appears the moment a dungeon has ever paid, and stays after
+    // it is spent: `deepestKey` is the record that a clear happened.
+    el.gemPill.hidden = state.gems <= 0 && (state.deepestKey ?? -1) < 0;
+    if (!el.gemPill.hidden) setText(el.gemCount, fmt(state.gems));
 
     // "there is something to spend here" markers
     el.pipTalents.hidden = state.freePoints <= 0 && state.relics <= 0 && state.souls <= 0;
@@ -1275,9 +1301,6 @@ export class UI {
     el.arenaAct.hidden = el.actBoss.hidden && el.actLeave.hidden
       && el.actEnter.hidden && el.actBlood.hidden;
 
-    // Well Fed is a live combat state, so it lives in the HUD, not the tab.
-    el.fed.hidden = !state.fed;
-    if (state.fed) setText(el.fedTime, String(Math.ceil(state.fedTimer)));
     // One chip for everything on a timer: brews from the cauldron, dishes
     // from the kitchen. They are the same kind of fact to the player.
     const brews = state.activePotions + state.activeDishes;
@@ -1296,12 +1319,6 @@ export class UI {
     el.pipForge.classList.add('pip--gold');
     el.pipPets.hidden = !PETS.some((p) => state.canFeedPet(p.id));
     el.pipPets.classList.add('pip--gold');
-
-    this.tickAutomation(dt);
-
-    this._timer = (this._timer ?? 0) + dt;
-    if (this._timer < 0.15) return;
-    this._timer = 0;
 
     // The Coin Cache is priced off a live rate, so an open shop keeps up.
     if (!el.gemShop.hidden) this.refreshWares();

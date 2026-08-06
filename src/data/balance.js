@@ -92,13 +92,21 @@ export function statUnlocked(key, state) {
   return state.prestiges > 0 || state.awakens > 0;
 }
 
-/** Value of a stat at a given level. */
+/** Value of a stat at a given level. Memoized: the damage/health getters
+ *  sit on the hottest paths in the game and levels are small integers, so
+ *  the Math.pow is paid once per (stat, level) ever instead of per read.
+ *  An array per stat, not a keyed map: the map's string key allocated on
+ *  every hit and promptly showed up in the profile itself. */
+const VALUE_MEMO = Object.create(null);
 export function statValue(key, lvl) {
+  const arr = VALUE_MEMO[key] ?? (VALUE_MEMO[key] = []);
+  const hit = arr[lvl];
+  if (hit !== undefined) return hit;
   const s = STATS[key];
   const v = s.growth != null
     ? s.base * Math.pow(s.growth, lvl)
     : s.base + s.step * lvl;
-  return s.cap != null ? Math.min(s.cap, v) : v;
+  return arr[lvl] = s.cap != null ? Math.min(s.cap, v) : v;
 }
 
 /** Last useful level of a capped stat (Infinity when uncapped). */

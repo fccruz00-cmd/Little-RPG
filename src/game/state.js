@@ -992,6 +992,11 @@ export class GameState {
       this.fedTimer -= dt;
       if (this.fedTimer > 0) return false;
     }
+    // With no meal running and none found last time, rescan the larder once
+    // a second instead of sixty times: a cooked fish can wait a beat.
+    this._mealScan = (this._mealScan ?? 1) + dt;
+    if (this._mealScan < 1) return false;
+    this._mealScan = 0;
     this.fedTier = -1;
     for (let i = SKILLS.fishing.resources.length - 1; i >= 0; i--) {
       const fish = SKILLS.fishing.resources[i];

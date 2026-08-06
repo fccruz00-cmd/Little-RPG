@@ -337,18 +337,24 @@ export class Battle {
    * in the tick rather than on any single event.
    */
   updatePets(dt) {
-    for (const pet of this.state.tamePets()) {
-      this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+    // Tames and feats complete off slow counters; polling them sixty times
+    // a second was a tenth of the whole simulation (each pass rebuilds the
+    // parade key and runs ten unlock closures). Once a second of game time
+    // catches every crossing the same frame a human could notice it.
+    this._tameTimer = (this._tameTimer ?? 1) + dt;
+    if (this._tameTimer >= 1) {
+      this._tameTimer = 0;
+      for (const pet of this.state.tamePets()) {
+        this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+      }
+      for (const feat of FEATS) {
+        if (this._featsDone.has(feat.id) || !featDone(feat, this.state.stats)) continue;
+        this._featsDone.add(feat.id);
+        this.state.invalidateBonus();
+        this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}` });
+      }
+      this.syncPets();
     }
-    // Feats ride the same tick: counters move on many sites, and the ones
-    // that climb in the background should still pay when they cross.
-    for (const feat of FEATS) {
-      if (this._featsDone.has(feat.id) || !featDone(feat, this.state.stats)) continue;
-      this._featsDone.add(feat.id);
-      this.state.invalidateBonus();
-      this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}` });
-    }
-    this.syncPets();
     const walking = this.hero.anim.name === 'walk';
     for (let i = 0; i < this.petActors.length; i++) {
       const actor = this.petActors[i];
