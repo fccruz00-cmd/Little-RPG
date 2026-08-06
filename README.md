@@ -6,7 +6,7 @@ input and clears stages. All you decide is where the gold goes.
 
 The **UI** keeps the top; under it the **Fight** takes a column of its own
 and the tabbed panel takes another — **Shop**, **Talents**, **Skills**,
-**Forge**, **Pets** and **Ascend**.
+**Cosmos**, **Forge**, **Ancestors**, **Pets** and **Ascend**.
 
 ```
 +--------------------------------------------------+
@@ -184,7 +184,7 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The seven tabs
+### The eight tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three webs behind one switch at the top. All three are the
@@ -243,8 +243,34 @@ it.
    | The Twins   | 9   | enchants +30% stronger |
    | The Crown   | 12  | the set bonus +30% stronger |
 5. **Forge**: only appears after the first rebirth.
-6. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
-7. **Ascend**: the two reset layers behind one switch.
+6. **Ancestors**: the Hall of Ancestors, open from the first reset ever
+   taken and never closed again. Every rebirth — and every awakening —
+   leaves behind a **spirit of the hero you were**, and each spirit can be
+   assigned **one Shop row** to keep bought, forever: through the rest of
+   the run, through rebirth, through awakening. Spirits wake on *lifetime*
+   rebirths (a counter nothing resets):
+
+   | spirit | wakes at |
+   |---|---:|
+   | The Founder | 1 |
+   | The Keeper  | 2 |
+   | The Blade   | 3 |
+   | The Miser   | 5 |
+   | The Sage    | 8 |
+   | The Warden  | 12 |
+   | The Reaper  | 17 |
+   | The Eternal | 23 |
+
+   A spirit visits the shop every **8 s** and buys up to its **level** in
+   levels of its row; **dust** raises a spirit (40 → 120 → 360 → 1080, to
+   level 5), which gives dust something to want besides the forge. The
+   **gold reserve** (0/25/50/75%) is the slice of the purse the whole hall
+   must leave untouched, so the spirits never starve a boss build or a
+   forge session. Same law as Herald and Anvil: a spirit only does what a
+   finger could — the shelf gates hold, capped rows stop at their caps,
+   and everything comes out of the one purse.
+7. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
+8. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
@@ -944,6 +970,7 @@ src/
     talents.js      all three trees (nodes, effects, costs)
     gear.js         forge: slots, rarities, odds and costs
     prestige.js     what a run is worth in relics, and a cycle in souls
+    ancestors.js    the hall: spirits, wake thresholds, rise costs
     sprites.js      GENERATED, frame counts and body box per sprite
   engine/
     loader.js       image loading

@@ -485,6 +485,25 @@ const PT = {
   'music: on': 'música: sim',
   'music: off': 'música: não',
 
+  // --- the Hall of Ancestors ---
+  'Ancestors': 'Ancestrais',
+  'The Founder': 'O Fundador',
+  'The Keeper': 'O Guardião',
+  'The Blade': 'A Lâmina',
+  'The Miser': 'O Avarento',
+  'The Sage': 'O Sábio',
+  'The Warden': 'O Vigia',
+  'The Reaper': 'O Ceifador',
+  'The Eternal': 'O Eterno',
+  'Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever — through rebirth and awakening. Dust raises a spirit, buying more levels per visit.':
+    'Cada renascimento deixa para trás o herói que você foi. Dê a cada espírito um upgrade para manter comprado e ele o fará, para sempre — através de renascimento e despertar. Pó fortalece um espírito, comprando mais níveis por visita.',
+  'Gold reserve': 'Reserva de ouro',
+  '— resting —': '— descansando —',
+  'Assignment': 'Tarefa',
+  'wakes at {0} lifetime rebirth(s)': 'desperta com {0} renascimento(s) na vida',
+  '{0} RISES TO {1}': '{0} SOBE PARA {1}',
+  'AN ANCESTOR WAKES': 'UM ANCESTRAL DESPERTA',
+
   // --- misc / hud / offline ---
   'Stage {0}': 'Fase {0}',
   '+{0} chance a node pays twice': '+{0} de chance do nó pagar dobrado',

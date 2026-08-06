@@ -108,6 +108,10 @@
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
+      <!-- the hall a rebirth opens: your past lives shop for you -->
+      <button class="tab" data-tab="hall" type="button" role="tab" id="tab-hall" hidden>
+        Ancestors<i class="pip" id="pip-hall" hidden></i>
+      </button>
       <button class="tab" data-tab="pets" type="button" role="tab">
         Pets<i class="pip" id="pip-pets" hidden></i>
       </button>
@@ -272,6 +276,26 @@
       <p class="foot-note">Odds move with <b>Smithing</b>, on the Skills tab.
         Dungeon <b>keys</b> are forged there too.<br>
         <span id="set-status"></span></p>
+    </div>
+
+    <!-- tab: the Hall of Ancestors (opens with the first rebirth). Every
+         reset leaves a spirit; each one auto-buys the shop row you assign
+         it, out of whatever the gold reserve leaves free. -->
+    <div class="pane" id="pane-hall">
+      <div class="pane__head">
+        <span class="pane__hint" id="hall-reserve-label">Gold reserve</span>
+        <div class="segmented" id="reserve-switch">
+          <button data-reserve="0" type="button">0%</button>
+          <button class="is-on" data-reserve="0.25" type="button">25%</button>
+          <button data-reserve="0.5" type="button">50%</button>
+          <button data-reserve="0.75" type="button">75%</button>
+        </div>
+        <span class="pane__points">
+          <i class="ico ico--sm ico--orb"></i> <b id="spirits-n">0/8</b>
+        </span>
+      </div>
+      <p class="pane__detail" id="hall-detail"></p>
+      <div class="pets" id="hall-list"></div>
     </div>
 
     <!-- tab 5: pets. The slime is free; the rest are objectives. -->

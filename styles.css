@@ -1444,6 +1444,36 @@ body { display: flex; justify-content: center; }
 .pet__fish { opacity: .8; }
 .pet__feed.can-buy { animation: nodeGlow 1.8s ease-in-out infinite; }
 
+/* --- the Hall of Ancestors: pet boards wearing a ghost --- */
+/* The portrait is the hero's own idle frame, tinted in code; the glow and
+   the translucency are what read as "spirit" rather than "another knight". */
+.spirit__thumb {
+  opacity: .82;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+.spirit.is-locked .spirit__thumb { filter: grayscale(1) brightness(.5); }
+.spirit__locked { display: block; }
+.spirit__locked[hidden] { display: none; }
+
+/* A native select, dressed like the boards around it. Native on purpose:
+   the picker a phone opens for it beats anything hand-rolled here. */
+.spirit__task {
+  display: block;
+  max-width: 100%;
+  margin-top: 1px;
+  font: inherit;
+  font-size: 10px;
+  color: var(--cream);
+  background: #201826;
+  border: 1px solid #4a4258;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.spirit__task[hidden] { display: none; }
+.spirit__task:focus-visible { outline: 2px solid var(--accent); }
+
+.spirit__up[hidden] { display: none; }
+
 /* --- tab 4: forge --- */
 .forge {
   flex: 1 1 auto;

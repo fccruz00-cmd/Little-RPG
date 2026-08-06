@@ -21,6 +21,7 @@ import {
   PLANETS, CONSTELLATIONS, CONSTELLATION_BY_ID, observeTime,
 } from '../data/cosmos.js';
 import { FEATS, featDone } from '../data/feats.js';
+import { ANCESTORS, HALL } from '../data/ancestors.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { PATHS, describePath } from '../data/paths.js';
 import { GEM_WARES, WARE_BY_ID } from '../data/gems.js';
@@ -145,6 +146,10 @@ export class UI {
       pathList: $('path-list'), pathNote: $('path-note'),
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
+      tabHall: $('tab-hall'), pipHall: $('pip-hall'),
+      hallList: $('hall-list'), hallDetail: $('hall-detail'),
+      spiritsN: $('spirits-n'), reserveSwitch: $('reserve-switch'),
+      hallReserveLabel: $('hall-reserve-label'),
       tabCosmos: $('tab-cosmos'), pipCosmos: $('pip-cosmos'),
       planetsFound: $('planets-found'), cosmosDetail: $('cosmos-detail'),
       cosmosSwitch: $('cosmos-switch'), skyStars: $('sky-stars'),
@@ -193,6 +198,7 @@ export class UI {
     this.buildKitchen();
     this.buildCosmos();
     this.buildForge();
+    this.buildHall();
     this.buildPets();
     this.buildFeats();
     this.buildWares();
@@ -254,7 +260,7 @@ export class UI {
     const TEXT = [
       ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
       ['[data-tab="skills"]', 'Skills'], ['[data-tab="cosmos"]', 'Cosmos'],
-      ['[data-tab="forge"]', 'Forge'],
+      ['[data-tab="forge"]', 'Forge'], ['[data-tab="hall"]', 'Ancestors'],
       ['[data-tab="pets"]', 'Pets'], ['[data-tab="prestige"]', 'Ascend'],
       ['[data-tree="talents"]', 'Talents'], ['[data-tree="relics"]', 'Relics'],
       ['[data-tree="souls"]', 'Souls'],
@@ -518,6 +524,105 @@ export class UI {
     const dh = Math.round(h * scale);
     ctx.drawImage(sheet.image, box.left, box.top, w, h,
       Math.floor((canvas.width - dw) / 2), canvas.height - dh, dw, dh);
+  }
+
+  /**
+   * The Hall of Ancestors: one board per spirit, all eight up front so the
+   * locked ones read as a roadmap, exactly like the pets. Each spirit is a
+   * past life, so the portrait is the hero's own idle frame washed in the
+   * spirit's colour -- the knight you were, gone a little translucent.
+   */
+  buildHall() {
+    setText(this.el.hallDetail, t('Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever — through rebirth and awakening. Dust raises a spirit, buying more levels per visit.'));
+    setText(this.el.hallReserveLabel, t('Gold reserve'));
+    const frag = document.createDocumentFragment();
+    this.spiritRows = [];
+    ANCESTORS.forEach((spirit, i) => {
+      const row = document.createElement('div');
+      row.className = 'pet spirit';
+      row.style.setProperty('--accent', spirit.accent);
+      row.innerHTML = `
+        <canvas class="pet__thumb spirit__thumb" width="26" height="26"></canvas>
+        <span class="pet__body">
+          <span class="pet__name">${t(spirit.name)} <em class="pet__lvl"></em></span>
+          <select class="spirit__task" aria-label="${t('Assignment')}"></select>
+          <span class="pet__effect spirit__locked"></span>
+        </span>
+        <button class="equip pet__feed spirit__up" type="button"></button>`;
+      this.drawGhostThumb(row.querySelector('canvas'), spirit.accent);
+      frag.append(row);
+      this.spiritRows.push({
+        spirit, i, row,
+        lvl: row.querySelector('.pet__lvl'),
+        task: row.querySelector('.spirit__task'),
+        locked: row.querySelector('.spirit__locked'),
+        up: row.querySelector('.spirit__up'),
+        options: '',
+      });
+    });
+    this.el.hallList.append(frag);
+  }
+
+  /** The hero's idle frame, washed in the spirit's colour. Two source-atop
+   *  passes, colour then white, so the wash also LIFTS the sprite: the
+   *  knight's palette is dark, and a dark ghost just reads as a shadow. */
+  drawGhostThumb(canvas, accent) {
+    this.drawPetThumb(canvas, 'knight');
+    const ctx = canvas.getContext('2d');
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  refreshHall(force = false) {
+    const { state, el } = this;
+    setText(el.spiritsN, `${state.spiritCount}/${ANCESTORS.length}`);
+    for (const button of el.reserveSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on',
+        Number(button.dataset.reserve) === state.ancestors.reserve);
+    }
+    // The option list only moves when a shelf opens, so it is rebuilt
+    // against a signature instead of on every 0.15s tick: an open <select>
+    // whose options are replaced under the thumb closes itself on phones.
+    const sig = state.spiritCount + ':' + UPGRADES
+      .filter((u) => statUnlocked(u.key, state)).map((u) => u.key).join();
+    const rebuild = force || sig !== this._hallSig;
+    this._hallSig = sig;
+    for (const r of this.spiritRows) {
+      const woken = r.i < state.spiritCount;
+      r.row.classList.toggle('is-locked', !woken);
+      r.task.hidden = !woken;
+      r.locked.hidden = woken;
+      r.up.hidden = !woken;
+      if (!woken) {
+        setText(r.locked, t('wakes at {0} lifetime rebirth(s)', r.spirit.at));
+        setText(r.lvl, '');
+        continue;
+      }
+      setText(r.lvl, `Lv. ${state.spiritLevel(r.i)}`);
+      if (rebuild) {
+        const opts = [`<option value="">${t('— resting —')}</option>`]
+          .concat(UPGRADES
+            .filter((u) => statUnlocked(u.key, state))
+            .map((u) => `<option value="${u.key}">${t(u.name)}</option>`))
+          .join('');
+        if (r.options !== opts) { r.options = opts; r.task.innerHTML = opts; }
+      }
+      const want = state.ancestors.assign[r.i] ?? '';
+      if (r.task.value !== want) r.task.value = want;
+      const maxed = state.spiritLevel(r.i) >= HALL.maxLevel;
+      setHtml(r.up, maxed ? 'MAX'
+        : `<i class="ico ico--sm ico--dust"></i> ${fmt(state.spiritUpCost(r.i))}`);
+      const can = state.canUpgradeSpirit(r.i);
+      r.up.disabled = !can;
+      r.up.classList.toggle('can-buy', can);
+    }
   }
 
   /** Builds the forge: one row per slot plus the odds table below. */
@@ -791,6 +896,28 @@ export class UI {
       this.refreshSkills();
     });
 
+    // --- the hall ---
+    el.reserveSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (!button) return;
+      if (state.setReserve(Number(button.dataset.reserve))) this.refreshHall();
+    });
+    for (const r of this.spiritRows) {
+      r.task.addEventListener('change', () => {
+        if (!state.assignSpirit(r.i, r.task.value || null)) {
+          this.refreshHall(true);   // refused: snap the select back
+          return;
+        }
+        this.sfx.play('buy');
+      });
+      r.up.addEventListener('click', () => {
+        if (!state.upgradeSpirit(r.i)) return;
+        this.sfx.play('jingle');
+        this.toast({ text: t('{0} RISES TO {1}', t(r.spirit.name).toUpperCase(), state.spiritLevel(r.i)) });
+        this.refreshHall();
+      });
+    }
+
     el.pathList.addEventListener('click', (e) => {
       const row = e.target.closest('.pathrow');
       if (!row || !state.choosePath(row.dataset.path)) return;
@@ -898,6 +1025,7 @@ export class UI {
       const gain = state.pendingRelics;
       if (gain <= 0) return;
       if (!confirm(t('Rebirth now pays {0} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?', gain))) return;
+      const spiritsBefore = state.spiritCount;
       battle.forfeitDungeon();
       state.prestige();
       battle.enterStage(state.startStage, { silent: true });
@@ -910,6 +1038,10 @@ export class UI {
           ? t('REBORN: THE FORGE IS OPEN')
           : t('REBORN: +{0} RELIC(S)', gain),
       });
+      // The life just ended walks into the hall.
+      if (state.spiritCount > spiritsBefore) {
+        this.toast({ text: t('AN ANCESTOR WAKES') });
+      }
     });
 
     el.awkGo.addEventListener('click', () => {
@@ -929,8 +1061,12 @@ export class UI {
       }
       lines.push(t('Confirm?'));
       if (!confirm(lines.join('\n\n'))) return;
+      const spiritsBefore = state.spiritCount;
       battle.forfeitDungeon();
       state.awaken();
+      if (state.spiritCount > spiritsBefore) {
+        this.toast({ text: t('AN ANCESTOR WAKES') });
+      }
       battle.enterStage(state.startStage, { silent: true });
       this.refreshShop(true);
       this.refreshForge();
@@ -1058,6 +1194,7 @@ export class UI {
     if (name === 'skills') this.refreshSkills();
     if (name === 'cosmos') this.refreshCosmos();
     if (name === 'forge') this.refreshForge();
+    if (name === 'hall') this.refreshHall(true);
     if (name === 'pets') this.refreshPets();
     if (name === 'prestige') this.refreshPrestige();
   }
@@ -1317,6 +1454,16 @@ export class UI {
     el.pipCosmos.classList.add('pip--gold');
     el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
     el.pipForge.classList.add('pip--gold');
+    // The hall opens on the first reset ever and never closes again. Its
+    // pip nags for an idle spirit or an affordable rise, same spirit as
+    // the forge's "you could do something here".
+    el.tabHall.hidden = !state.hallOpen;
+    let hallNag = false;
+    for (let i = 0; i < state.spiritCount; i++) {
+      if (!state.ancestors.assign[i] || state.canUpgradeSpirit(i)) { hallNag = true; break; }
+    }
+    el.pipHall.hidden = el.tabHall.hidden || !hallNag;
+    el.pipHall.classList.add('pip--gold');
     el.pipPets.hidden = !PETS.some((p) => state.canFeedPet(p.id));
     el.pipPets.classList.add('pip--gold');
 
@@ -1328,6 +1475,7 @@ export class UI {
     else if (this.tab === 'skills') this.refreshSkills();
     else if (this.tab === 'cosmos') this.refreshCosmos();
     else if (this.tab === 'forge') this.refreshForge();
+    else if (this.tab === 'hall') this.refreshHall();
     else if (this.tab === 'pets') this.refreshPets();
     else this.refreshPrestige();
   }
@@ -1562,6 +1710,15 @@ export class UI {
         this.doForge(slotId, true);
       }
       this._autoForge = Math.min(this._autoForge, AUTO_FORGE_EVERY);
+    }
+
+    // The hall. The spirits' clock lives in state (they are game rules,
+    // not UI convenience), but it ticks from here so they keep shopping
+    // through background catch-ups, exactly like Herald and Anvil.
+    const raised = state.tickAncestors(dt);
+    if (raised > 0) {
+      state.save();
+      if (!this.quiet && this.tab === 'upgrades') this.refreshShop(true);
     }
   }
 

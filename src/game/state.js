@@ -35,6 +35,9 @@ import { PATH_BY_ID } from '../data/paths.js';
 import {
   PLANET_BY_ID, CONSTELLATION_BY_ID, BODY_BY_ID, observeTime,
 } from '../data/cosmos.js';
+import {
+  ANCESTORS, HALL, RESERVES, spiritUpCost, spiritsAwake,
+} from '../data/ancestors.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -43,7 +46,7 @@ const MULTIPLIER_KEYS = [
 ];
 
 const SAVE_KEY = 'little-rpg.save.v1';
-const SAVE_VERSION = 15;
+const SAVE_VERSION = 16;
 const SAVE_EVERY = 5; // seconds
 const REDEEMED_KEPT = 50; // purchase tokens kept against double-crediting
 
@@ -132,6 +135,12 @@ function defaults() {
     // observation per planet, so re-aiming the telescope loses nothing.
     cosmos: { found: [], target: null, progress: {} },
 
+    // The Hall of Ancestors: spirits of past lives, woken by lifetime
+    // rebirths (stats.rebirths), each buying one shop row on its own.
+    // `assign` maps spirit index -> stat key; `levels` is per spirit;
+    // `reserve` is the slice of the purse the spirits must not touch.
+    ancestors: { assign: {}, levels: {}, reserve: 0.25 },
+
     // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
     // rebirth and not awakening, because a purse you can also be sold must
     // never be emptied by a button the game asks you to press.
@@ -188,7 +197,7 @@ function renameKeys(map) {
 function migrate(data) {
   if (!data) return null;
   if (data.version === SAVE_VERSION) return data;
-  if (data.version >= 1 && data.version <= 14) {
+  if (data.version >= 1 && data.version <= 15) {
     // v1: before levels/talents/prestige. v2: before the forge.
     // v3: before the ids were translated. v4: before mining.
     // v5: mining stood alone, before chopping and fishing joined it.
@@ -208,6 +217,8 @@ function migrate(data) {
     // v14: before contracts, enchants, paths, the sprint and the idol. All
     // of them start empty via defaults; the constructor rolls the first
     // quest board from live stats, so day one asks for a day's work.
+    // v15: before the Hall of Ancestors; assignments start empty via
+    // defaults, and the lifetime rebirth counter is seeded below.
     const out14 = data;
     // A save that had already awakened earned the choice a new awakening
     // would have granted; without this line those players wait a whole
@@ -221,6 +232,15 @@ function migrate(data) {
       talents: renameKeys(data.talents),
       relicTalents: renameKeys(data.relicTalents),
       gear: renameKeys(data.gear),
+    };
+    // The hall counts LIFETIME rebirths, which no save before v16 recorded.
+    // Seed it from what the save can prove: the rebirths of this ascension
+    // plus one per awakening, since each awakening closed a whole cycle. An
+    // undercount for old veterans, never an overcount, and it only climbs.
+    out.stats = {
+      ...(out.stats ?? {}),
+      rebirths: data.stats?.rebirths
+        ?? ((data.prestiges ?? 0) + (data.awakens ?? 0)),
     };
     // The first-clear bounty is paid for having gone that deep, and a save
     // that arrives here already has. Without this the most invested player
@@ -282,6 +302,13 @@ export class GameState {
       target: data.cosmos?.target ?? null,
       progress: { ...(data.cosmos?.progress ?? {}) },
     };
+    this.ancestors = {
+      assign: { ...(data.ancestors?.assign ?? {}) },
+      levels: { ...(data.ancestors?.levels ?? {}) },
+      // Imports and hand-edited saves: only a preset reserve is trusted.
+      reserve: RESERVES.includes(data.ancestors?.reserve)
+        ? data.ancestors.reserve : 0.25,
+    };
     // A save cannot keep a speed its gates no longer justify (imports,
     // hand-edited saves): clamp instead of trusting the field.
     this.speed = Math.max(1, Math.min(Math.round(data.speed ?? 1), this.maxSpeed));
@@ -297,6 +324,7 @@ export class GameState {
     this.streak = 0;
     this.hp = this.maxHp;
     this._saveTimer = 0;
+    this._spiritTimer = 0;
     this._goldWindow = [];
     // Seconds of SIMULATED time, advanced by the loop, never by the wall
     // clock. The background loop fast-forwards a minute of fighting in a few
@@ -1347,6 +1375,106 @@ export class GameState {
     return this.speed;
   }
 
+  // --- the Hall of Ancestors ------------------------------------------
+  /** Open once ANY reset has ever been taken. Lifetime, so unlike the
+   *  forge it does not close when an awakening zeroes `prestiges`. */
+  get hallOpen() {
+    return (this.stats.rebirths ?? 0) > 0;
+  }
+
+  /** Spirits woken by this save's lifetime rebirths. */
+  get spiritCount() {
+    return spiritsAwake(this.stats.rebirths ?? 0);
+  }
+
+  spiritLevel(i) {
+    return this.ancestors.levels[i] ?? 1;
+  }
+
+  /** Points a spirit at a shop row; falsy `key` sends it back to idle. */
+  assignSpirit(i, key) {
+    if (i < 0 || i >= this.spiritCount) return false;
+    if (key && (!STATS[key] || !statUnlocked(key, this))) return false;
+    if (key) this.ancestors.assign[i] = key;
+    else delete this.ancestors.assign[i];
+    this.save();
+    return true;
+  }
+
+  spiritUpCost(i) {
+    return spiritUpCost(this.spiritLevel(i));
+  }
+
+  canUpgradeSpirit(i) {
+    return i >= 0 && i < this.spiritCount
+      && this.spiritLevel(i) < HALL.maxLevel
+      && this.dust >= this.spiritUpCost(i);
+  }
+
+  /** Raises a spirit for dust: one more shelf level per visit. */
+  upgradeSpirit(i) {
+    if (!this.canUpgradeSpirit(i)) return false;
+    this.dust -= this.spiritUpCost(i);
+    this.ancestors.levels[i] = this.spiritLevel(i) + 1;
+    this.save();
+    return true;
+  }
+
+  setReserve(r) {
+    if (!RESERVES.includes(r)) return false;
+    this.ancestors.reserve = r;
+    this.save();
+    return true;
+  }
+
+  /**
+   * One spirit's visit to the shop: up to its level in levels of its one
+   * row, paid out of what the reserve leaves free. The shelf gate rides in
+   * `statUnlocked`, same as `bulkFor`: a locked row cannot be bought, not
+   * even by the dead. Returns levels bought.
+   */
+  spiritBuy(i) {
+    const key = this.ancestors.assign[i];
+    if (!key || !STATS[key] || !statUnlocked(key, this) || this.isMaxed(key)) return 0;
+    const spendable = this.gold * (1 - this.ancestors.reserve);
+    const n = Math.min(this.spiritLevel(i),
+      affordableLevels(key, this.levels[key], spendable));
+    if (n <= 0) return 0;
+    const price = statCostBulk(key, this.levels[key], n);
+    if (price > this.gold) return 0;
+    this.gold -= price;
+    const hpBefore = this.maxHp;
+    this.levels[key] += n;
+    // Same courtesy the shop button pays: bought health arrives healed.
+    if (key === 'maxHp') this.hp += this.maxHp - hpBefore;
+    return n;
+  }
+
+  /**
+   * The hall's clock. `dt` is one frame in the foreground and a whole
+   * minute from a background catch-up, so it loops like Herald does,
+   * capped so a resume from a long freeze cannot stall the thread.
+   * Returns total levels bought, so the caller knows to save and repaint.
+   */
+  tickAncestors(dt) {
+    if (!this.hallOpen || this.spiritCount === 0) return 0;
+    this._spiritTimer += dt;
+    let bought = 0;
+    let budget = 200;
+    while (this._spiritTimer >= HALL.period && budget > 0) {
+      budget -= 1;
+      this._spiritTimer -= HALL.period;
+      let round = 0;
+      for (let i = 0; i < this.spiritCount; i++) round += this.spiritBuy(i);
+      bought += round;
+      // A dry round means gold, not backlog, is the limit: burn the rest
+      // of the queue instead of retrying it purchase by failed purchase.
+      if (round === 0) break;
+    }
+    this._spiritTimer = Math.min(this._spiritTimer, HALL.period);
+    return bought;
+  }
+
   // --- contracts ------------------------------------------------------
   /**
    * Rolls the board over when the UTC day or week has moved on. Idempotent
@@ -1407,6 +1535,7 @@ export class GameState {
     this.relics += gain;
     this.relicsEarned += gain;
     this.prestiges += 1;
+    this.stats.rebirths += 1;   // lifetime; wakes the hall's spirits
 
     this.resetRun();
     this.save();
@@ -1494,6 +1623,8 @@ export class GameState {
 
     this.souls += gain;
     this.awakens += 1;
+    // An awakening closes a cycle, so it is one more life left behind.
+    this.stats.rebirths += 1;
     // The choice comes back with every awakening; the path itself stays.
     this.pathFree = true;
 
@@ -1588,7 +1719,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos,
+      cosmos, ancestors,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1600,7 +1731,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos,
+      cosmos, ancestors,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

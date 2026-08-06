@@ -40,11 +40,14 @@ export const FEATS = [
     key: 'dmgMul', mode: 'mul', per: 0.05, desc: 'clear 5 Bloodmoons' },
 ];
 
-/** Fresh lifetime counters, one per stat a feat can read. */
+/** Fresh lifetime counters, one per stat a feat can read. `rebirths` counts
+ *  every reset ever taken -- prestige and awakening both -- and is what
+ *  wakes the Hall of Ancestors' spirits. */
 export function emptyStats() {
   return {
     kills: 0, bossKills: 0, deaths: 0, forges: 0, legendaries: 0,
     refines: 0, feeds: 0, brews: 0, cooks: 0, dungeonWins: 0, bloodWins: 0,
+    rebirths: 0,
   };
 }
 
