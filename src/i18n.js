@@ -325,8 +325,8 @@ const PT = {
   'Cosmos': 'Cosmos',
   'Planetarium': 'Planetário',
   'Constellations': 'Constelações',
-  'One body at a time, on game time. A discovered planet is yours forever — through rebirth and awakening — and <b>automates one thing</b> you were doing by hand.':
-    'Um corpo por vez, em tempo de jogo. Um planeta descoberto é seu para sempre — através do renascer e do despertar — e <b>automatiza uma coisa</b> que você fazia na mão.',
+  'One body at a time, on game time. A discovered planet is yours forever, through rebirth and awakening, and <b>automates one thing</b> you were doing by hand.':
+    'Um corpo por vez, em tempo de jogo. Um planeta descoberto é seu para sempre, através do renascer e do despertar, e <b>automatiza uma coisa</b> que você fazia na mão.',
   'The stars share the one telescope with the planets. A charted constellation is a <b>permanent buff</b> to your skills or your gear.':
     'As estrelas dividem o único telescópio com os planetas. Uma constelação mapeada é um <b>bônus permanente</b> para seus ofícios ou seu equipamento.',
   'Discover your <b>first planet</b> to read the stars.':
@@ -435,8 +435,8 @@ const PT = {
     'Renascer agora paga {0} relíquia(s).\n\nVocê perde fase, ouro, upgrades, nível e pontos de talento. Confirmar?',
   'Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive.':
     'Despertar paga {0} alma(s).\n\nVocê perde tudo que o Renascer leva, MAIS relíquias, a árvore de relíquias, renascimentos, pó e equipamento. Almas e a aba Ofícios sobrevivem.',
-  'That includes {0} Mythic item(s) — gems spent on Mythic Chests do not come back.':
-    'Isso inclui {0} item(ns) Mítico(s) — gemas gastas em Baús Míticos não voltam.',
+  'That includes {0} Mythic item(s): gems spent on Mythic Chests do not come back.':
+    'Isso inclui {0} item(ns) Mítico(s): gemas gastas em Baús Míticos não voltam.',
   'Confirm?': 'Confirmar?',
   'Erase EVERYTHING, souls, relics, prestige and your gems included? Gems do not come back, whether you cleared for them or paid for them.':
     'Apagar TUDO, incluindo almas, relíquias, prestígio e suas gemas? Gemas não voltam, tendo você limpado masmorra por elas ou pago por elas.',
@@ -519,10 +519,10 @@ const PT = {
   'The Warden': 'O Vigia',
   'The Reaper': 'O Ceifador',
   'The Eternal': 'O Eterno',
-  'Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever — through rebirth and awakening. Dust raises a spirit, buying more levels per visit.':
-    'Cada renascimento deixa para trás o herói que você foi. Dê a cada espírito um upgrade para manter comprado e ele o fará, para sempre — através de renascimento e despertar. Pó fortalece um espírito, comprando mais níveis por visita.',
+  'Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever, through rebirth and awakening. Dust raises a spirit, buying more levels per visit.':
+    'Cada renascimento deixa para trás o herói que você foi. Dê a cada espírito um upgrade para manter comprado e ele o fará, para sempre, através de renascimento e despertar. Pó fortalece um espírito, comprando mais níveis por visita.',
   'Gold reserve': 'Reserva de ouro',
-  '— resting —': '— descansando —',
+  'resting': 'descansando',
   'Assignment': 'Tarefa',
   'wakes at {0} lifetime rebirth(s)': 'desperta com {0} renascimento(s) na vida',
   '{0} RISES TO {1}': '{0} SOBE PARA {1}',
@@ -546,14 +546,14 @@ const PT = {
   'your name': 'seu nome',
   'PICK A CLEANER NAME': 'ESCOLHA UM NOME MAIS LIMPO',
   'reading the board...': 'lendo o placar...',
-  'nobody here yet — be the first': 'ninguém aqui ainda — seja o primeiro',
+  'nobody here yet, be the first': 'ninguém aqui ainda, seja o primeiro',
   'stage {0}': 'fase {0}',
   'your rank: #{0}': 'sua posição: #{0}',
-  'offline — showing the last copy': 'offline — mostrando a última cópia',
+  'offline, showing the last copy': 'offline, mostrando a última cópia',
   'No real money and no gem-bought power. Gold and timeskips do not count.':
     'Sem dinheiro real e sem poder comprado com gemas. Ouro e pulos de tempo não contam.',
-  'No real money — but power was bought with earned gems.':
-    'Sem dinheiro real — mas poder foi comprado com gemas ganhas.',
+  'No real money, but power was bought with earned gems.':
+    'Sem dinheiro real, mas poder foi comprado com gemas ganhas.',
   'Real money was spent here. Thank you for keeping the lights on.':
     'Dinheiro real foi gasto aqui. Obrigado por manter as luzes acesas.',
   'Scores are claims sent by each device; absurd ones get pruned. Only your name and your best runs ever leave the game.':

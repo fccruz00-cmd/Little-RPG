@@ -344,7 +344,7 @@ export class UI {
       ['.statbar div:nth-child(2) dt', `<i class="ico ico--sm ico--health"></i>${t('health')}`],
       ['.statbar div:nth-child(3) dt', `<i class="ico ico--sm ico--crit"></i>${t('crit')}`],
       ['.statbar div:nth-child(4) dt', `<i class="ico ico--sm ico--gold"></i>${t('gold')}`],
-      ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos os buffs somam e os níveis sobrevivem a <b>tudo</b> — e <b>um deles, à sua escolha, anda do seu lado</b>.'],
+      ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos os buffs somam e os níveis sobrevivem a <b>tudo</b>. E <b>um deles, à sua escolha, anda do seu lado</b>.'],
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
@@ -352,7 +352,7 @@ export class UI {
       ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
       ['#store-note', 'Gemas compram ritmo, nunca um teto, e <b>toda gema daqui também pode ser ganha</b> limpando masmorras. As compras são feitas pela loja do aparelho; o jogo nunca vê seus dados de pagamento.'],
       ['#gem-more', 'Sem gemas? Limpe uma masmorra, ou toque na bolsa lá em cima.'],
-      ['#store-empty', '<b>Esta cópia do jogo não vende nada.</b> Não há loja de aplicativos conectada a ela, então não há nada aqui para comprar e nenhum jeito de ela cobrar seu dinheiro. Toda gema do jogo sai de uma masmorra — forje uma chave na aba Ofícios e vá gastá-la.'],
+      ['#store-empty', '<b>Esta cópia do jogo não vende nada.</b> Não há loja de aplicativos conectada a ela, então não há nada aqui para comprar e nenhum jeito de ela cobrar seu dinheiro. Toda gema do jogo sai de uma masmorra: forje uma chave na aba Ofícios e vá gastá-la.'],
       ['.foot > span:first-child', `Fase <b id="stat-stage-foot">1</b>`],
       ['.foot__best', `Recorde: fase <b id="stat-best">1</b>`],
       ['#asc-rebirth .prestige__gain div', `<strong id="pres-gain">0</strong> relíquia(s)\n<small>${t('if you rebirth now')}</small>`],
@@ -560,7 +560,7 @@ export class UI {
    * spirit's colour -- the knight you were, gone a little translucent.
    */
   buildHall() {
-    setText(this.el.hallDetail, t('Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever — through rebirth and awakening. Dust raises a spirit, buying more levels per visit.'));
+    setText(this.el.hallDetail, t('Every rebirth leaves behind the hero you were. Give each spirit one upgrade to keep bought and it will, forever, through rebirth and awakening. Dust raises a spirit, buying more levels per visit.'));
     setText(this.el.hallReserveLabel, t('Gold reserve'));
 
     // The Ancestral Bounty: one board, hall-wide, priced in dust.
@@ -667,7 +667,7 @@ export class UI {
       }
       setText(r.lvl, `Lv. ${state.spiritLevel(r.i)}`);
       if (rebuild) {
-        const opts = [`<option value="">${t('— resting —')}</option>`]
+        const opts = [`<option value="">${t('resting')}</option>`]
           .concat(UPGRADES
             .filter((u) => statUnlocked(u.key, state))
             .map((u) => `<option value="${u.key}">${t(u.name)}</option>`))
@@ -1135,7 +1135,7 @@ export class UI {
       // player bought something they earned would be its own small lie.
       const mythic = state.mythicWorn;
       if (mythic > 0) {
-        lines.push(t('That includes {0} Mythic item(s) — gems spent on Mythic Chests do not come back.', mythic));
+        lines.push(t('That includes {0} Mythic item(s): gems spent on Mythic Chests do not come back.', mythic));
       }
       lines.push(t('Confirm?'));
       if (!confirm(lines.join('\n\n'))) return;
@@ -2014,7 +2014,7 @@ export class UI {
       ? state.starsOpen
         ? t('The stars share the one telescope with the planets. A charted constellation is a <b>permanent buff</b> to your skills or your gear.')
         : t('Discover your <b>first planet</b> to read the stars.')
-      : t('One body at a time, on game time. A discovered planet is yours forever — through rebirth and awakening — and <b>automates one thing</b> you were doing by hand.'));
+      : t('One body at a time, on game time. A discovered planet is yours forever, through rebirth and awakening, and <b>automates one thing</b> you were doing by hand.'));
 
     for (const { body, card, meter, state: stateEl } of this.bodyCards.values()) {
       const isFound = state.planetFound(body.id);
@@ -2080,7 +2080,7 @@ export class UI {
     }
     setText(el.ranksNote, {
       pure: t('No real money and no gem-bought power. Gold and timeskips do not count.'),
-      gilded: t('No real money — but power was bought with earned gems.'),
+      gilded: t('No real money, but power was bought with earned gems.'),
       patron: t('Real money was spent here. Thank you for keeping the lights on.'),
     }[this.league]);
 
@@ -2093,7 +2093,7 @@ export class UI {
     const mine = deviceId();
     const value = (r) => (this.board === 'sprint' ? r.sprint : r.best_stage);
     const html = rows.length === 0
-      ? `<div class="rank rank--empty">${t('nobody here yet — be the first')}</div>`
+      ? `<div class="rank rank--empty">${t('nobody here yet, be the first')}</div>`
       : rows.map((r, i) => `
         <div class="rank${r.device === mine ? ' is-me' : ''}">
           <b>#${i + 1}</b>
@@ -2104,7 +2104,7 @@ export class UI {
 
     const bits = [];
     if (rank > 100) bits.push(t('your rank: #{0}', fmt(rank)));
-    if (stale) bits.push(t('offline — showing the last copy'));
+    if (stale) bits.push(t('offline, showing the last copy'));
     bits.push(t('Scores are claims sent by each device; absurd ones get pruned. Only your name and your best runs ever leave the game.'));
     setText(el.ranksFoot, bits.join(' · '));
   }
