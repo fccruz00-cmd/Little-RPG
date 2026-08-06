@@ -102,6 +102,67 @@ export class Renderer {
     this.scratch.width = FRAME;
     this.scratch.height = FRAME;
     this.scratchCtx = this.scratch.getContext('2d');
+
+    // Scenery layers (PixelLab art baked into masks; see assets/bg/). They
+    // load in the background and the procedural silhouettes keep drawing
+    // until they land, so a slow disk never blanks the arena.
+    this.layers = null;
+    this._tintCache = new Map();
+    this.loadScenery();
+  }
+
+  /**
+   * The background art is shipped as WHITE alpha masks and tinted at draw
+   * time with the biome's own colours -- one set of images serves all
+   * fourteen palettes, and hell keeps looking like hell for free.
+   */
+  loadScenery() {
+    const one = (src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = globalThis.__ASSET_MAP?.[src] ?? src;
+    });
+    Promise.all([
+      one('assets/bg/far.png'), one('assets/bg/mid.png'), one('assets/bg/trees.png'),
+      one('assets/bg/ground.png'), one('assets/bg/moon.png'),
+    ]).then(([far, mid, trees, ground, moon]) => {
+      if (far && mid && trees && ground && moon) {
+        this.layers = { far, mid, trees, ground, moon };
+      }
+    });
+  }
+
+  /** A mask filled with `color`, cached per (layer, colour). */
+  tinted(name, img, color, alpha = 0.6) {
+    const key = `${name}|${color}`;
+    let out = this._tintCache.get(key);
+    if (out) return out;
+    out = document.createElement('canvas');
+    out.width = img.width;
+    out.height = img.height;
+    const c = out.getContext('2d');
+    c.drawImage(img, 0, 0);
+    // Masks are solid white, so 'source-in' paints the silhouette; the moon
+    // keeps its craters through 'source-atop' at partial strength.
+    c.globalCompositeOperation = name === 'moon' ? 'source-atop' : 'source-in';
+    if (name === 'moon') c.globalAlpha = alpha;
+    c.fillStyle = color;
+    c.fillRect(0, 0, out.width, out.height);
+    this._tintCache.set(key, out);
+    return out;
+  }
+
+  /** Tiles one parallax band across the view, snapped to device pixels. */
+  tileLayer(name, img, color, parallax, camX, baseY, worldH) {
+    const { ctx } = this;
+    const tile = this.tinted(name, img, color);
+    const dh = Math.round(worldH);
+    const dw = Math.max(1, Math.round(img.width * (dh / img.height)));
+    let x = -(((camX * parallax) % dw + dw) % dw);
+    for (; x < this.width; x += dw) {
+      ctx.drawImage(tile, this.q(x), Math.round(baseY - dh), dw, dh);
+    }
   }
 
   /** Recomputes the logical resolution. Returns the visible world width. */
@@ -211,20 +272,38 @@ export class Renderer {
     }
     ctx.globalAlpha = 1;
 
-    // moon: bone over the overworld, blood over hell, ash in the depths
+    // moon: bone over the overworld, blood over hell, ash in the depths.
+    // A cratered sprite when the art has landed, the plain disc until then.
     const moonX = 20 - ((camX * 0.02) % (W + 60));
-    ctx.fillStyle = tier.moon;
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.arc(moonX + W * 0.7, 12 * this.sky, 5 * this.sky, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    if (this.layers) {
+      const d = Math.round(11 * this.sky);
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(this.tinted('moon', this.layers.moon, tier.moon),
+        this.q(moonX + W * 0.7 - d / 2), Math.round(12 * this.sky - d / 2), d, d);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = tier.moon;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(moonX + W * 0.7, 12 * this.sky, 5 * this.sky, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
 
-    // The seeds stay 26 and 16: they are what makes the two bands different
-    // silhouettes, and they must not move when the heights do.
-    this.drawHills(camX * 0.15, groundY + 2, 26 * this.sky, 46 * this.sky, biome.far, 26);
-    this.drawHills(camX * 0.38, groundY + 2, 16 * this.sky, 31 * this.sky, biome.mid, 16);
-    this.drawTrees(camX * 0.62, groundY, biome.tree);
+    if (this.layers) {
+      // The PixelLab bands: ridge, wooded hills, pine treeline -- shipped
+      // as masks, tinted with this biome's own far/mid/tree colours, and
+      // mirror-baked so the tiling has no seam to find.
+      this.tileLayer('far', this.layers.far, biome.far, 0.15, camX, groundY + 2, 52 * this.sky);
+      this.tileLayer('mid', this.layers.mid, biome.mid, 0.38, camX, groundY + 2, 34 * this.sky);
+      this.tileLayer('trees', this.layers.trees, biome.tree, 0.62, camX, groundY + 1, 24 * this.sky);
+    } else {
+      // The seeds stay 26 and 16: they are what makes the two bands
+      // different silhouettes, and they must not move when the heights do.
+      this.drawHills(camX * 0.15, groundY + 2, 26 * this.sky, 46 * this.sky, biome.far, 26);
+      this.drawHills(camX * 0.38, groundY + 2, 16 * this.sky, 31 * this.sky, biome.mid, 16);
+      this.drawTrees(camX * 0.62, groundY, biome.tree);
+    }
 
     // ground
     ctx.fillStyle = biome.ground;
@@ -232,15 +311,26 @@ export class Renderer {
     ctx.fillStyle = biome.grass;
     ctx.fillRect(0, groundY, W, 2);
 
-    // ground detail (scrolls with the world)
-    ctx.fillStyle = '#00000038';
-    const step = 7;
-    const first = Math.floor(camX / step);
-    for (let k = first; k * step - camX < W + step; k++) {
-      const r = hash(k * 31 + 5);
-      if (r > 0.55) continue;
-      const x = this.q(k * step - camX + r * 4);
-      ctx.fillRect(x, groundY + 4 + Math.floor(r * 8), 2 + Math.floor(r * 4), 1);
+    if (this.layers) {
+      // Real dirt: a detail map (translucent darks and lights) laid over
+      // the biome's ground colour, scrolling with the world at full speed.
+      const g = this.layers.ground;
+      const dw = g.width;
+      let x = -(((camX % dw) + dw) % dw);
+      for (; x < W; x += dw) {
+        ctx.drawImage(g, this.q(x), groundY, dw, GROUND_FROM_BOTTOM);
+      }
+    } else {
+      // ground detail (scrolls with the world)
+      ctx.fillStyle = '#00000038';
+      const step = 7;
+      const first = Math.floor(camX / step);
+      for (let k = first; k * step - camX < W + step; k++) {
+        const r = hash(k * 31 + 5);
+        if (r > 0.55) continue;
+        const x = this.q(k * step - camX + r * 4);
+        ctx.fillRect(x, groundY + 4 + Math.floor(r * 8), 2 + Math.floor(r * 4), 1);
+      }
     }
 
     // foreground grass tufts
