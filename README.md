@@ -184,7 +184,7 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The six tabs
+### The seven tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three webs behind one switch at the top. All three are the
@@ -199,9 +199,33 @@ it.
 3. **Skills**: the seven skills behind one switch — Mining, Chopping,
    Fishing and Farming on the line; Smithing at the workshop, Alchemy at
    the cauldron, Cooking at the kitchen.
-4. **Forge**: only appears after the first rebirth.
-5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
-6. **Ascend**: the two reset layers behind one switch.
+4. **Cosmos**: only appears after the first awakening. The observatory
+   watches **one body at a time** on game time (the speed toggle turns the
+   sky faster), keeps partial progress per planet, and each discovery is
+   permanent — it survives rebirth *and* awakening. Each of the eight
+   automates one thing you were doing by hand:
+
+   | body | hours | automates |
+   |---|---:|---|
+   | Luna    | 0.3 | fishing runs in the background |
+   | Mercury | 0.75 | claims finished contracts |
+   | Venus   | 1.5 | farming runs in the background |
+   | Mars    | 2.5 | mining runs in the background |
+   | Jupiter | 4   | chopping runs in the background |
+   | Saturn  | 6   | re-brews a lapsing potion |
+   | Uranus  | 9   | re-plates a lapsing dish |
+   | Neptune | 13  | refines every pile on its own |
+
+   A gathering planet pays one full node per 15 s tick on its line and
+   skips the line your tool is on — roughly a third of working it by
+   hand, so the tool slot keeps its weight. Bench planets only do what a
+   finger could: Saturn and Uranus top up only effects **you** set going,
+   and nothing happens when the materials are not there. The endgame
+   automates the early friction, the same bargain Herald, Anvil and
+   Forager already made.
+5. **Forge**: only appears after the first rebirth.
+6. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
+7. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
@@ -1028,7 +1052,8 @@ The game uses crops from four third-party packs:
 - **Premium - Raven Fantasy Icons**, upgrade and item icons
 
 The eight farm-and-kitchen icons (seedling, hoe, crate, cookpot, stew, pie,
-rations, jam — cells 39–46 of the icon strip) were generated with
+rations, jam — cells 39–46 of the icon strip) and the nine night-sky icons
+(the eight bodies plus the telescope — cells 47–55) were generated with
 [PixelLab](https://pixellab.ai) on this project's own account and carry no
 third-party redistribution question.
 

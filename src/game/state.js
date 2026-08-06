@@ -32,6 +32,7 @@ import {
   dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
 } from '../data/quests.js';
 import { PATH_BY_ID } from '../data/paths.js';
+import { PLANET_BY_ID, observeTime } from '../data/cosmos.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -123,6 +124,11 @@ function defaults() {
 
     // Gilded Idol: the one permanent gem ware. Offline gold at full rate.
     idolOwned: false,
+
+    // The Cosmos: opens after the first awakening and survives everything,
+    // like the souls that paid for the telescope. `progress` keeps partial
+    // observation per planet, so re-aiming the telescope loses nothing.
+    cosmos: { found: [], target: null, progress: {} },
 
     // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
     // rebirth and not awakening, because a purse you can also be sold must
@@ -269,6 +275,11 @@ export class GameState {
     this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
     this.quests = data.quests ?? null;
     this.rollQuests();
+    this.cosmos = {
+      found: [...(data.cosmos?.found ?? [])],
+      target: data.cosmos?.target ?? null,
+      progress: { ...(data.cosmos?.progress ?? {}) },
+    };
     // A save cannot keep a speed its gates no longer justify (imports,
     // hand-edited saves): clamp instead of trusting the field.
     this.speed = Math.max(1, Math.min(Math.round(data.speed ?? 1), this.maxSpeed));
@@ -1246,6 +1257,36 @@ export class GameState {
     return this.grantGems(amount);
   }
 
+  // --- the cosmos -----------------------------------------------------
+  get cosmosOpen() {
+    return this.awakens > 0;
+  }
+
+  planetFound(id) {
+    return this.cosmos.found.includes(id);
+  }
+
+  /** Points the telescope at a body. Partial progress is kept per planet. */
+  observePlanet(id) {
+    if (!this.cosmosOpen || this.planetFound(id) || !PLANET_BY_ID[id]) return false;
+    this.cosmos.target = this.cosmos.target === id ? null : id;
+    this.save();
+    return true;
+  }
+
+  /** Advances the sky by `dt`. Returns the planet discovered, or null. */
+  tickCosmos(dt) {
+    const id = this.cosmos.target;
+    if (!this.cosmosOpen || !id) return null;
+    const progress = this.cosmos.progress;
+    progress[id] = (progress[id] ?? 0) + dt;
+    if (progress[id] < observeTime(PLANET_BY_ID[id])) return null;
+    this.cosmos.found.push(id);
+    this.cosmos.target = null;
+    this.save();
+    return PLANET_BY_ID[id];
+  }
+
   // --- game speed -----------------------------------------------------
   /** Fastest speed the save's gates allow. Same shape as the shop shelves:
    *  the rebirth gate honours awakens, because awakening zeroes prestiges. */
@@ -1503,6 +1544,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
+      cosmos,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1514,6 +1556,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
+      cosmos,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

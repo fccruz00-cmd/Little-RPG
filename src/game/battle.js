@@ -7,8 +7,10 @@ import {
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
 import {
-  SKILLS, GATHER_IDS, GATHER, ALCH, rollResource, nodeYield, workTime,
+  SKILLS, GATHER_IDS, GATHER, ALCH, rollResource, nodeYield, workTime, bestForStage,
 } from '../data/gathering.js';
+import { DISHES } from '../data/dishes.js';
+import { PLANET_BY_ID, COSMOS } from '../data/cosmos.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { RARITIES } from '../data/gear.js';
 import { PETS } from '../data/pets.js';
@@ -699,6 +701,72 @@ export class Battle {
     }
   }
 
+  /**
+   * The Cosmos. Observation runs on game time (the speed toggle turns the
+   * sky faster), and every discovered planet does one thing a finger was
+   * doing. Gathering planets pay one full node per tick on their line --
+   * roughly a third of working it by hand -- and skip the line your tool is
+   * on, which is already gathering for real. Bench planets only re-run a
+   * brew, dish or claim that the player set going themselves.
+   */
+  updateCosmos(dt) {
+    const { state } = this;
+    if (!state.cosmosOpen) return;
+    const found = state.tickCosmos(dt);
+    if (found) this.emit('toast', { text: `${found.name.toUpperCase()} DISCOVERED!` });
+    if (!state.cosmos.found.length) return;
+
+    this.cosmosTimer = (this.cosmosTimer ?? 0) + dt;
+    if (this.cosmosTimer < COSMOS.every) return;
+    this.cosmosTimer = 0;
+
+    for (const pid of state.cosmos.found) {
+      const planet = PLANET_BY_ID[pid];
+      if (planet.auto === 'skill') {
+        const skill = planet.skill;
+        if (state.tool === skill) continue;
+        // Best resource both the stage and the tool can reach; no tease
+        // roll here -- a planet never taunts you with what it cannot work.
+        const list = SKILLS[skill].resources;
+        const best = bestForStage(skill, this.level);
+        const resource = best.tier <= state.tools[skill] ? best
+          : (list.filter((r) => this.level >= r.minStage && r.tier <= state.tools[skill]).at(-1) ?? list[0]);
+        const amount = nodeYield(resource, state.tools[skill], state.gatherBonus(skill));
+        state.addRaw(resource.id, amount);
+        const levels = state.gainGatherXp(skill, resource.xp * COSMOS.xpShare);
+        if (levels) {
+          this.emit('toast', { text: `${SKILLS[skill].name.toUpperCase()} ${state.skills[skill].level}!` });
+        }
+      } else if (planet.auto === 'brews') {
+        for (const potion of POTIONS) {
+          const left = state.potions[potion.id] ?? 0;
+          if (left > 0 && left < COSMOS.topUpBelow && state.canBrew(potion.id)) {
+            state.brew(potion.id);
+          }
+        }
+      } else if (planet.auto === 'dishes') {
+        for (const dish of DISHES) {
+          const left = state.dishes[dish.id] ?? 0;
+          if (left > 0 && left < COSMOS.topUpBelow && state.canCook(dish.id)) {
+            state.cook(dish.id);
+          }
+        }
+      } else if (planet.auto === 'contracts') {
+        const { dailies, weekly } = state.questBoard();
+        let paid = 0;
+        for (const quest of dailies) {
+          if (state.canClaimQuest(quest)) paid += state.claimQuest(quest);
+        }
+        if (state.canClaimQuest(weekly, true)) paid += state.claimQuest(weekly, true);
+        if (paid) this.emit('toast', { text: `MERCURY: +${paid} GEM(S)` });
+      } else if (planet.auto === 'refine') {
+        for (const gid of GATHER_IDS) {
+          for (const resource of SKILLS[gid].resources) state.refine(gid, resource);
+        }
+      }
+    }
+  }
+
   /** Forager, from the relic tree: rotates the tool so no line stalls. */
   updateAutoSwitch(dt) {
     const { state } = this;
@@ -734,6 +802,7 @@ export class Battle {
     this.updateEnemy(dt);
     this.updateProps();
     this.updatePets(dt);
+    this.updateCosmos(dt);
     this.updateCorpses(dt);
     this.updateFloaters(dt);
 

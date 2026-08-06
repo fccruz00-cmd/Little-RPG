@@ -101,6 +101,10 @@
       <button class="tab" data-tab="skills" type="button" role="tab">
         Skills<i class="pip" id="pip-skills" hidden></i>
       </button>
+      <!-- the layer an awakening opens above the road -->
+      <button class="tab" data-tab="cosmos" type="button" role="tab" id="tab-cosmos" hidden>
+        Cosmos<i class="pip" id="pip-cosmos" hidden></i>
+      </button>
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
@@ -225,6 +229,23 @@
       <div class="tree-scroll" id="tree-alchemy" hidden></div>
       <div class="tree-scroll" id="tree-farming" hidden></div>
       <div class="tree-scroll" id="tree-cooking" hidden></div>
+    </div>
+
+    <!-- tab: the cosmos (shows up after the first awakening). One body
+         under observation at a time; each discovery automates one thing. -->
+    <div class="pane" id="pane-cosmos">
+      <div class="pane__head">
+        <span class="pane__hint" id="cosmos-hint"></span>
+        <span class="pane__points">
+          <i class="ico ico--sm ico--telescope"></i> <b id="planets-found">0/8</b>
+        </span>
+      </div>
+      <p class="pane__detail" id="cosmos-detail">
+        The observatory watches <b>one body at a time</b>, on game time.
+        A discovered planet is yours forever — it survives rebirth and
+        awakening — and <b>automates one thing</b> you were doing by hand.
+      </p>
+      <div class="keys" id="planets"></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->

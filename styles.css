@@ -95,7 +95,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 47;
+  --n: 56;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -155,6 +155,16 @@ body { display: flex; justify-content: center; }
 .ico--pie           { --i: 44; }
 .ico--rations       { --i: 45; }
 .ico--jam           { --i: 46; }
+/* the night sky, same origin */
+.ico--luna          { --i: 47; }
+.ico--mercury       { --i: 48; }
+.ico--venus         { --i: 49; }
+.ico--mars          { --i: 50; }
+.ico--jupiter       { --i: 51; }
+.ico--saturn        { --i: 52; }
+.ico--uranus        { --i: 53; }
+.ico--neptune       { --i: 54; }
+.ico--telescope     { --i: 55; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }

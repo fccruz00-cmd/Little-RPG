@@ -17,6 +17,7 @@ import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { DISHES } from '../data/dishes.js';
+import { PLANETS, observeTime, describePlanet } from '../data/cosmos.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { PATHS, describePath } from '../data/paths.js';
@@ -142,6 +143,8 @@ export class UI {
       pathList: $('path-list'), pathNote: $('path-note'),
       perks: $('perks'), perksList: $('perks-list'),
       tabForge: $('tab-forge'), pipForge: $('pip-forge'),
+      tabCosmos: $('tab-cosmos'), pipCosmos: $('pip-cosmos'),
+      planets: $('planets'), planetsFound: $('planets-found'), cosmosHint: $('cosmos-hint'),
       pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
@@ -184,6 +187,7 @@ export class UI {
     this.buildKeys();
     this.buildCauldron();
     this.buildKitchen();
+    this.buildCosmos();
     this.buildForge();
     this.buildPets();
     this.buildFeats();
@@ -245,7 +249,8 @@ export class UI {
     if (lang !== 'pt') return;
     const TEXT = [
       ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
-      ['[data-tab="skills"]', 'Skills'], ['[data-tab="forge"]', 'Forge'],
+      ['[data-tab="skills"]', 'Skills'], ['[data-tab="cosmos"]', 'Cosmos'],
+      ['[data-tab="forge"]', 'Forge'],
       ['[data-tab="pets"]', 'Pets'], ['[data-tab="prestige"]', 'Ascend'],
       ['[data-tree="talents"]', 'Talents'], ['[data-tree="relics"]', 'Relics'],
       ['[data-tree="souls"]', 'Souls'],
@@ -305,6 +310,7 @@ export class UI {
       ['.statbar div:nth-child(3) dt', `<i class="ico ico--sm ico--crit"></i>${t('crit')}`],
       ['.statbar div:nth-child(4) dt', `<i class="ico ico--sm ico--gold"></i>${t('gold')}`],
       ['#pet-detail', 'Pets são domados <b>jogando os pilares do jogo</b> e sobem de nível <b>comendo peixe cru</b> das próprias águas. Todos te seguem, todos os buffs somam, e os níveis sobrevivem a <b>tudo</b>, renascimento e despertar.'],
+      ['#cosmos-detail', 'O observatório assiste <b>um corpo por vez</b>, em tempo de jogo. Um planeta descoberto é seu para sempre — sobrevive ao renascer e ao despertar — e <b>automatiza uma coisa</b> que você fazia na mão.'],
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
@@ -727,6 +733,13 @@ export class UI {
       this.refreshSkills();
     });
 
+    el.planets.addEventListener('click', (e) => {
+      const row = e.target.closest('.planet');
+      if (!row || !state.observePlanet(row.dataset.planet)) return;
+      this.sfx.play('buy');
+      this.refreshCosmos();
+    });
+
     el.kitchen.addEventListener('click', (e) => {
       const row = e.target.closest('[data-dish]');
       if (!row) return;
@@ -1032,6 +1045,7 @@ export class UI {
     }
     if (name === 'talents') this.refreshTrees(true);
     if (name === 'skills') this.refreshSkills();
+    if (name === 'cosmos') this.refreshCosmos();
     if (name === 'forge') this.refreshForge();
     if (name === 'pets') this.refreshPets();
     if (name === 'prestige') this.refreshPrestige();
@@ -1261,6 +1275,11 @@ export class UI {
     el.pipPrestige.hidden = state.pendingRelics <= 0 && state.pendingSouls <= 0;
     el.pipPrestige.classList.add('pip--gold');
     el.tabForge.hidden = !state.forgeUnlocked;
+    el.tabCosmos.hidden = !state.cosmosOpen;
+    // The sky nags only while the telescope sits idle with bodies left.
+    el.pipCosmos.hidden = !state.cosmosOpen || state.cosmos.target != null
+      || state.cosmos.found.length >= PLANETS.length;
+    el.pipCosmos.classList.add('pip--gold');
     el.pipForge.hidden = !state.forgeUnlocked || !SLOTS.some((sl) => state.canForge(sl.id));
     el.pipForge.classList.add('pip--gold');
     el.pipPets.hidden = !PETS.some((p) => state.canFeedPet(p.id));
@@ -1278,6 +1297,7 @@ export class UI {
     if (this.tab === 'upgrades') this.refreshShop();
     else if (this.tab === 'talents') this.refreshTrees();
     else if (this.tab === 'skills') this.refreshSkills();
+    else if (this.tab === 'cosmos') this.refreshCosmos();
     else if (this.tab === 'forge') this.refreshForge();
     else if (this.tab === 'pets') this.refreshPets();
     else this.refreshPrestige();
@@ -1627,6 +1647,50 @@ export class UI {
       setText(action, can ? t('cook') : state.dishCapped(dish.id) ? t('full') : t('need'));
       row.disabled = !can;
       row.classList.toggle('can-smelt', can);
+    }
+  }
+
+  /** The observatory: one row per body, nearest first. */
+  buildCosmos() {
+    this.planetRows = new Map();
+    for (const planet of PLANETS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore key planet';
+      row.dataset.planet = planet.id;
+      row.style.setProperty('--ore', planet.accent);
+      row.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${planet.icon}"></i> ${t(planet.name)}</span>
+        <span class="key__what">${describePlanet(planet)}</span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt"></span>`;
+      this.el.planets.append(row);
+      this.planetRows.set(planet.id, {
+        planet, row,
+        left: row.querySelector('b'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+  }
+
+  refreshCosmos() {
+    const { state, el } = this;
+    setText(el.planetsFound, `${state.cosmos.found.length}/${PLANETS.length}`);
+    setText(el.cosmosHint, state.cosmos.target
+      ? t('the telescope is watching')
+      : t('point the telescope at a body'));
+    for (const { planet, row, left, action } of this.planetRows.values()) {
+      const found = state.planetFound(planet.id);
+      const watching = state.cosmos.target === planet.id;
+      const done = state.cosmos.progress[planet.id] ?? 0;
+      const need = observeTime(planet);
+      row.classList.toggle('is-done', found);
+      row.classList.toggle('can-smelt', !found && watching);
+      row.disabled = found;
+      setText(left, found ? '' : watching || done > 0 ? duration(Math.max(1, need - done)) : duration(need));
+      setText(action, found ? '✓'
+        : watching ? `${Math.floor((done / need) * 100)}%`
+        : t('observe'));
     }
   }
 
