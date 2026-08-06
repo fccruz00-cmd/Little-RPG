@@ -1704,7 +1704,7 @@ export class GameState {
    * skipped, and neither does a key you cleared on the way there.
    */
   get pendingSouls() {
-    return soulsEarnedAt(this.cycleRelics);
+    return soulsEarnedAt(this.cycleRelics, this.awakens);
   }
 
   /** Whether the path picker is live: awakened, with a choice unspent. */

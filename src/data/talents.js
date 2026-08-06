@@ -119,6 +119,12 @@ export const SOUL_TREE = [
       { id: 'rend',       name: 'Rend',       icon: 'dagger',       max: 5, cost: 2, key: 'critAdd',      mode: 'add', per: 0.05 },
       { id: 'annihilate', name: 'Annihilate', icon: 'crit_power',   max: 5, cost: 2, key: 'critPowerAdd', mode: 'add', per: 0.70 },
       { id: 'cataclysm',  name: 'Cataclysm',  icon: 'attack_speed', max: 4, cost: 3, key: 'atkSpeedMul',  mode: 'mul', per: 0.15 },
+      // The rail. Every other soul node runs out, and the audit showed
+      // what follows: the Soul Echo pays ever more souls with nowhere to
+      // go. This one never fills, and soulCost's cost+ranks curve makes
+      // each rank dearer than the last, a quadratic sink for a linearly
+      // growing income. That pairing is the whole endgame pace.
+      { id: 'transcend', name: 'Transcendence', icon: 'orb', max: 99, cost: 4, key: 'dmgMul', mode: 'mul', per: 0.12 },
     ],
   },
   {
@@ -128,6 +134,10 @@ export const SOUL_TREE = [
       { id: 'bloodline',   name: 'Bloodline',    icon: 'book',   max: 5, cost: 2, key: 'extraPoints', mode: 'add',  per: 2 },
       { id: 'aegis',       name: 'Aegis',        icon: 'shield', max: 5, cost: 3, key: 'damageTaken', mode: 'less', per: 0.05 },
       { id: 'eternalHour', name: 'Eternal Hour', icon: 'boss',   max: 4, cost: 2, key: 'bossTime',    mode: 'add',  per: 8 },
+      // Transcendence's shieldmate: the enemy's damage climbs the same
+      // curve its health does, so an uncapped damage rail without an
+      // uncapped health rail just relocates the wall.
+      { id: 'undying', name: 'Undying', icon: 'health', max: 99, cost: 4, key: 'hpMul', mode: 'mul', per: 0.12 },
     ],
   },
   {

@@ -291,7 +291,11 @@ it.
      three sources: banked by past rebirths, still pending in the current
      run, and paid by dungeon clears. The first soul lands at 50 relics.
      Souls and the soul tree survive every later awakening, as does the
-     Skills tab.
+     Skills tab. The **Soul Echo** lifts every payout by half its base per
+     awakening already taken, so cycles climb instead of repeating, and
+     the two uncapped rails at the ends of the soul lanes (Transcendence
+     and Undying, +12% damage or health a rank at ever-steeper cost) make
+     sure a soul never arrives with nowhere to go.
 
 ### The talent web
 

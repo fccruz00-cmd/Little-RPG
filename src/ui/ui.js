@@ -2591,7 +2591,7 @@ export class UI {
     setText(el.awkProgress, fmt(earned));
 
     // Measured from what the cycle is already worth, like the relic readout.
-    const next = nextSoulRelics(soulsEarnedAt(earned));
+    const next = nextSoulRelics(soulsEarnedAt(earned, state.awakens), state.awakens);
     setText(el.awkNext, isFinite(next) ? t('{0} relics', next) : t('n/a'));
 
     this.refreshPaths();

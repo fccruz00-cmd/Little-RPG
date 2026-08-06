@@ -153,14 +153,16 @@ export const SOUL_LANES = [
 ];
 
 const SOUL_NODES = byId(SOUL_TREE);
-const S_ASCENDANT = ['soulfire', 'rend', 'annihilate', 'cataclysm'];
-const S_ETERNITY  = ['memory', 'bloodline', 'aegis', 'eternalHour'];
+// Transcendence and Undying cap their lanes: the uncapped rails sit at the
+// far end of the climb, past everything that fills.
+const S_ASCENDANT = ['soulfire', 'rend', 'annihilate', 'cataclysm', 'transcend'];
+const S_ETERNITY  = ['memory', 'bloodline', 'aegis', 'eternalHour', 'undying'];
 const S_DOMINION  = ['avarice', 'epiphany', 'hoard', 'conquest'];
 
 export const SOUL_WEB = makeWeb({
   id: 'soul',
   lanes: SOUL_LANES,
-  colW: cols(4),
+  colW: cols(5),
   nodes: [
     ...lane('ascendant', 0, S_ASCENDANT, SOUL_NODES),
     ...lane('eternity',  2, S_ETERNITY,  SOUL_NODES),
