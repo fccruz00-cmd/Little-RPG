@@ -416,6 +416,10 @@ export class GameState {
       if (!level) continue;
       const amount = pet.per * level * (1 + b.petPower);
       if (pet.mode === 'mul') b[pet.key] *= 1 + amount;
+      // 'less' has to shrink its key like the trees' apply() does: the first
+      // ten pets never used it, and the missing branch quietly turned Clot's
+      // "less damage taken" into MORE damage taken.
+      else if (pet.mode === 'less') b[pet.key] *= Math.max(0.1, 1 - amount);
       else b[pet.key] += amount;
     }
 
@@ -1517,6 +1521,7 @@ export class GameState {
     if (!this.canClaimQuest(quest, weekly)) return 0;
     if (weekly) this.quests.weekClaimed = true;
     else this.quests.claimed.push(quest.id);
+    this.stats.contracts += 1;   // lifetime; The Doorman is counting
     // Through the one door money also comes through, so a contract gem and
     // a bought gem are indistinguishable everywhere downstream.
     return this.grantGems(quest.gems);

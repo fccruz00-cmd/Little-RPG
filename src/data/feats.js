@@ -47,7 +47,7 @@ export function emptyStats() {
   return {
     kills: 0, bossKills: 0, deaths: 0, forges: 0, legendaries: 0,
     refines: 0, feeds: 0, brews: 0, cooks: 0, dungeonWins: 0, bloodWins: 0,
-    rebirths: 0,
+    rebirths: 0, contracts: 0,
   };
 }
 

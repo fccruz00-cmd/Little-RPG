@@ -1,3 +1,5 @@
+import { KEYS } from './dungeon.js';
+
 // Pets: tamed companions that trail behind the hero.
 //
 // Every tamed pet's buff is on at once; there is no slot and no choice to
@@ -140,6 +142,156 @@ export const PETS = [
     },
   },
 ];
+
+/** The last key tier: what "the deepest dungeon" means this build. */
+const DEEPEST_TIER = KEYS.length - 1;
+
+// --- the third dozen ----------------------------------------------------
+// Twelve more, same law: one pillar each, no two pets on one bonus key.
+// The first ten toured the systems the game launched with; these twelve
+// point at everything built since -- enchants, contracts, the Cosmos, the
+// Bloodmoon, the kitchen, the Hall of Ancestors -- and their objectives sit
+// a real distance out on purpose: the collection was filling up faster
+// than the game could grow.
+//
+// `per` values hold the second five's discipline: a wider parade, not a
+// second power curve, and Pack Leader multiplies all of it.
+PETS.push(
+  {
+    id: 'ashbat', name: 'Ash Bat', sprite: 'hellbat', accent: '#c97b5a',
+    fishTier: 1,
+    key: 'moveMul', mode: 'mul', per: 0.02,
+    blurb: 'beats its wings to hurry you along',
+    unlock: {
+      desc: 'reach Chopping level 15',
+      test: (s) => s.skills.chopping.level >= 15,
+      now: (s) => s.skills.chopping.level, need: 15,
+    },
+  },
+  {
+    id: 'urchin', name: 'Urchin', sprite: 'demon_d', accent: '#7fb069',
+    fishTier: 1,
+    key: 'thorns', mode: 'add', per: 0.012,
+    blurb: 'is very awkward to step on',
+    unlock: {
+      desc: 'reach Farming level 15',
+      test: (s) => s.skills.farming.level >= 15,
+      now: (s) => s.skills.farming.level, need: 15,
+    },
+  },
+  {
+    id: 'honeybear', name: 'Honey Bear', sprite: 'werebear', accent: '#d8a657',
+    fishTier: 0,
+    key: 'yieldAll', mode: 'add', per: 0.012,
+    blurb: 'sniffs out the heavier baskets',
+    unlock: {
+      desc: 'plate 25 dishes',
+      test: (s) => s.stats.cooks >= 25,
+      now: (s) => s.stats.cooks, need: 25,
+    },
+  },
+  {
+    id: 'clot', name: 'Clot', sprite: 'blood_monster_b', accent: '#a34d4d',
+    fishTier: 2,
+    key: 'damageTaken', mode: 'less', per: 0.006,
+    blurb: 'gets between you and the worst of it',
+    unlock: {
+      desc: 'bring down 150 bosses',
+      test: (s) => s.stats.bossKills >= 150,
+      now: (s) => s.stats.bossKills, need: 150,
+    },
+  },
+  {
+    id: 'doorman', name: 'The Doorman', sprite: 'armored_skeleton', accent: '#9aa5b1',
+    fishTier: 4,
+    key: 'ambush', mode: 'add', per: 0.04,
+    blurb: 'introduces you to every new arrival',
+    unlock: {
+      desc: 'claim 30 contracts',
+      test: (s) => s.stats.contracts >= 30,
+      now: (s) => s.stats.contracts, need: 30,
+    },
+  },
+  {
+    id: 'hedgewizard', name: 'Hedge Wizard', sprite: 'wizard', accent: '#6f8fd4',
+    fishTier: 1,
+    key: 'workAll', mode: 'mul', per: 0.01,
+    blurb: 'hastens every swing of the tools',
+    unlock: {
+      // Constellations count too: it is one telescope either way.
+      desc: 'chart 4 bodies in the Cosmos',
+      test: (s) => s.cosmos.found.length >= 4,
+      now: (s) => s.cosmos.found.length, need: 4,
+    },
+  },
+  {
+    id: 'calf', name: 'Minotaur Calf', sprite: 'minotaur', accent: '#b0846d',
+    fishTier: 2,
+    key: 'bossTime', mode: 'add', per: 0.5,
+    blurb: 'stares the boss clock down',
+    unlock: {
+      desc: 'clear the deepest dungeon tier',
+      test: (s) => s.deepestKey >= DEEPEST_TIER,
+      now: (s) => Math.max(0, s.deepestKey + 1), need: DEEPEST_TIER + 1,
+    },
+  },
+  {
+    id: 'auntie', name: 'Auntie Imp', sprite: 'demoness_a', accent: '#d488b8',
+    fishTier: 0,
+    key: 'feedLess', mode: 'less', per: 0.02,
+    blurb: 'stretches every meal further',
+    unlock: {
+      desc: 'feed your pets 100 times',
+      test: (s) => s.stats.feeds >= 100,
+      now: (s) => s.stats.feeds, need: 100,
+    },
+  },
+  {
+    id: 'grudge', name: 'Grudge', sprite: 'demon_b', accent: '#8d6fc4',
+    fishTier: 3,
+    key: 'critPowerAdd', mode: 'add', per: 0.03,
+    blurb: 'remembers exactly where it hurts',
+    unlock: {
+      // Live-state test, like the set bonus: the enchant has to be WORN.
+      desc: 'wear a Tier III enchant',
+      test: (s) => Object.entries(s.gearMods)
+        .some(([slot, mod]) => mod?.tier >= 3 && s.gear[slot] != null),
+    },
+  },
+  {
+    id: 'moonpup', name: 'Moon Pup', sprite: 'werewolf', accent: '#8fa3d4',
+    fishTier: 3,
+    key: 'respawnMul', mode: 'less', per: 0.03,
+    blurb: 'howls you back onto your feet',
+    unlock: {
+      desc: 'clear 5 Bloodmoons',
+      test: (s) => s.stats.bloodWins >= 5,
+      now: (s) => s.stats.bloodWins, need: 5,
+    },
+  },
+  {
+    id: 'tutor', name: 'Grave Tutor', sprite: 'necromancer', accent: '#7fc4a8',
+    fishTier: 4,
+    key: 'dustChance', mode: 'add', per: 0.004,
+    blurb: 'lectures the leftovers into dust',
+    unlock: {
+      desc: 'roll 10 Legendaries',
+      test: (s) => s.stats.legendaries >= 10,
+      now: (s) => s.stats.legendaries, need: 10,
+    },
+  },
+  {
+    id: 'greedling', name: 'Greedling', sprite: 'demon_c', accent: '#e0c060',
+    fishTier: 4,
+    key: 'treasure', mode: 'add', per: 0.008,
+    blurb: 'shakes the fallen for loose coins',
+    unlock: {
+      desc: 'wake 3 ancestors',
+      test: (s) => s.spiritCount >= 3,
+      now: (s) => s.spiritCount, need: 3,
+    },
+  },
+);
 
 export const PET_BY_ID = Object.fromEntries(PETS.map((p) => [p.id, p]));
 

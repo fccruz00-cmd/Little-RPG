@@ -315,8 +315,9 @@ export class Battle {
     // behind the hero, and the road behind him is 35 units on a phone and 75
     // in a desktop column -- so the last of them would be tamed, fed and
     // permanently off screen. Closing up overlaps them slightly, which reads
-    // as a crowd rather than a queue.
-    this.petStep = Math.max(6, 9 - Math.max(0, tamed.length - 5) * 0.6);
+    // as a crowd rather than a queue; at the four-unit floor a full parade
+    // of twenty-two still fits a desktop column's stretch of road.
+    this.petStep = Math.max(4, 9 - Math.max(0, tamed.length - 5) * 0.6);
     this.petActors = tamed.map((pet, i) => {
       // The sprite is a roster mob; hover comes from its own def so the bat
       // pet flies exactly as high as the bat it used to be.

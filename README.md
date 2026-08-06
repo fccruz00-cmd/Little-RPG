@@ -435,12 +435,12 @@ awakened when paths shipped get their pick on load.
 
 ### Pets
 
-Ten companions. The slime is with you from the start; the other nine are
-locked behind **objectives, one per pillar of the game**, so the collection
-doubles as a tour of the systems. Objectives are checked against live state
-every tick, a tame lands the moment it is earned, and nothing ever comes
-undone: an old save walks out of load with everything it already qualifies
-for.
+Twenty-two companions. The slime is with you from the start; the other
+twenty-one are locked behind **objectives, one per pillar of the game**, so
+the collection doubles as a tour of the systems. Objectives are checked
+against live state every tick, a tame lands the moment it is earned, and
+nothing ever comes undone: an old save walks out of load with everything it
+already qualifies for.
 
 **Every tamed pet is active at once.** All of them trail the hero in a
 little parade, drawn from the enemy roster's own sheets at pet scale, and
@@ -458,6 +458,18 @@ all their buffs stack. The choice lives in the taming, not in a slot.
 | Bloodling      | a blood moon clear        | Trout    | +0.2% lifesteal |
 | Ember Golem    | forging a legendary       | Salmon   | +4% dust |
 | Imp            | reaching stage 100        | Sturgeon | +0.4% to strike twice |
+| Ash Bat        | Chopping level 15         | Carp     | +2% stride |
+| Urchin         | Farming level 15          | Carp     | +1.2% thorns |
+| Honey Bear     | plating 25 dishes         | Minnows  | +1.2% yield, all skills |
+| Clot           | 150 boss kills            | Trout    | -0.6% damage taken |
+| The Doorman    | claiming 30 contracts     | Sturgeon | +4% on the first hit |
+| Hedge Wizard   | charting 4 Cosmos bodies  | Carp     | +1% work speed, all skills |
+| Minotaur Calf  | the deepest dungeon tier  | Trout    | +0.5s on the boss timer |
+| Auntie Imp     | 100 pet feedings          | Minnows  | pets eat 2% less |
+| Grudge         | wearing a Tier III enchant| Salmon   | +0.03 crit damage |
+| Moon Pup       | 5 Bloodmoon clears        | Salmon   | 3% faster to get up |
+| Grave Tutor    | rolling 10 Legendaries    | Sturgeon | +0.4% dust chance |
+| Greedling      | waking 3 ancestors        | Sturgeon | +0.8% double-gold kills |
 
 **Two rules hold the roster together**, and they are worth keeping if it
 grows again. No two pets carry the same bonus key, so a pet is never a
@@ -465,16 +477,18 @@ smaller copy of another one; and the sprite must be a mob or boss the loader
 already fetches (`allActorIds`), or the pet is invisible in both the parade
 and its own row. Both are asserted in the tests.
 
-The second five sit at about two thirds of the first five's `per` values.
-Ten pets should be a wider collection than five, not twice the power — and
-Pack Leader, on the soul web, multiplies all ten. Their objectives point at
-the three systems the first five missed (fishing, the forge, the blood moon)
-plus the two things every player accumulates and was never paid for: deaths,
-and the push past stage 100.
+Everything after the first five sits at about two thirds of their `per`
+values. Twenty-two pets should be a wider collection than five, not four
+times the power — and Pack Leader, on the soul web, multiplies all of them.
+The third dozen's objectives point at everything built since the first ten
+(enchants, contracts, the Cosmos, the kitchen, the Bloodmoon, the Hall of
+Ancestors), and they sit a real distance out on purpose: the collection was
+filling up faster than the game could grow.
 
 The parade tightens as it grows: nine units apart, ten pets trail 95 behind
-the hero, and the road behind him is 35 units on a phone. The step closes to
-six, which overlaps them slightly and reads as a crowd rather than a queue.
+the hero, and the road behind him is 35 units on a phone. The step closes
+down to four, which overlaps them slightly and reads as a crowd rather than
+a queue — a full parade of twenty-two still fits a desktop column's road.
 
 Levels are bought with **raw fish of the pet's own tier**. Meals always cook
 from the best fish first, so the lower tiers pile up as dead stock the moment
