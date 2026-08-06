@@ -190,6 +190,20 @@ export function rememberMine(env) {
   cachePut('me', { env });
 }
 
+/**
+ * Tells the backend a purchase token exists, so the verify-purchase edge
+ * function can confirm it with Google and brand this device a verified
+ * patron. Fire and forget: billing never waits on the leaderboard, and a
+ * miss costs nothing but the badge until the next purchase reports again.
+ */
+export function reportPurchase(sku, token) {
+  if (!hasBackend() || !deviceId() || !sku || !token) return;
+  call('/functions/v1/verify-purchase', {
+    method: 'POST',
+    body: { device: deviceId(), sku, token },
+  }).catch(() => { /* offline or unconfigured; the league ledger still holds */ });
+}
+
 function cachePut(key, value) {
   try {
     const all = JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}');
