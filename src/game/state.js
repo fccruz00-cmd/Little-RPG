@@ -476,6 +476,18 @@ export class GameState {
       }
     }
 
+    // The fold-lens jewels: the strong shelf, whole-economy stones. They
+    // are priced in souls, the fight's own deep currency, so the law that
+    // GATHERING never pays damage stands untouched; and none of them pays
+    // damage anyway, by the same taste that keeps gems pace-only.
+    for (const jewel of JEWELS) {
+      if (jewel.lens !== 'fold') continue;
+      const f = this.jewelFacet(jewel.id);
+      if (!f) continue;
+      if (jewel.mode === 'add') b[jewel.key] += f;
+      else b[jewel.key] *= 1 + f;
+    }
+
     // Every tamed pet is one more node, with its level as the ranks, and
     // Pack Leader (soul tree) amplifies the lot. Pets fold LAST so petPower
     // is already summed whichever branch order the trees ran in. Armor is
@@ -530,13 +542,16 @@ export class GameState {
     b.yieldMul *= 1 + this.bonus.yieldAll + (this.constPowers.yieldAll ?? 0);
     b.gatherSpeed *= this.bonus.workAll * (1 - (this.constPowers.workAll ?? 0));
     b.gatherXpMul *= 1 + (this.constPowers.skillXp ?? 0);
-    // Singularity jewels: cut once with souls, shining on every line at
-    // once. Haste's third facet zeroes the term and workTime's minWork
+    // The gather-lens jewels: cut once with souls, shining on every line
+    // at once. Haste's third facet zeroes its term and workTime's minWork
     // floor catches it: "instant" still costs the minimum swing.
-    b.gatherSpeed *= 1 - this.jewelFacet('haste');
-    b.yieldMul *= 1 + this.jewelFacet('plenty');
-    b.nodeMul *= 1 + this.jewelFacet('springs');
-    b.gatherXpMul *= 1 + this.jewelFacet('study');
+    for (const jewel of JEWELS) {
+      if (jewel.lens !== 'gather') continue;
+      const f = this.jewelFacet(jewel.id);
+      if (!f) continue;
+      if (jewel.mode === 'less') b[jewel.key] *= Math.max(0, 1 - f);
+      else b[jewel.key] *= 1 + f;
+    }
     this._gatherBonus[skillId] = b;
     return b;
   }
@@ -866,8 +881,8 @@ export class GameState {
     if (!this.canBuyJewel(id)) return false;
     this.souls -= this.jewelCost(id);
     this.jewels[id] = (this.jewels[id] ?? 0) + 1;
-    // Facets fold into the gather lens, so every cache of it is stale.
-    this._gatherBonus = {};
+    // Facets shine through both lenses now: stale the whole fold.
+    this.invalidateBonus();
     this.save();
     return true;
   }
