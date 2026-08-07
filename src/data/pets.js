@@ -1,4 +1,5 @@
 import { KEYS } from './dungeon.js';
+import { ORES, LOGS } from './gathering.js';
 
 // Pets: tamed companions that trail behind the hero.
 //
@@ -23,6 +24,7 @@ import { KEYS } from './dungeon.js';
 export const PETS = [
   {
     id: 'slime', name: 'Pocket Slime', sprite: 'slime', accent: '#6dba79',
+    armor: 'Gel Helm',
     fishTier: 0,
     key: 'hpMul', mode: 'mul', per: 0.04,
     blurb: 'a jelly that soaks hits for you',
@@ -30,6 +32,7 @@ export const PETS = [
   },
   {
     id: 'bat', name: 'Belfry Bat', sprite: 'bat', accent: '#5aa9c9',
+    armor: 'Wing Bands',
     fishTier: 1,
     key: 'atkSpeedMul', mode: 'mul', per: 0.015,
     blurb: 'sets the pace of your swings',
@@ -41,6 +44,7 @@ export const PETS = [
   },
   {
     id: 'watcher', name: 'Little Watcher', sprite: 'eyeball_monster', accent: '#b072c9',
+    armor: 'Iron Monocle',
     fishTier: 3,
     key: 'critAdd', mode: 'add', per: 0.004,
     blurb: 'points at the soft spots',
@@ -53,6 +57,7 @@ export const PETS = [
   },
   {
     id: 'hellpup', name: 'Hellpup', sprite: 'hellhound', accent: '#e67146',
+    armor: 'Spiked Collar',
     fishTier: 2,
     key: 'dmgMul', mode: 'mul', per: 0.04,
     blurb: 'bites whatever you are hitting',
@@ -64,6 +69,7 @@ export const PETS = [
   },
   {
     id: 'cinder', name: 'Cinder Slime', sprite: 'lava_slime', accent: '#ebb85b',
+    armor: 'Ash Crown',
     fishTier: 4,
     key: 'goldMul', mode: 'mul', per: 0.05,
     blurb: 'sweats molten pocket change',
@@ -86,6 +92,7 @@ export const PETS = [
   // Pack Leader multiplies all ten.
   {
     id: 'bones', name: 'Bone Buddy', sprite: 'skeleton', accent: '#d8d4c0',
+    armor: 'Rib Cuirass',
     fishTier: 0,
     key: 'regenMul', mode: 'mul', per: 0.06,
     blurb: 'keeps picking you back up',
@@ -99,6 +106,7 @@ export const PETS = [
   },
   {
     id: 'wisp', name: 'Wisp', sprite: 'ghostfire', accent: '#8fd4ff',
+    armor: 'Lantern Cage',
     fishTier: 1,
     key: 'xpMul', mode: 'mul', per: 0.03,
     blurb: 'lights the way to the next level',
@@ -110,6 +118,7 @@ export const PETS = [
   },
   {
     id: 'bloodling', name: 'Bloodling', sprite: 'blood_monster_a', accent: '#b74132',
+    armor: 'Rusty Muzzle',
     fishTier: 2,
     key: 'lifesteal', mode: 'add', per: 0.002,
     blurb: 'drinks what you spill',
@@ -121,6 +130,7 @@ export const PETS = [
   },
   {
     id: 'ember', name: 'Ember Golem', sprite: 'flame_golem', accent: '#e67146',
+    armor: 'Furnace Door',
     fishTier: 3,
     key: 'dustMul', mode: 'mul', per: 0.04,
     blurb: 'grinds the leftovers back into dust',
@@ -132,6 +142,7 @@ export const PETS = [
   },
   {
     id: 'imp', name: 'Imp', sprite: 'demon_a', accent: '#c79ae8',
+    armor: 'Horn Caps',
     fishTier: 4,
     key: 'doubleHit', mode: 'add', per: 0.004,
     blurb: 'sneaks in a second swing',
@@ -159,6 +170,7 @@ const DEEPEST_TIER = KEYS.length - 1;
 PETS.push(
   {
     id: 'ashbat', name: 'Ash Bat', sprite: 'hellbat', accent: '#c97b5a',
+    armor: 'Soot Goggles',
     fishTier: 1,
     key: 'moveMul', mode: 'mul', per: 0.02,
     blurb: 'beats its wings to hurry you along',
@@ -170,6 +182,7 @@ PETS.push(
   },
   {
     id: 'urchin', name: 'Urchin', sprite: 'demon_d', accent: '#7fb069',
+    armor: 'Thorn Pauldrons',
     fishTier: 1,
     key: 'thorns', mode: 'add', per: 0.012,
     blurb: 'is very awkward to step on',
@@ -181,6 +194,7 @@ PETS.push(
   },
   {
     id: 'honeybear', name: 'Honey Bear', sprite: 'werebear', accent: '#d8a657',
+    armor: 'Honeypot Helm',
     fishTier: 0,
     key: 'yieldAll', mode: 'add', per: 0.012,
     blurb: 'sniffs out the heavier baskets',
@@ -192,6 +206,7 @@ PETS.push(
   },
   {
     id: 'clot', name: 'Clot', sprite: 'blood_monster_b', accent: '#a34d4d',
+    armor: 'Clot Buckler',
     fishTier: 2,
     key: 'damageTaken', mode: 'less', per: 0.006,
     blurb: 'gets between you and the worst of it',
@@ -203,6 +218,7 @@ PETS.push(
   },
   {
     id: 'doorman', name: 'The Doorman', sprite: 'armored_skeleton', accent: '#9aa5b1',
+    armor: 'Greeting Gauntlets',
     fishTier: 4,
     key: 'ambush', mode: 'add', per: 0.04,
     blurb: 'introduces you to every new arrival',
@@ -214,6 +230,7 @@ PETS.push(
   },
   {
     id: 'hedgewizard', name: 'Hedge Wizard', sprite: 'wizard', accent: '#6f8fd4',
+    armor: 'Iron-Brim Hat',
     fishTier: 1,
     key: 'workAll', mode: 'mul', per: 0.01,
     blurb: 'hastens every swing of the tools',
@@ -226,6 +243,7 @@ PETS.push(
   },
   {
     id: 'calf', name: 'Minotaur Calf', sprite: 'minotaur', accent: '#b0846d',
+    armor: 'Horn Guard',
     fishTier: 2,
     key: 'bossTime', mode: 'add', per: 0.5,
     blurb: 'stares the boss clock down',
@@ -237,6 +255,7 @@ PETS.push(
   },
   {
     id: 'auntie', name: 'Auntie Imp', sprite: 'demoness_a', accent: '#d488b8',
+    armor: 'Oven Mitts',
     fishTier: 0,
     key: 'feedLess', mode: 'less', per: 0.02,
     blurb: 'stretches every meal further',
@@ -248,6 +267,7 @@ PETS.push(
   },
   {
     id: 'grudge', name: 'Grudge', sprite: 'demon_b', accent: '#8d6fc4',
+    armor: 'Spite Visor',
     fishTier: 3,
     key: 'critPowerAdd', mode: 'add', per: 0.03,
     blurb: 'remembers exactly where it hurts',
@@ -260,6 +280,7 @@ PETS.push(
   },
   {
     id: 'moonpup', name: 'Moon Pup', sprite: 'werewolf', accent: '#8fa3d4',
+    armor: 'Moonsteel Harness',
     fishTier: 3,
     key: 'respawnMul', mode: 'less', per: 0.03,
     blurb: 'howls you back onto your feet',
@@ -271,6 +292,7 @@ PETS.push(
   },
   {
     id: 'tutor', name: 'Grave Tutor', sprite: 'necromancer', accent: '#7fc4a8',
+    armor: 'Lecture Cowl',
     fishTier: 4,
     key: 'dustChance', mode: 'add', per: 0.004,
     blurb: 'lectures the leftovers into dust',
@@ -282,6 +304,7 @@ PETS.push(
   },
   {
     id: 'greedling', name: 'Greedling', sprite: 'demon_c', accent: '#e0c060',
+    armor: 'Coin Vest',
     fishTier: 4,
     key: 'treasure', mode: 'add', per: 0.008,
     blurb: 'shakes the fallen for loose coins',
@@ -302,4 +325,35 @@ export const PET_FEED = { base: 5, growth: 1.32 };
 /** Raw fish to take a pet from `level` to `level + 1`. */
 export function petFeedCost(level) {
   return Math.ceil(PET_FEED.base * Math.pow(PET_FEED.growth, level - 1));
+}
+
+// --- armor ---------------------------------------------------------------
+// One piece per pet, and only one, shaped to the body that wears it: a helm
+// for the slime because a jelly has nowhere to hang a cuirass, oven mitts
+// for the auntie, a monocle for the eye. Each tier multiplies THAT pet's
+// buff, so armor deepens the pet you love instead of adding a second stat
+// system. Paid in bars and planks like tools and keys, tier N in tier-N
+// materials: the parade is the smith's last, longest customer. Bolted to
+// the pet, so like the pet it survives every reset.
+export const PET_ARMOR = {
+  max: 5,
+  boost: 0.25,   // the pet's buff, +25% per tier: x2.25 fully dressed
+  costs: [
+    { bars: 20, planks: 12 },
+    { bars: 32, planks: 20 },
+    { bars: 48, planks: 30 },
+    { bars: 72, planks: 45 },
+    { bars: 108, planks: 68 },
+  ],
+};
+
+/** What the NEXT tier of a pet's piece costs, or null at the ceiling. */
+export function petArmorCost(tier) {
+  const spec = PET_ARMOR.costs[tier];
+  if (!spec) return null;
+  return {
+    tier: tier + 1,
+    ore: ORES[tier].id, oreName: ORES[tier].name, bars: spec.bars,
+    log: LOGS[tier].id, logName: LOGS[tier].name, planks: spec.planks,
+  };
 }

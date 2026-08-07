@@ -7,21 +7,23 @@ import {
 } from '../data/skilltree.js';
 import {
   nextRelicStage, relicsEarnedAt, PRESTIGE,
-  nextSoulRelics, soulsEarnedAt, AWAKEN,
+  nextSoulRelics, soulsEarnedAt, AWAKEN, SINGULARITY,
 } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import {
   SLOTS, RARITIES, SET_BONUS, setRarity, describeGear, rarityOdds, describeEnchant,
 } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
-import { PETS, PET_BY_ID } from '../data/pets.js';
+import { PETS, PET_BY_ID, PET_ARMOR } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { DISHES } from '../data/dishes.js';
 import {
   PLANETS, CONSTELLATIONS, CONSTELLATION_BY_ID, observeTime,
 } from '../data/cosmos.js';
 import { OMNI, OMNI_ROWS, omniTier, omniNext } from '../data/omni.js';
-import { FEATS, featDone } from '../data/feats.js';
+import { BESTIARY, BESTIARY_ROWS, huntTier, huntNext } from '../data/bestiary.js';
+import { JEWELS, JEWEL_BY_ID, JEWEL_MAX } from '../data/jewels.js';
+import { FEATS, featRanks, featNext } from '../data/feats.js';
 import { ANCESTORS, HALL } from '../data/ancestors.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { PATHS, describePath } from '../data/paths.js';
@@ -142,6 +144,11 @@ export class UI {
       presGainBox: document.querySelector('#asc-rebirth .prestige__gain'),
       ascSwitch: $('asc-switch'), ascSouls: $('asc-souls'), soulsHave: $('souls-have'),
       ascRebirth: $('asc-rebirth'), ascAwaken: $('asc-awaken'), pipAwaken: $('pip-awaken'),
+      ascSingularity: $('asc-singularity'), ascSingTab: $('asc-sing-tab'),
+      singState: $('sing-state'), singNeed: $('sing-need'),
+      singNote: $('sing-note'), singGo: $('sing-go'),
+      tabAwaken: $('tab-awaken'), awakenSwitch: $('awaken-switch'),
+      awakenDetail: $('awaken-detail'), awakenSouls: $('awaken-souls'),
       ascFeats: $('asc-feats'), featsList: $('feats-list'),
       awkGain: $('awk-gain'), awkHave: $('awk-have'), awkCount: $('awk-count'),
       awkSpent: $('awk-spent'), awkNext: $('awk-next'), awkGo: $('awk-go'),
@@ -161,12 +168,15 @@ export class UI {
       cosmosSwitch: $('cosmos-switch'), skyStars: $('sky-stars'),
       planetarium: $('planetarium'), constellations: $('constellations'),
       omniList: $('omni-list'),
+      huntList: $('hunt-list'), jewelList: $('jewel-list'),
+      petarmorWrap: $('petarmor-wrap'),
       pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
       enchWrap: $('ench-wrap'), enchTitle: $('ench-title'), enchList: $('ench-list'),
+      petarmorList: $('petarmor-list'),
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
       gemPill: $('gem-pill'), gemCount: $('stat-gems'),
       gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
@@ -211,6 +221,7 @@ export class UI {
     this.buildKitchen();
     this.buildCosmos();
     this.buildForge();
+    this.buildPetArmor();
     this.buildHall();
     this.buildPets();
     this.buildFeats();
@@ -282,7 +293,7 @@ export class UI {
     if (lang !== 'pt') return;
     const TEXT = [
       ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
-      ['[data-tab="skills"]', 'Skills'], ['[data-tab="cosmos"]', 'Cosmos'],
+      ['[data-tab="skills"]', 'Skills'], ['[data-tab="cosmos"]', 'Singularity'],
       ['[data-tab="forge"]', 'Forge'], ['[data-tab="hall"]', 'Ancestors'],
       ['[data-tab="pets"]', 'Pets'], ['[data-tab="prestige"]', 'Ascend'],
       ['[data-tree="talents"]', 'Talents'], ['[data-tree="relics"]', 'Relics'],
@@ -292,10 +303,14 @@ export class UI {
       ['[data-skill="alchemy"]', 'Alchemy'],
       ['[data-skill="farming"]', 'Farming'], ['[data-skill="cooking"]', 'Cooking'],
       ['[data-asc="rebirth"]', 'Rebirth'], ['[data-asc="awaken"]', 'Awaken'],
-      ['[data-asc="feats"]', 'Feats'],
+      ['[data-asc="singularity"]', 'Singularity'], ['[data-asc="feats"]', 'Feats'],
       ['[data-sky="planetarium"]', 'Planetarium'],
       ['[data-sky="constellations"]', 'Constellations'],
       ['[data-sky="omni"]', 'Omniscience'],
+      ['[data-tab="awaken"]', 'Awaken'],
+      ['[data-lore="hunt"]', 'Bestiary'],
+      ['[data-lore="jewels"]', 'Jewels'],
+      ['#sing-go', 'Singularity'],
       ['[data-league="pure"]', 'Pure'], ['[data-league="gilded"]', 'Gilded'],
       ['[data-league="patron"]', 'Patron'],
       ['[data-board="sprint"]', 'Weekly sprint'], ['[data-board="best"]', 'Best stage'],
@@ -318,6 +333,7 @@ export class UI {
       ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
       ['#import-file-label', 'Read a file'], ['#import-go', 'Replace and load'],
       ['#import-note', 'This replaces the current save on this device.'],
+      ['#petarmor-title', 'Pet armor'],
       ['#options-close', 'Close'], ['#gemshop-close', 'Close'],
       ['#rotate-say', 'Turn your phone sideways'],
       ['#rotate-note', 'Little RPG is played in landscape.'],
@@ -356,7 +372,7 @@ export class UI {
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
-      ['#asc-feats .prestige__note', 'Feitos são marcas da vida inteira: os contadores nunca zeram, nem no despertar, e cada feito completo paga um <b>bônus permanente pequeno</b> para sempre.'],
+      ['#asc-feats .prestige__note', 'Feitos são escadas da vida inteira: os contadores nunca zeram, nem no despertar, e cada meta alcançada paga um <b>bônus permanente pequeno</b> e então <b>dobra</b> para a próxima. Nenhuma escada tem teto.'],
       ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
       ['#store-note', 'Gemas compram ritmo, nunca um teto, e <b>toda gema daqui também pode ser ganha</b> limpando masmorras. As compras são feitas pela loja do aparelho; o jogo nunca vê seus dados de pagamento.'],
       ['#gem-more', 'Sem gemas? Limpe uma masmorra, ou toque na bolsa lá em cima.'],
@@ -559,6 +575,34 @@ export class UI {
     const dh = Math.round(h * scale);
     ctx.drawImage(sheet.image, box.left, box.top, w, h,
       Math.floor((canvas.width - dw) / 2), canvas.height - dh, dw, dh);
+  }
+
+  /** The parade's fitted pieces, forged where the bars live: one keys-style
+   *  row per tamed pet, wearing the pet's own colour. Untamed pets keep
+   *  their rows hidden; the pets tab is the roadmap, the forge is a bench. */
+  buildPetArmor() {
+    this.armorRows = new Map();
+    const frag = document.createDocumentFragment();
+    for (const pet of PETS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore';
+      row.dataset.pet = pet.id;
+      row.style.setProperty('--ore', pet.accent);
+      row.innerHTML = `
+        <span class="ore__name">${t(pet.armor)}<i class="armor__who">${pet.name}</i></span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt"></span>`;
+      frag.append(row);
+      this.armorRows.set(pet.id, {
+        pet, row,
+        what: row.querySelector('.key__what'),
+        have: row.querySelector('b'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.petarmorList.append(frag);
   }
 
   /**
@@ -922,6 +966,16 @@ export class UI {
       this.refreshCosmos();
     };
     el.planetarium.addEventListener('click', aimTelescope);
+    // A jewel refuses like a key: disabled, with the price showing.
+    el.jewelList.addEventListener('click', (e) => {
+      const row = e.target.closest('.ore');
+      if (!row || !state.buyJewel(row.dataset.jewel)) return;
+      const jewel = JEWEL_BY_ID[row.dataset.jewel];
+      this.sfx.play('jingle');
+      this.toast({ text: t('{0} CUT: FACET {1}', t(jewel.name).toUpperCase(),
+        ['I', 'II', 'III'][state.jewels[jewel.id] - 1]) });
+      this.refreshCosmos();
+    });
     el.constellations.addEventListener('click', aimTelescope);
 
     el.kitchen.addEventListener('click', (e) => {
@@ -1048,6 +1102,19 @@ export class UI {
       if (button) this.doForge(button.dataset.slot);
     });
 
+    // The parade's pieces: a row refuses by sitting disabled with its
+    // have/cost bill showing, same contract as the dungeon keys.
+    el.petarmorList.addEventListener('click', (e) => {
+      const row = e.target.closest('.ore');
+      if (!row || !state.armorPet(row.dataset.pet)) return;
+      const pet = PET_BY_ID[row.dataset.pet];
+      this.sfx.play('jingle');
+      this.toast({ text: t('{0} wears {1}', pet.name.toUpperCase(),
+        `${t(pet.armor)} ${['I', 'II', 'III', 'IV', 'V'][state.petArmor[pet.id] - 1]}`) });
+      this.refreshForge();
+      this.refreshPets();
+    });
+
     el.enchList.addEventListener('click', (e) => {
       const row = e.target.closest('.ench');
       if (!row) return;
@@ -1104,6 +1171,21 @@ export class UI {
     el.ascSwitch.addEventListener('click', (e) => {
       const button = e.target.closest('button');
       if (button) this.showAsc(button.dataset.asc);
+    });
+
+    el.awakenSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button) this.showLore(button.dataset.lore);
+    });
+
+    el.singGo.addEventListener('click', () => {
+      if (!state.doSingularity()) return;
+      this.sfx.play('jingle');
+      this.toast({ text: t('THE SINGULARITY: THE SKY IS OPEN') });
+      // The door swings on the spot, not on the next tick.
+      el.tabCosmos.hidden = false;
+      this.refreshPrestige();
+      this.showTab('cosmos');
     });
 
     el.presGo.addEventListener('click', () => {
@@ -1342,6 +1424,7 @@ export class UI {
     if (name === 'talents') this.refreshTrees(true);
     if (name === 'skills') this.refreshSkills();
     if (name === 'cosmos') this.refreshCosmos();
+    if (name === 'awaken') this.refreshLore();
     if (name === 'forge') this.refreshForge();
     if (name === 'hall') this.refreshHall(true);
     if (name === 'pets') this.refreshPets();
@@ -1370,6 +1453,7 @@ export class UI {
     }
     this.el.ascRebirth.hidden = name !== 'rebirth';
     this.el.ascAwaken.hidden = name !== 'awaken';
+    this.el.ascSingularity.hidden = name !== 'singularity';
     this.el.ascFeats.hidden = name !== 'feats';
     this.refreshPrestige();
   }
@@ -1426,9 +1510,13 @@ export class UI {
   refreshFeats() {
     const { state } = this;
     for (const { feat, li, mark } of this.featRows.values()) {
-      const done = featDone(feat, state.stats);
-      li.classList.toggle('is-done', done);
-      setText(mark, done ? '\u2713' : `${fmt(Math.min(state.stats[feat.stat] ?? 0, feat.need))}/${fmt(feat.need)}`);
+      const rungs = featRanks(feat, state.stats);
+      li.classList.toggle('is-done', rungs > 0);
+      // The rung climbed, then the road to the next: the ladder never ends.
+      const count = state.stats[feat.stat] ?? 0;
+      setText(mark, rungs > 0
+        ? `x${rungs} \u00b7 ${fmt(count)}/${fmt(featNext(feat, state.stats))}`
+        : `${fmt(count)}/${fmt(feat.need)}`);
     }
   }
 
@@ -1595,6 +1683,7 @@ export class UI {
     el.pipPrestige.hidden = state.pendingRelics <= 0 && state.pendingSouls <= 0;
     el.pipPrestige.classList.add('pip--gold');
     el.tabForge.hidden = !state.forgeUnlocked;
+    el.tabAwaken.hidden = state.awakens < 1;
     el.tabCosmos.hidden = !state.cosmosOpen;
     // The sky nags only while the telescope sits idle with bodies left.
     const skyLeft = PLANETS.some((p) => !state.planetFound(p.id))
@@ -1623,6 +1712,7 @@ export class UI {
     else if (this.tab === 'talents') this.refreshTrees();
     else if (this.tab === 'skills') this.refreshSkills();
     else if (this.tab === 'cosmos') this.refreshCosmos();
+    else if (this.tab === 'awaken') this.refreshLore();
     else if (this.tab === 'forge') this.refreshForge();
     else if (this.tab === 'hall') this.refreshHall();
     else if (this.tab === 'pets') this.refreshPets();
@@ -1760,6 +1850,35 @@ export class UI {
 
     const hasAnvil = state.bonus.autoCraft > 0;
     el.autoCraftWrap.hidden = !hasAnvil;
+
+    // The parade's pieces: the keys' have/cost readout, the pet's colour.
+    // Fitting a wild thing for armor is singularity knowledge: the whole
+    // bench stays out of sight until the first awakening.
+    el.petarmorWrap.hidden = state.awakens < 1;
+    for (const { pet, row, what, have, action } of this.armorRows.values()) {
+      const tamed = (state.pets[pet.id] ?? 0) > 0;
+      row.hidden = !tamed;
+      if (!tamed) continue;
+      const tier = state.petArmor[pet.id] ?? 0;
+      const next = state.petArmorNext(pet.id);
+      setText(have, `${tier}/${PET_ARMOR.max}`);
+      if (!next) {
+        setHtml(what, `<b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b> ${t(pet.name)}`);
+        setText(action, t('max'));
+        row.disabled = true;
+        row.classList.add('is-done');
+        row.classList.remove('can-smelt');
+        continue;
+      }
+      const can = state.canArmorPet(pet.id);
+      setHtml(what,
+        `<i class="ico ico--sm ico--bar"></i>${fmt(state.refined[next.ore] ?? 0)}/${next.bars} `
+        + `<i class="ico ico--sm ico--plank"></i>${fmt(state.refined[next.log] ?? 0)}/${next.planks}`);
+      setText(action, can ? t('forge') : t('need'));
+      row.disabled = !can;
+      row.classList.toggle('can-smelt', can);
+      row.classList.remove('is-done');
+    }
 
     for (const entry of this.slots.values()) {
       const equipped = state.gear[entry.slot.id];
@@ -2028,6 +2147,8 @@ export class UI {
     build(this.el.planetarium, PLANETS);
     build(this.el.constellations, CONSTELLATIONS);
     this.buildOmni();
+    this.buildHunt();
+    this.buildJewels();
   }
 
   /** The ledger: one board per pile, currencies first, then the lines. */
@@ -2079,6 +2200,94 @@ export class UI {
     setText(this.el.planetsFound, String(total));
   }
 
+  /** The bestiary: one board per species, thumbed with its own sprite. */
+  buildHunt() {
+    this.huntRows = [];
+    const frag = document.createDocumentFragment();
+    for (const rowDef of BESTIARY_ROWS) {
+      const el = document.createElement('div');
+      el.className = 'ore key omni-row';
+      el.innerHTML = `
+        <span class="ore__name"><canvas class="hunt__thumb" width="18" height="18"></canvas> ${t(rowDef.name)}</span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt"></span>`;
+      try { this.drawPetThumb(el.querySelector('canvas'), rowDef.id); } catch { /* no sheet, no thumb */ }
+      frag.append(el);
+      this.huntRows.push({
+        def: rowDef, el,
+        what: el.querySelector('.key__what'),
+        have: el.querySelector('b'),
+        mark: el.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.huntList.append(frag);
+  }
+
+  refreshHunt() {
+    const { state } = this;
+    let total = 0;
+    for (const r of this.huntRows) {
+      const kills = state.hunts[r.def.id] ?? 0;
+      const notches = huntTier(kills, r.def.base);
+      const next = huntNext(kills, r.def.base);
+      total += notches;
+      setHtml(r.have, `${fmt(kills)} <span class="omni__tag">${t('kill(s)')}</span>`);
+      setText(r.mark, notches ? `${notches}/${BESTIARY.cap}` : '');
+      setHtml(r.what, notches
+        ? `<b>${t('x{0} damage to them', (1 + BESTIARY.per * notches).toFixed(2))}</b>`
+          + (next ? ` &middot; ${t('next notch at {0}', fmt(next))}` : ` &middot; ${t('at the summit')}`)
+        : t('first notch at {0}', fmt(r.def.base)));
+      r.el.classList.toggle('is-done', notches >= BESTIARY.cap);
+      r.el.classList.toggle('can-smelt', notches > 0);
+    }
+  }
+
+  /** The jewels: four stones, keys-style, priced in souls. */
+  buildJewels() {
+    this.jewelRows = new Map();
+    const frag = document.createDocumentFragment();
+    for (const jewel of JEWELS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore';
+      row.dataset.jewel = jewel.id;
+      row.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${jewel.icon}"></i> ${t(jewel.name)}</span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b> <i class="ico ico--sm ico--orb"></i></span>
+        <span class="ore__smelt"></span>`;
+      frag.append(row);
+      this.jewelRows.set(jewel.id, {
+        jewel, row,
+        what: row.querySelector('.key__what'),
+        cost: row.querySelector('b'),
+        have: row.querySelector('.ore__have'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.jewelList.append(frag);
+  }
+
+  refreshJewels() {
+    const { state } = this;
+    for (const { jewel, row, what, cost, have, action } of this.jewelRows.values()) {
+      const rank = state.jewels[jewel.id] ?? 0;
+      const price = state.jewelCost(jewel.id);
+      const now = rank ? jewel.describe(rank, jewel.facets[rank - 1]) : t(jewel.blurb);
+      setHtml(what, rank && price != null
+        ? `<b>${now}</b> &middot; ${jewel.describe(rank + 1, jewel.facets[rank])}`
+        : rank ? `<b>${now}</b>` : now);
+      have.style.visibility = price == null ? 'hidden' : 'visible';
+      if (price != null) setText(cost, fmt(price));
+      setText(action, price == null ? t('max')
+        : state.canBuyJewel(jewel.id) ? `${rank}/${JEWEL_MAX}` : t('need'));
+      row.disabled = !state.canBuyJewel(jewel.id);
+      row.classList.toggle('can-smelt', state.canBuyJewel(jewel.id));
+      row.classList.toggle('is-done', price == null);
+    }
+  }
+
   showSky(view) {
     this.skyView = view;
     for (const button of this.el.cosmosSwitch.querySelectorAll('button')) {
@@ -2088,6 +2297,29 @@ export class UI {
     this.el.constellations.hidden = view !== 'constellations';
     this.el.omniList.hidden = view !== 'omni';
     this.refreshCosmos();
+  }
+
+  /** Flips the Awaken tab between the bestiary and the jewels. */
+  showLore(view) {
+    this.loreView = view;
+    for (const button of this.el.awakenSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.lore === view);
+    }
+    this.el.huntList.hidden = view !== 'hunt';
+    this.el.jewelList.hidden = view !== 'jewels';
+    this.refreshLore();
+  }
+
+  refreshLore() {
+    const { state, el } = this;
+    setText(el.awakenSouls, fmt(state.souls));
+    if ((this.loreView ?? 'hunt') === 'hunt') {
+      setHtml(el.awakenDetail, t('The Bestiary counts every kill by the name of what died, lifetime, through every reset. Each notch of ten kills past a species\' first mark pays <b>more damage against that species</b>, forever.'));
+      this.refreshHunt();
+    } else {
+      setHtml(el.awakenDetail, t('Jewels are cut with <b>souls</b> and never break: each facet betters every gathering line at once, and the third cut of the first stone makes the swing instant.'));
+      this.refreshJewels();
+    }
   }
 
   refreshCosmos() {
@@ -2616,8 +2848,12 @@ export class UI {
 
       const { fish, cost } = state.petFood(pet.id);
       setText(lvl, t('Lv {0}', level));
-      // Today's buff, then what the next meal buys: the whole decision.
-      setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>`);
+      // Today's buff, what the next meal buys, and what the pet wears; the
+      // piece itself is FORGED on the forge tab, where the bars live.
+      const tier = state.petArmor[pet.id] ?? 0;
+      const worn = tier
+        ? ` &middot; ${t(pet.armor)}: <b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b>` : '';
+      setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>${worn}`);
 
       feed.hidden = false;
       feed.disabled = !state.canFeedPet(pet.id);
@@ -2673,6 +2909,7 @@ export class UI {
     el.ascSouls.hidden = state.souls <= 0 && state.awakens <= 0;
     setText(el.soulsHave, fmt(state.souls));
     this.refreshAwaken();
+    this.refreshSingularity();
     this.refreshFeats();
   }
 
@@ -2699,6 +2936,22 @@ export class UI {
     setText(el.awkGo, gain > 0
       ? t('Awaken for {0} soul(s)', gain)
       : t('Earn {0} relics first', isFinite(next) ? next : AWAKEN.minRelics));
+  }
+
+  /** The ceremony's board: sealed, ready, or crossed. */
+  refreshSingularity() {
+    const { state, el } = this;
+    // The switch button shows once the first awakening makes the door
+    // conceivable; the ceremony itself waits for the third.
+    el.ascSingTab.hidden = state.awakens < 1 && !state.singularity;
+    const done = state.singularity > 0;
+    setText(el.singState, done ? t('The sky is open') : t('The sky is sealed'));
+    setText(el.singNeed, done ? ''
+      : t('{0}/{1} awakening(s)', state.awakens, SINGULARITY.needsAwakens));
+    setHtml(el.singNote, t('The Singularity is not another wipe: it is a door. Cross it once, at {0} lifetime awakenings, and the sky opens forever: the Planetarium, the Constellations and the Omniscience marks, past every reset.', SINGULARITY.needsAwakens));
+    el.singGo.disabled = !state.canSingularity;
+    setText(el.singGo, done ? t('crossed') : t('Singularity'));
+    el.singGo.classList.toggle('is-done', done);
   }
 
   /** Lists what the relic tree already grants; hides itself when empty. */

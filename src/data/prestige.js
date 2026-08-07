@@ -41,6 +41,14 @@ export function nextRelicStage(earned, prestiges = 0) {
 // damage and gold. Souls are measured against every relic the ascension has
 // earned across all of its rebirths, so no rebirth is ever wasted work.
 
+// The Singularity: the third door, and the first that is not a wipe. It
+// asks for three lifetime awakenings, opens once, and what it opens is
+// the sky: the Planetarium, the Constellations and the Omniscience marks
+// all live past it. A ceremony, not a cycle.
+export const SINGULARITY = {
+  needsAwakens: 3,
+};
+
 export const AWAKEN = {
   minRelics: 50,   // relics earned before the first soul pays out
   divisor: 50,

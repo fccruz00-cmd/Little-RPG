@@ -9,7 +9,7 @@ import {
 import {
   TALENT_WEB, RELIC_WEB, SOUL_WEB, SKILL_WEBS, webUnlocked,
 } from '../data/skilltree.js';
-import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
+import { relicsEarnedAt, soulsEarnedAt, SINGULARITY } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import {
   SLOTS, RARITIES, LEGENDARY, DUST, SET_BONUS, setRarity, craftCost, rollRarity, gearValue,
@@ -22,12 +22,14 @@ import {
 } from '../data/gathering.js';
 import { DISHES, DISH_BY_ID, DISH_COSTS } from '../data/dishes.js';
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
-import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
+import {
+  PETS, PET_BY_ID, petFeedCost, PET_ARMOR, petArmorCost,
+} from '../data/pets.js';
 import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
 import {
   WARE_BY_ID, GEM_FIRST, CACHE_SECONDS, SKIP_SECONDS, CHEST_FLOOR,
 } from '../data/gems.js';
-import { FEATS, featDone, emptyStats } from '../data/feats.js';
+import { FEATS, featRanks, emptyStats } from '../data/feats.js';
 import {
   dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
 } from '../data/quests.js';
@@ -39,6 +41,8 @@ import {
   ANCESTORS, HALL, RESERVES, BOUNTY, spiritUpCost, spiritsAwake,
 } from '../data/ancestors.js';
 import { OMNI_ROWS, omniTier } from '../data/omni.js';
+import { BESTIARY, BESTIARY_BY_ID, huntTier } from '../data/bestiary.js';
+import { JEWELS, JEWEL_BY_ID, JEWEL_MAX } from '../data/jewels.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -105,6 +109,13 @@ function defaults() {
     // pets: tamed for good, fed on raw fish, all of it awaken-proof.
     // Every tamed pet's buff is on; the collection is the progression.
     pets: {},         // petId -> level (absent = not tamed yet)
+
+    // Singularity: the bestiary's kill ledger (speciesId -> lifetime kills,
+    // notches pay damage vs that species once awakened) and the jewels
+    // (jewelId -> facets cut, paid in souls, bettering every line).
+    hunts: {},
+    jewels: {},
+    petArmor: {},     // petId -> armor tier, bolted on like the tame itself
 
     // cauldron: potion id -> seconds of effect remaining
     potions: {},
@@ -305,6 +316,9 @@ export class GameState {
     this.refined = { ...(data.refined ?? {}) };
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
+    this.hunts = { ...(data.hunts ?? {}) };
+    this.jewels = { ...(data.jewels ?? {}) };
+    this.petArmor = { ...(data.petArmor ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
     this.dishes = { ...(data.dishes ?? {}) };
     this.redeemed = Array.isArray(data.redeemed) ? [...data.redeemed] : [];
@@ -316,6 +330,12 @@ export class GameState {
       target: data.cosmos?.target ?? null,
       progress: { ...(data.cosmos?.progress ?? {}) },
     };
+    // The ceremony, 0 or 1. Saves from before the door existed prove they
+    // crossed it by having charted the sky at all: a discovery could only
+    // have happened on the open side.
+    this.singularity = data.singularity != null
+      ? (data.singularity ? 1 : 0)
+      : (this.cosmos.found.length > 0 ? 1 : 0);
     this.ancestors = {
       assign: { ...(data.ancestors?.assign ?? {}) },
       levels: { ...(data.ancestors?.levels ?? {}) },
@@ -442,13 +462,14 @@ export class GameState {
     // Completed feats are nodes with a single permanent rank. Completion is
     // monotone (the counters only climb), so it derives instead of storing.
     for (const feat of FEATS) {
-      if (featDone(feat, this.stats)) apply(feat, 1);
+      const rungs = featRanks(feat, this.stats);
+      if (rungs) apply(feat, rungs);
     }
 
     // Omniscience: each record's marks are ranks of that row's own buff.
-    // Records accrue from the first minute, but the eye only OPENS with
-    // the first awakening: the ledger is knowledge the road cannot read.
-    if (this.awakens > 0) {
+    // Records accrue from the first minute, but the ledger lives on the
+    // open side of the Singularity: the eye opens with the ceremony.
+    if (this.singularity > 0) {
       for (const omniRow of OMNI_ROWS) {
         const marks = omniTier(this.omni[omniRow.id] ?? 0, omniRow.base);
         if (marks) apply(omniRow, marks);
@@ -457,11 +478,13 @@ export class GameState {
 
     // Every tamed pet is one more node, with its level as the ranks, and
     // Pack Leader (soul tree) amplifies the lot. Pets fold LAST so petPower
-    // is already summed whichever branch order the trees ran in.
+    // is already summed whichever branch order the trees ran in. Armor is
+    // the pet's own multiplier: one fitted piece, +25% of ITS buff a tier.
     for (const pet of PETS) {
       const level = this.pets[pet.id];
       if (!level) continue;
-      const amount = pet.per * level * (1 + b.petPower);
+      const dressed = 1 + PET_ARMOR.boost * (this.petArmor[pet.id] ?? 0);
+      const amount = pet.per * level * (1 + b.petPower) * dressed;
       if (pet.mode === 'mul') b[pet.key] *= 1 + amount;
       // 'less' has to shrink its key like the trees' apply() does: the first
       // ten pets never used it, and the missing branch quietly turned Clot's
@@ -507,6 +530,13 @@ export class GameState {
     b.yieldMul *= 1 + this.bonus.yieldAll + (this.constPowers.yieldAll ?? 0);
     b.gatherSpeed *= this.bonus.workAll * (1 - (this.constPowers.workAll ?? 0));
     b.gatherXpMul *= 1 + (this.constPowers.skillXp ?? 0);
+    // Singularity jewels: cut once with souls, shining on every line at
+    // once. Haste's third facet zeroes the term and workTime's minWork
+    // floor catches it: "instant" still costs the minimum swing.
+    b.gatherSpeed *= 1 - this.jewelFacet('haste');
+    b.yieldMul *= 1 + this.jewelFacet('plenty');
+    b.nodeMul *= 1 + this.jewelFacet('springs');
+    b.gatherXpMul *= 1 + this.jewelFacet('study');
     this._gatherBonus[skillId] = b;
     return b;
   }
@@ -803,6 +833,45 @@ export class GameState {
     return this.gatherBonus('smithing').forgeCostLess;
   }
 
+  // --- the Singularity: bestiary and jewels ---------------------------
+  /**
+   * Damage multiplier against one species. The ledger counts from the
+   * first kill and survives everything; the grudge only folds once the
+   * first awakening opens the eye, same law as the Omniscience marks.
+   */
+  huntMul(speciesId) {
+    if (this.awakens <= 0) return 1;
+    const row = BESTIARY_BY_ID[speciesId];
+    if (!row) return 1;
+    return 1 + BESTIARY.per * huntTier(this.hunts[speciesId] ?? 0, row.base);
+  }
+
+  /** The facet value a jewel currently shines at (0 uncut). */
+  jewelFacet(id) {
+    const rank = this.jewels[id] ?? 0;
+    return rank ? JEWEL_BY_ID[id].facets[rank - 1] : 0;
+  }
+
+  /** Souls the next facet asks, or null at the third cut. */
+  jewelCost(id) {
+    return JEWEL_BY_ID[id]?.costs[this.jewels[id] ?? 0] ?? null;
+  }
+
+  canBuyJewel(id) {
+    const cost = this.jewelCost(id);
+    return this.awakens > 0 && cost != null && this.souls >= cost;
+  }
+
+  buyJewel(id) {
+    if (!this.canBuyJewel(id)) return false;
+    this.souls -= this.jewelCost(id);
+    this.jewels[id] = (this.jewels[id] ?? 0) + 1;
+    // Facets fold into the gather lens, so every cache of it is stale.
+    this._gatherBonus = {};
+    this.save();
+    return true;
+  }
+
   // --- pets -----------------------------------------------------------
   /**
    * Tames every pet whose objective the save has met and does not own yet.
@@ -838,6 +907,34 @@ export class GameState {
   setCompanion(id) {
     if (!this.pets[id] || id === this.companion) return false;
     this.companion = id;
+    this.save();
+    return true;
+  }
+
+  // --- pet armor ------------------------------------------------------
+  /** The next rise of a pet's one piece, or null when fully dressed. */
+  petArmorNext(id) {
+    if (!this.pets[id]) return null;
+    return petArmorCost(this.petArmor[id] ?? 0);
+  }
+
+  canArmorPet(id) {
+    const cost = this.petArmorNext(id);
+    // The bench itself is smith work, but FITTING a wild thing for armor
+    // is singularity knowledge: the pieces sell only once awakened.
+    return this.awakens > 0
+      && cost != null
+      && (this.refined[cost.ore] ?? 0) >= cost.bars
+      && (this.refined[cost.log] ?? 0) >= cost.planks;
+  }
+
+  armorPet(id) {
+    if (!this.canArmorPet(id)) return false;
+    const cost = this.petArmorNext(id);
+    this.refined[cost.ore] -= cost.bars;
+    this.refined[cost.log] -= cost.planks;
+    this.petArmor[id] = (this.petArmor[id] ?? 0) + 1;
+    this.invalidateBonus();
     this.save();
     return true;
   }
@@ -1135,8 +1232,12 @@ export class GameState {
 
   // --- forge --------------------------------------------------------
   /** The forge only exists after the first rebirth. */
+  /** Open once ANY reset has ever been taken, like the hall. It used to
+   *  read `prestiges`, which awakening zeroes, so the deepest reset in the
+   *  game quietly closed a whole tab: "cade a porra da forge", the owner,
+   *  after one awakening. Knowledge does not close. */
   get forgeUnlocked() {
-    return this.prestiges > 0;
+    return (this.stats.rebirths ?? 0) > 0;
   }
 
   /** Dust a kill yields (0 when nothing drops). */
@@ -1417,7 +1518,20 @@ export class GameState {
 
   // --- the cosmos -----------------------------------------------------
   get cosmosOpen() {
-    return this.awakens > 0;
+    return this.singularity > 0;
+  }
+
+  // --- the Singularity ceremony ---------------------------------------
+  get canSingularity() {
+    return this.singularity === 0 && this.awakens >= SINGULARITY.needsAwakens;
+  }
+
+  /** The door opens once and wipes nothing. Returns true when it took. */
+  doSingularity() {
+    if (!this.canSingularity) return false;
+    this.singularity = 1;
+    this.save();
+    return true;
   }
 
   planetFound(id) {
@@ -1489,8 +1603,8 @@ export class GameState {
   }
 
   // --- the Hall of Ancestors ------------------------------------------
-  /** Open once ANY reset has ever been taken. Lifetime, so unlike the
-   *  forge it does not close when an awakening zeroes `prestiges`. */
+  /** Open once ANY reset has ever been taken. Lifetime, like the forge:
+   *  what a reset zeroes is stock, never doors. */
   get hallOpen() {
     return (this.stats.rebirths ?? 0) > 0;
   }
@@ -1916,7 +2030,8 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, singularity,
+      potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
@@ -1928,7 +2043,8 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, singularity,
+      potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
