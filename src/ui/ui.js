@@ -2035,7 +2035,9 @@ export class UI {
       const marks = omniTier(record, r.def.base);
       const next = omniNext(record, r.def.base);
       total += marks;
-      setText(r.have, fmt(record));
+      // now/record, not record alone: a lone number reads as a pocket, and
+      // the first alpha tester tried to spend one.
+      setHtml(r.have, `<span class="omni__now">${fmt(r.def.read(state))}/</span>${fmt(record)}`);
       setText(r.mark, marks ? `${marks}/${OMNI.cap}` : '');
       setHtml(r.what, marks
         ? `<b>${describeNode(r.def, marks)}</b>`
@@ -2590,7 +2592,13 @@ export class UI {
 
       feed.hidden = false;
       feed.disabled = !state.canFeedPet(pet.id);
-      setHtml(feed, `${t('Feed')} &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
+      // A refusal must explain itself: the alpha test's first bug report
+      // was a full crate of MEALS and a button that "just would not go".
+      // have/cost says it eats RAW fish, and how short the pond is.
+      const held = state.raw[fish.id] ?? 0;
+      setHtml(feed, feed.disabled
+        ? `${t('Feed')} &middot; ${fmt(held)}/${fmt(cost)} <span class="pet__fish">${fish.name}</span>`
+        : `${t('Feed')} &middot; ${fmt(cost)} <span class="pet__fish">${fish.name}</span>`);
       feed.classList.toggle('can-buy', !feed.disabled);
     }
     // The walker: one pet on the road, chosen here, buffs untouched.

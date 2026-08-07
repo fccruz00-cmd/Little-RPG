@@ -784,6 +784,10 @@ export class Battle {
         if (paid) this.emit('toast', { text: `MERCURY: +${paid} GEM(S)` });
       } else if (planet.auto === 'refine') {
         for (const gid of GATHER_IDS) {
+          // Raw fish is pet food before it is meal stock, and a planet that
+          // quietly starved the parade would be the first automation to do
+          // something a player would not. Neptune leaves the ponds alone.
+          if (gid === 'fishing') continue;
           for (const resource of SKILLS[gid].resources) state.refine(gid, resource);
         }
       }
