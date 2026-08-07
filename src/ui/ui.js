@@ -2035,9 +2035,10 @@ export class UI {
       const marks = omniTier(record, r.def.base);
       const next = omniNext(record, r.def.base);
       total += marks;
-      // now/record, not record alone: a lone number reads as a pocket, and
-      // the first alpha tester tried to spend one.
-      setHtml(r.have, `<span class="omni__now">${fmt(r.def.read(state))}/</span>${fmt(record)}`);
+      // The record, alone. Two numbers a row confused harder than one ever
+      // did; what you HOLD lives on the stock list, and the ledger keeps
+      // only what it is for. The word beside it says which number this is.
+      setHtml(r.have, `${fmt(record)} <span class="omni__tag">${t('rec.')}</span>`);
       setText(r.mark, marks ? `${marks}/${OMNI.cap}` : '');
       setHtml(r.what, marks
         ? `<b>${describeNode(r.def, marks)}</b>`

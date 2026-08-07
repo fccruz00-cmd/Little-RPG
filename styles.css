@@ -1501,8 +1501,8 @@ body { display: flex; justify-content: center; }
 .omni-row { cursor: default; grid-template-columns: auto minmax(0, 1fr) auto 44px; }
 .omni-row .key__what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .omni-row .ore__smelt { color: var(--gold); }
-/* the pocket, small and dim beside the record it chases */
-.omni__now { font-weight: 400; color: var(--ink-dim); font-size: 10px; }
+/* the little word that says "this is a record, not your pocket" */
+.omni__tag { font-weight: 400; color: var(--ink-dim); font-size: 9px; }
 
 /* --- the boards: three leagues, two ladders, one modal --- */
 .segmented--ranks { margin: 4px 0 2px; }
