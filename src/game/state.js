@@ -1135,8 +1135,12 @@ export class GameState {
 
   // --- forge --------------------------------------------------------
   /** The forge only exists after the first rebirth. */
+  /** Open once ANY reset has ever been taken, like the hall. It used to
+   *  read `prestiges`, which awakening zeroes, so the deepest reset in the
+   *  game quietly closed a whole tab: "cade a porra da forge", the owner,
+   *  after one awakening. Knowledge does not close. */
   get forgeUnlocked() {
-    return this.prestiges > 0;
+    return (this.stats.rebirths ?? 0) > 0;
   }
 
   /** Dust a kill yields (0 when nothing drops). */
@@ -1489,8 +1493,8 @@ export class GameState {
   }
 
   // --- the Hall of Ancestors ------------------------------------------
-  /** Open once ANY reset has ever been taken. Lifetime, so unlike the
-   *  forge it does not close when an awakening zeroes `prestiges`. */
+  /** Open once ANY reset has ever been taken. Lifetime, like the forge:
+   *  what a reset zeroes is stock, never doors. */
   get hallOpen() {
     return (this.stats.rebirths ?? 0) > 0;
   }
