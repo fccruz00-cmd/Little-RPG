@@ -22,7 +22,9 @@ import {
 } from '../data/gathering.js';
 import { DISHES, DISH_BY_ID, DISH_COSTS } from '../data/dishes.js';
 import { KEYS, KEY_BY_TIER } from '../data/dungeon.js';
-import { PETS, PET_BY_ID, petFeedCost } from '../data/pets.js';
+import {
+  PETS, PET_BY_ID, petFeedCost, PET_ARMOR, petArmorCost,
+} from '../data/pets.js';
 import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
 import {
   WARE_BY_ID, GEM_FIRST, CACHE_SECONDS, SKIP_SECONDS, CHEST_FLOOR,
@@ -105,6 +107,7 @@ function defaults() {
     // pets: tamed for good, fed on raw fish, all of it awaken-proof.
     // Every tamed pet's buff is on; the collection is the progression.
     pets: {},         // petId -> level (absent = not tamed yet)
+    petArmor: {},     // petId -> armor tier, bolted on like the tame itself
 
     // cauldron: potion id -> seconds of effect remaining
     potions: {},
@@ -305,6 +308,7 @@ export class GameState {
     this.refined = { ...(data.refined ?? {}) };
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
+    this.petArmor = { ...(data.petArmor ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
     this.dishes = { ...(data.dishes ?? {}) };
     this.redeemed = Array.isArray(data.redeemed) ? [...data.redeemed] : [];
@@ -457,11 +461,13 @@ export class GameState {
 
     // Every tamed pet is one more node, with its level as the ranks, and
     // Pack Leader (soul tree) amplifies the lot. Pets fold LAST so petPower
-    // is already summed whichever branch order the trees ran in.
+    // is already summed whichever branch order the trees ran in. Armor is
+    // the pet's own multiplier: one fitted piece, +25% of ITS buff a tier.
     for (const pet of PETS) {
       const level = this.pets[pet.id];
       if (!level) continue;
-      const amount = pet.per * level * (1 + b.petPower);
+      const dressed = 1 + PET_ARMOR.boost * (this.petArmor[pet.id] ?? 0);
+      const amount = pet.per * level * (1 + b.petPower) * dressed;
       if (pet.mode === 'mul') b[pet.key] *= 1 + amount;
       // 'less' has to shrink its key like the trees' apply() does: the first
       // ten pets never used it, and the missing branch quietly turned Clot's
@@ -838,6 +844,31 @@ export class GameState {
   setCompanion(id) {
     if (!this.pets[id] || id === this.companion) return false;
     this.companion = id;
+    this.save();
+    return true;
+  }
+
+  // --- pet armor ------------------------------------------------------
+  /** The next rise of a pet's one piece, or null when fully dressed. */
+  petArmorNext(id) {
+    if (!this.pets[id]) return null;
+    return petArmorCost(this.petArmor[id] ?? 0);
+  }
+
+  canArmorPet(id) {
+    const cost = this.petArmorNext(id);
+    return cost != null
+      && (this.refined[cost.ore] ?? 0) >= cost.bars
+      && (this.refined[cost.log] ?? 0) >= cost.planks;
+  }
+
+  armorPet(id) {
+    if (!this.canArmorPet(id)) return false;
+    const cost = this.petArmorNext(id);
+    this.refined[cost.ore] -= cost.bars;
+    this.refined[cost.log] -= cost.planks;
+    this.petArmor[id] = (this.petArmor[id] ?? 0) + 1;
+    this.invalidateBonus();
     this.save();
     return true;
   }
@@ -1920,7 +1951,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
@@ -1932,7 +1963,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),

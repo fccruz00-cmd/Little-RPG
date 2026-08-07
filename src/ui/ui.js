@@ -14,7 +14,7 @@ import {
   SLOTS, RARITIES, SET_BONUS, setRarity, describeGear, rarityOdds, describeEnchant,
 } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
-import { PETS, PET_BY_ID } from '../data/pets.js';
+import { PETS, PET_BY_ID, PET_ARMOR } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { DISHES } from '../data/dishes.js';
 import {
@@ -530,6 +530,7 @@ export class UI {
         </span>
         <span class="pet__acts">
           <button class="equip pet__feed" type="button">Feed</button>
+          <button class="equip pet__gear" type="button" hidden></button>
           <button class="equip pet__walk" type="button"></button>
         </span>`;
       this.drawPetThumb(row.querySelector('canvas'), pet.sprite);
@@ -539,6 +540,7 @@ export class UI {
         lvl: row.querySelector('.pet__lvl'),
         effect: row.querySelector('.pet__effect'),
         feed: row.querySelector('.pet__feed'),
+        gear: row.querySelector('.pet__gear'),
         walk: row.querySelector('.pet__walk'),
       });
     }
@@ -1068,6 +1070,24 @@ export class UI {
         battle.syncPets();
         this.sfx.play('buy');
         this.toast({ text: t('{0} WALKS WITH YOU', PET_BY_ID[row.dataset.pet].name.toUpperCase()) });
+        this.refreshPets();
+        return;
+      }
+      // The fitted piece: buys the next rise, or says exactly what it asks.
+      if (e.target.closest('.pet__gear')) {
+        const id = row.dataset.pet;
+        const pet = PET_BY_ID[id];
+        const cost = state.petArmorNext(id);
+        if (!cost) return;
+        if (!state.armorPet(id)) {
+          this.toast({ text: t('{0} asks {1}', t(pet.armor).toUpperCase(),
+            `${cost.bars} ${cost.oreName} ${t(SKILLS.mining.refinedName)}(s), `
+            + `${cost.planks} ${cost.logName} ${t(SKILLS.chopping.refinedName)}(s)`), bad: true });
+          return;
+        }
+        this.sfx.play('jingle');
+        this.toast({ text: t('{0} wears {1}', pet.name.toUpperCase(),
+          `${t(pet.armor)} ${['I', 'II', 'III', 'IV', 'V'][(state.petArmor[id] ?? 1) - 1]}`) });
         this.refreshPets();
         return;
       }
@@ -2599,7 +2619,7 @@ export class UI {
     const { state, el } = this;
     setText(el.petsCount, `${Object.keys(state.pets).length}/${PETS.length}`);
 
-    for (const { pet, row, lvl, effect, feed } of this.petRows.values()) {
+    for (const { pet, row, lvl, effect, feed, gear } of this.petRows.values()) {
       const level = state.pets[pet.id] ?? 0;
       const tamed = level > 0;
       row.classList.toggle('is-locked', !tamed);
@@ -2611,13 +2631,26 @@ export class UI {
         setText(lvl, t('locked'));
         setHtml(effect, `${t(pet.blurb)}. ${t('Tame: ')}<b>${t(u.desc)}</b>${progress}.`);
         feed.hidden = true;
+        gear.hidden = true;
         continue;
       }
 
       const { fish, cost } = state.petFood(pet.id);
       setText(lvl, t('Lv {0}', level));
-      // Today's buff, then what the next meal buys: the whole decision.
-      setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>`);
+      // Today's buff, then what the next meal buys, then what the pet wears.
+      const tier = state.petArmor[pet.id] ?? 0;
+      const worn = tier
+        ? ` &middot; ${t(pet.armor)}: <b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b>` : '';
+      setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>${worn}`);
+
+      // The one fitted piece: its name, how dressed, and the glow when the
+      // refined piles can pay the next rise.
+      gear.hidden = false;
+      const next = state.petArmorNext(pet.id);
+      setHtml(gear, `<i class="ico ico--sm ico--shield"></i> ${t(pet.armor)} &middot; ${tier}/${PET_ARMOR.max}`);
+      gear.disabled = !next;
+      gear.classList.toggle('can-buy', state.canArmorPet(pet.id));
+      gear.classList.toggle('is-done', !next);
 
       feed.hidden = false;
       feed.disabled = !state.canFeedPet(pet.id);

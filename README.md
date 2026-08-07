@@ -536,6 +536,18 @@ cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
 gathering economy touches, pets and their levels survive **rebirth and
 awakening both**.
 
+Every pet also owns exactly **one piece of armor**, shaped to the body
+that wears it: a **Gel Helm** because a jelly has nowhere to hang a
+cuirass, **Oven Mitts** for Auntie Imp, a **Furnace Door** for the
+golem's chest, **Greeting Gauntlets** for the Doorman's handshake.
+Five rises per piece, paid in bars and planks (tier N in tier-N
+materials, from 20 bars and 12 planks up to 108 and 68), and each rise
+multiplies **that pet's own buff** by another +25%, x2.25 fully
+dressed. One fitted piece instead of a wardrobe keeps it a deepening of
+the pet you already love, not a second gear system, and it makes the
+parade the smith's last, longest customer. Like the tame itself, the
+piece is bolted on for good: it survives rebirth and awakening.
+
 ### Options and languages
 
 The footer's **options** opens the game's one modal: sound effects, music,

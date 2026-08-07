@@ -538,6 +538,32 @@ const PT = {
   'with you': 'com você',
   '{0} WALKS WITH YOU': '{0} ANDA COM VOCÊ',
 
+  // --- pet armor: one fitted piece each ---
+  '{0} wears {1}': '{0} veste {1}',
+  '{0} asks {1}': '{0} pede {1}',
+  'Gel Helm': 'Elmo de Gel',
+  'Wing Bands': 'Faixas de Asa',
+  'Iron Monocle': 'Monóculo de Ferro',
+  'Spiked Collar': 'Coleira de Espinhos',
+  'Ash Crown': 'Coroa de Cinzas',
+  'Rib Cuirass': 'Couraça de Costelas',
+  'Lantern Cage': 'Gaiola de Lanterna',
+  'Rusty Muzzle': 'Focinheira Enferrujada',
+  'Furnace Door': 'Porta de Fornalha',
+  'Horn Caps': 'Ponteiras de Chifre',
+  'Soot Goggles': 'Óculos de Fuligem',
+  'Thorn Pauldrons': 'Ombreiras de Espinho',
+  'Honeypot Helm': 'Elmo de Pote de Mel',
+  'Clot Buckler': 'Broquel de Coágulo',
+  'Greeting Gauntlets': 'Manoplas de Cumprimento',
+  'Iron-Brim Hat': 'Chapéu de Aba de Ferro',
+  'Horn Guard': 'Protetor de Chifres',
+  'Oven Mitts': 'Luvas de Forno',
+  'Spite Visor': 'Viseira de Rancor',
+  'Moonsteel Harness': 'Arreio de Aço Lunar',
+  'Lecture Cowl': 'Capuz de Palestra',
+  'Coin Vest': 'Colete de Moedas',
+
   // --- Omniscience ---
   'Omniscience': 'Onisciência',
   'Omniscience counts everything you have ever <b>gained</b>, lifetime. Spending never subtracts: the tally grows with your farm on its own, every mark of ten pays its own permanent buff, and the ledger survives every reset.':
