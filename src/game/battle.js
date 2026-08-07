@@ -782,14 +782,12 @@ export class Battle {
         }
         if (state.canClaimQuest(weekly, true)) paid += state.claimQuest(weekly, true);
         if (paid) this.emit('toast', { text: `MERCURY: +${paid} GEM(S)` });
-      } else if (planet.auto === 'refine') {
-        for (const gid of GATHER_IDS) {
-          // Raw fish is pet food before it is meal stock, and a planet that
-          // quietly starved the parade would be the first automation to do
-          // something a player would not. Neptune leaves the ponds alone.
-          if (gid === 'fishing') continue;
-          for (const resource of SKILLS[gid].resources) state.refine(gid, resource);
-        }
+      } else if (planet.auto === 'feed') {
+        // The refinery runs itself now, so Neptune took the one chore left
+        // at the pond: it feeds the walking companion out of the reserve,
+        // one meal per visit, and stops where a finger would, when the
+        // pile cannot pay.
+        if (state.canFeedPet(state.companion)) state.feedPet(state.companion);
       }
     }
   }
@@ -823,6 +821,7 @@ export class Battle {
     this.updateNodes(dt);
     this.updateAutoSwitch(dt);
     state.tickMeals(dt);
+    state.tickRefine(dt);
     state.tickPotions(dt);
     state.tickDishes(dt);
 

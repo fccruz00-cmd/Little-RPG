@@ -61,8 +61,8 @@ export const PLANETS = [
   },
   {
     id: 'neptune', name: 'Neptune', icon: 'neptune', accent: '#6a8fd6',
-    hours: 13, auto: 'refine',
-    blurb: 'the deep refines every pile on its own',
+    hours: 13, auto: 'feed',
+    blurb: 'the deep feeds the companion walking beside you',
   },
 ];
 

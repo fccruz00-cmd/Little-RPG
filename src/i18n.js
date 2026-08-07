@@ -365,7 +365,7 @@ const PT = {
   'the giant fells wood without you stopping': 'o gigante derruba madeira sem você parar',
   'the ringed keeper re-brews a lapsing potion': 'o guardião dos anéis repõe a poção que expira',
   'the pale one re-plates a lapsing dish': 'o pálido repõe o prato que expira',
-  'the deep refines every pile on its own': 'o profundo refina toda pilha sozinho',
+  'the deep feeds the companion walking beside you': 'o profundo alimenta o companheiro que anda com você',
 
   // --- kitchen ---
   'cook': 'cozinhar',
@@ -540,6 +540,7 @@ const PT = {
   'Omniscience counts everything you have ever <b>gained</b>, lifetime. Spending never subtracts: the tally grows with your farm on its own, every mark of ten pays its own permanent buff, and the ledger survives every reset.':
     'A Onisciência conta tudo que você já <b>ganhou</b>, na vida inteira. Gastar nunca desconta: o número cresce sozinho com o seu farm, cada marca de dez paga seu próprio buff permanente, e o livro sobrevive a todo reset.',
   'total': 'total',
+  'auto': 'auto',
   'first mark at {0}': 'primeira marca em {0}',
   'next mark at {0}': 'próxima marca em {0}',
   'at the summit': 'no topo',

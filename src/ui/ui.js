@@ -892,17 +892,6 @@ export class UI {
       this.refreshSkills();
     });
 
-    el.stock.addEventListener('click', (e) => {
-      const row = e.target.closest('.ore');
-      if (!row) return;
-      const entry = this.stockRows.get(row.dataset.resource);
-      const made = state.refine(entry.skill, entry.resource);
-      if (!made) return;
-      state.save();
-      this.toast({ text: `+${fmt(made)} ${entry.resource.name} ${t(SKILLS[entry.skill].refinedName)}(s)` });
-      this.refreshSkills();
-    });
-
     el.cauldron.addEventListener('click', (e) => {
       const row = e.target.closest('[data-potion]');
       if (!row) return;
@@ -1858,15 +1847,16 @@ export class UI {
     }
   }
 
-  /** One row per resource, across all three skills: raw, refined, and refine. */
+  /** One row per resource: raw, refined, and the ratio. A ledger, not a
+   *  bench: the refinery works alone, so nothing here takes a tap. The
+   *  alpha tester clicked a carp three times asking what it was for. */
   buildStock() {
     this.stockRows = new Map();
     for (const id of GATHER_IDS) {
       const skill = SKILLS[id];
       for (const resource of skill.resources) {
-        const row = document.createElement('button');
-        row.type = 'button';
-        row.className = 'ore';
+        const row = document.createElement('div');
+        row.className = 'ore ore--ledger';
         row.dataset.resource = resource.id;
         row.dataset.skill = id;
         row.style.setProperty('--ore', resource.color);
@@ -2437,12 +2427,11 @@ export class UI {
       if (entry.row.hidden) continue;
       const raw = Math.floor(state.raw[resourceId] ?? 0);
       const refined = state.refined[resourceId] ?? 0;
-      const ready = state.refinable(id, entry.resource);
       setText(entry.raw, fmt(raw));
       setText(entry.refined, fmt(refined));
-      setText(entry.action, ready > 0 ? `+${fmt(ready)}` : `${state.refineCostFor(id, entry.resource)}:1`);
-      entry.row.disabled = ready <= 0;
-      entry.row.classList.toggle('can-smelt', ready > 0);
+      // The ratio and the word: this row informs, the refinery works.
+      setText(entry.action,
+        `${t('auto')} ${state.refineCostFor(id, entry.resource)}:1`);
     }
 
     const tier = state.tools[id];

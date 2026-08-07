@@ -1369,7 +1369,7 @@ body { display: flex; justify-content: center; }
 .ore__name { font-size: 11px; font-weight: 700; color: var(--ore); text-align: left; }
 .ore__have { font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
 .ore__have b { color: var(--cream); font-weight: 700; margin-left: 3px; }
-/* Idle it shows the exchange rate, ready it shows the bars waiting. */
+/* The right-hand word: a verb on the benches, the rate on the ledger. */
 .ore__smelt {
   font-size: 10px;
   font-weight: 700;
@@ -1379,6 +1379,9 @@ body { display: flex; justify-content: center; }
 .ore.can-smelt .ore__smelt { color: var(--gold); }
 .ore:disabled { cursor: default; opacity: .7; }
 .ore:not(:disabled):active { transform: translateY(1px); }
+/* The stock list is a ledger, not a bench: nothing here takes a tap. */
+.ore--ledger { cursor: default; }
+.ore--ledger:active { transform: none; }
 
 .mine-tools { flex: none; padding: 4px 5px; }
 .mine-tools .slot { grid-template-columns: 26px 1fr auto; }

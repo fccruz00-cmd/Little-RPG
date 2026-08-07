@@ -105,6 +105,18 @@ export function toolCost(tier) {
   };
 }
 
+// --- the refinery ---------------------------------------------------
+// Nobody clicks a carp. Refining used to be a tap on the stock row, and it
+// died in alpha as the third complaint about the same fish: a button that
+// quietly turns pet food into meal stock is a trap, not a decision. The
+// refinery now sweeps on its own, and fish keep a raw reserve first,
+// because the parade eats before the kitchen does.
+export const REFINERY = {
+  period: 5,        // seconds between sweeps
+  feedReserve: 12,  // feeds' worth of raw fish held back per hungry mouth
+  fishFloor: 30,    // raw fish always left in a pond line, pets or none
+};
+
 // --- skills ---------------------------------------------------------
 export const GATHER = {
   spacing: 130,      // world px between nodes, before Deep Survey

@@ -262,7 +262,7 @@ it.
    | Jupiter | 4   | chopping runs in the background |
    | Saturn  | 6   | re-brews a lapsing potion |
    | Uranus  | 9   | re-plates a lapsing dish |
-   | Neptune | 13  | refines every pile on its own |
+   | Neptune | 13  | feeds the walking companion on its own |
 
    A gathering planet pays one full node per 15 s tick on its line and
    skips the line your tool is on — roughly a third of working it by
@@ -527,7 +527,9 @@ Ancestors), and they sit a real distance out on purpose: the collection was
 filling up faster than the game could grow.
 
 
-Levels are bought with **raw fish of the pet's own tier**. Meals always cook
+Levels are bought with **raw fish of the pet's own tier**, and the
+refinery's reserve guarantees the larder: meals only ever cook from the
+surplus, so the feed is always there when the button is. Meals always cook
 from the best fish first, so the lower tiers pile up as dead stock the moment
 a better pool opens; pets are what that surplus is for, and the geometric
 cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
@@ -626,6 +628,16 @@ the pane: Smithing the workshop, Alchemy the cauldron, Cooking the kitchen.
 | Smithing | none  | none   | the forge: odds, cost and refining |
 | Alchemy  | none  | none   | the cauldron: potion strength, span, price |
 | Cooking  | none  | none   | **dishes**: timed yield/gold/XP/stride buffs |
+
+**The refinery runs itself.** Raw becomes refined on its own, a sweep
+every few seconds, and the stock list is a ledger, not a bench: nothing
+on it takes a tap. It used to be a click per pile, and it died in alpha
+as the third complaint about the same fish — a button that quietly turns
+pet food into meal stock is a trap, not a decision. Fish are the one
+line the refinery treats differently: every pond keeps a raw **reserve**
+(a dozen feeds' worth for whoever eats that tier, never less than 30),
+so feeding a pet never loses to the kitchen, and only the surplus above
+the reserve becomes meals.
 
 **Farming** is the fourth line: plots of tilled earth with the crop poking
 out in its own colour, worked in one stop (a crop you had to walk *back*
@@ -813,8 +825,9 @@ solve before selling anything.
 
 The forge used to be pure RNG on fixed odds with nothing to improve. Smithing
 is what it was missing. It has no nodes and no tool; it levels from the two
-things it does: **refining** (which works from stage 1) and **forging**
-(which only opens after the first rebirth), so it never sits idle.
+things it does: **refining** (which works from stage 1, done by the
+automatic refinery as the piles come in) and **forging** (which only opens
+after the first rebirth), so it never sits idle.
 
 Its web does three things:
 

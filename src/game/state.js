@@ -17,7 +17,7 @@ import {
 } from '../data/gear.js';
 import {
   SKILLS, SKILL_IDS, GATHER_IDS, SKILL_TREES, GATHER, GATHER_KEYS, GATHER_MULS,
-  MEAL, SMITH, ALCH, COOK, TOOL_TIERS, ORES, LOGS, CROPS,
+  MEAL, SMITH, ALCH, COOK, REFINERY, TOOL_TIERS, ORES, LOGS, CROPS,
   toolCost, gatherXpToNext, refineCost,
 } from '../data/gathering.js';
 import { DISHES, DISH_BY_ID, DISH_COSTS } from '../data/dishes.js';
@@ -742,9 +742,9 @@ export class GameState {
     return Math.floor((this.raw[resource.id] ?? 0) / this.refineCostFor(skillId, resource));
   }
 
-  /** Refines everything it can of one resource. Returns the units produced. */
-  refine(skillId, resource) {
-    const made = this.refinable(skillId, resource);
+  /** Refines what it can of one resource, up to `cap`. Returns the units. */
+  refine(skillId, resource, cap = Infinity) {
+    const made = Math.min(this.refinable(skillId, resource), cap);
     if (made <= 0) return 0;
     this.raw[resource.id] -= made * this.refineCostFor(skillId, resource);
     this.refined[resource.id] = (this.refined[resource.id] ?? 0) + made;
@@ -753,6 +753,39 @@ export class GameState {
     // stage 1: the forge itself does not open until the first rebirth.
     this.gainGatherXp('smithing', made * resource.xp * SMITH.refineXp);
     return made;
+  }
+
+  /** Raw fish the refinery must leave in the pond: the parade eats first. */
+  fishReserve(fish) {
+    let feed = 0;
+    for (const pet of PETS) {
+      if (pet.fishTier !== fish.tier || !this.pets[pet.id]) continue;
+      feed = Math.max(feed, Math.ceil(
+        petFeedCost(this.pets[pet.id]) * this.bonus.feedLess));
+    }
+    return Math.max(REFINERY.fishFloor, feed * REFINERY.feedReserve);
+  }
+
+  /**
+   * The refinery sweeps on its own: nobody clicks a carp. Ore, wood and
+   * crops flow whole, they have no other mouth to feed; fish refine only
+   * past the reserve, so feeding a pet never loses to the kitchen.
+   */
+  tickRefine(dt) {
+    this._refineTimer = (this._refineTimer ?? 0) + dt;
+    if (this._refineTimer < REFINERY.period) return;
+    this._refineTimer = 0;
+    for (const gid of GATHER_IDS) {
+      for (const resource of SKILLS[gid].resources) {
+        let cap = Infinity;
+        if (gid === 'fishing') {
+          const spare = (this.raw[resource.id] ?? 0) - this.fishReserve(resource);
+          cap = Math.floor(spare / this.refineCostFor(gid, resource));
+          if (cap <= 0) continue;
+        }
+        this.refine(gid, resource, cap);
+      }
+    }
   }
 
   // --- smithing -----------------------------------------------------
