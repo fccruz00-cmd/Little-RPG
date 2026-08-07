@@ -95,7 +95,7 @@ body { display: flex; justify-content: center; }
 /* --- icons (Raven Fantasy strip, 32px each) --- */
 .ico {
   --i: 0;
-  --n: 64;
+  --n: 96;
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -174,6 +174,39 @@ body { display: flex; justify-content: center; }
 .ico--river         { --i: 61; }
 .ico--twins         { --i: 62; }
 .ico--crownstars    { --i: 63; }
+/* the jewels and the parade's fitted pieces, one face each */
+.ico--jewel_haste   { --i: 64; }
+.ico--jewel_plenty  { --i: 65; }
+.ico--jewel_springs { --i: 66; }
+.ico--jewel_study   { --i: 67; }
+.ico--jewel_midas   { --i: 68; }
+.ico--jewel_cinders { --i: 69; }
+.ico--jewel_tithes  { --i: 70; }
+.ico--jewel_echoes  { --i: 71; }
+.ico--jewel_crucible{ --i: 72; }
+.ico--jewel_feast   { --i: 73; }
+.ico--arm_gelhelm   { --i: 74; }
+.ico--arm_wingbands { --i: 75; }
+.ico--arm_monocle   { --i: 76; }
+.ico--arm_collar    { --i: 77; }
+.ico--arm_ashcrown  { --i: 78; }
+.ico--arm_ribcuirass{ --i: 79; }
+.ico--arm_lanterncage{ --i: 80; }
+.ico--arm_muzzle    { --i: 81; }
+.ico--arm_furnacedoor{ --i: 82; }
+.ico--arm_horncaps  { --i: 83; }
+.ico--arm_goggles   { --i: 84; }
+.ico--arm_pauldrons { --i: 85; }
+.ico--arm_honeypot  { --i: 86; }
+.ico--arm_buckler   { --i: 87; }
+.ico--arm_gauntlets { --i: 88; }
+.ico--arm_ironhat   { --i: 89; }
+.ico--arm_hornguard { --i: 90; }
+.ico--arm_ovenmitts { --i: 91; }
+.ico--arm_visor     { --i: 92; }
+.ico--arm_harness   { --i: 93; }
+.ico--arm_cowl      { --i: 94; }
+.ico--arm_coinvest  { --i: 95; }
 
 .ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
 .ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }

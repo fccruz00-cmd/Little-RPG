@@ -590,7 +590,7 @@ export class UI {
       row.dataset.pet = pet.id;
       row.style.setProperty('--ore', pet.accent);
       row.innerHTML = `
-        <span class="ore__name">${t(pet.armor)}<i class="armor__who">${pet.name}</i></span>
+        <span class="ore__name"><i class="ico ico--sm ico--${pet.armorIcon}"></i> ${t(pet.armor)}<i class="armor__who">${pet.name}</i></span>
         <span class="key__what"></span>
         <span class="ore__have"><b></b></span>
         <span class="ore__smelt"></span>`;
@@ -2852,7 +2852,7 @@ export class UI {
       // piece itself is FORGED on the forge tab, where the bars live.
       const tier = state.petArmor[pet.id] ?? 0;
       const worn = tier
-        ? ` &middot; ${t(pet.armor)}: <b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b>` : '';
+        ? ` &middot; <i class="ico ico--sm ico--${pet.armorIcon}"></i> ${t(pet.armor)}: <b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b>` : '';
       setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>${worn}`);
 
       feed.hidden = false;
