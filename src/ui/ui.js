@@ -167,6 +167,7 @@ export class UI {
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
       enchWrap: $('ench-wrap'), enchTitle: $('ench-title'), enchList: $('ench-list'),
+      petarmorList: $('petarmor-list'),
       reset: $('btn-reset'), exportSave: $('btn-export'), importSave: $('btn-import'),
       gemPill: $('gem-pill'), gemCount: $('stat-gems'),
       gemShop: $('gemshop'), gemClose: $('gemshop-close'), wares: $('wares'),
@@ -211,6 +212,7 @@ export class UI {
     this.buildKitchen();
     this.buildCosmos();
     this.buildForge();
+    this.buildPetArmor();
     this.buildHall();
     this.buildPets();
     this.buildFeats();
@@ -318,6 +320,7 @@ export class UI {
       ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
       ['#import-file-label', 'Read a file'], ['#import-go', 'Replace and load'],
       ['#import-note', 'This replaces the current save on this device.'],
+      ['#petarmor-title', 'Pet armor'],
       ['#options-close', 'Close'], ['#gemshop-close', 'Close'],
       ['#rotate-say', 'Turn your phone sideways'],
       ['#rotate-note', 'Little RPG is played in landscape.'],
@@ -530,7 +533,6 @@ export class UI {
         </span>
         <span class="pet__acts">
           <button class="equip pet__feed" type="button">Feed</button>
-          <button class="equip pet__gear" type="button" hidden></button>
           <button class="equip pet__walk" type="button"></button>
         </span>`;
       this.drawPetThumb(row.querySelector('canvas'), pet.sprite);
@@ -540,7 +542,6 @@ export class UI {
         lvl: row.querySelector('.pet__lvl'),
         effect: row.querySelector('.pet__effect'),
         feed: row.querySelector('.pet__feed'),
-        gear: row.querySelector('.pet__gear'),
         walk: row.querySelector('.pet__walk'),
       });
     }
@@ -561,6 +562,34 @@ export class UI {
     const dh = Math.round(h * scale);
     ctx.drawImage(sheet.image, box.left, box.top, w, h,
       Math.floor((canvas.width - dw) / 2), canvas.height - dh, dw, dh);
+  }
+
+  /** The parade's fitted pieces, forged where the bars live: one keys-style
+   *  row per tamed pet, wearing the pet's own colour. Untamed pets keep
+   *  their rows hidden; the pets tab is the roadmap, the forge is a bench. */
+  buildPetArmor() {
+    this.armorRows = new Map();
+    const frag = document.createDocumentFragment();
+    for (const pet of PETS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore';
+      row.dataset.pet = pet.id;
+      row.style.setProperty('--ore', pet.accent);
+      row.innerHTML = `
+        <span class="ore__name">${t(pet.armor)}<i class="armor__who">${pet.name}</i></span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt"></span>`;
+      frag.append(row);
+      this.armorRows.set(pet.id, {
+        pet, row,
+        what: row.querySelector('.key__what'),
+        have: row.querySelector('b'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.petarmorList.append(frag);
   }
 
   /**
@@ -1050,6 +1079,19 @@ export class UI {
       if (button) this.doForge(button.dataset.slot);
     });
 
+    // The parade's pieces: a row refuses by sitting disabled with its
+    // have/cost bill showing, same contract as the dungeon keys.
+    el.petarmorList.addEventListener('click', (e) => {
+      const row = e.target.closest('.ore');
+      if (!row || !state.armorPet(row.dataset.pet)) return;
+      const pet = PET_BY_ID[row.dataset.pet];
+      this.sfx.play('jingle');
+      this.toast({ text: t('{0} wears {1}', pet.name.toUpperCase(),
+        `${t(pet.armor)} ${['I', 'II', 'III', 'IV', 'V'][state.petArmor[pet.id] - 1]}`) });
+      this.refreshForge();
+      this.refreshPets();
+    });
+
     el.enchList.addEventListener('click', (e) => {
       const row = e.target.closest('.ench');
       if (!row) return;
@@ -1070,24 +1112,6 @@ export class UI {
         battle.syncPets();
         this.sfx.play('buy');
         this.toast({ text: t('{0} WALKS WITH YOU', PET_BY_ID[row.dataset.pet].name.toUpperCase()) });
-        this.refreshPets();
-        return;
-      }
-      // The fitted piece: buys the next rise, or says exactly what it asks.
-      if (e.target.closest('.pet__gear')) {
-        const id = row.dataset.pet;
-        const pet = PET_BY_ID[id];
-        const cost = state.petArmorNext(id);
-        if (!cost) return;
-        if (!state.armorPet(id)) {
-          this.toast({ text: t('{0} asks {1}', t(pet.armor).toUpperCase(),
-            `${cost.bars} ${cost.oreName} ${t(SKILLS.mining.refinedName)}(s), `
-            + `${cost.planks} ${cost.logName} ${t(SKILLS.chopping.refinedName)}(s)`), bad: true });
-          return;
-        }
-        this.sfx.play('jingle');
-        this.toast({ text: t('{0} wears {1}', pet.name.toUpperCase(),
-          `${t(pet.armor)} ${['I', 'II', 'III', 'IV', 'V'][(state.petArmor[id] ?? 1) - 1]}`) });
         this.refreshPets();
         return;
       }
@@ -1780,6 +1804,32 @@ export class UI {
 
     const hasAnvil = state.bonus.autoCraft > 0;
     el.autoCraftWrap.hidden = !hasAnvil;
+
+    // The parade's pieces: the keys' have/cost readout, the pet's colour.
+    for (const { pet, row, what, have, action } of this.armorRows.values()) {
+      const tamed = (state.pets[pet.id] ?? 0) > 0;
+      row.hidden = !tamed;
+      if (!tamed) continue;
+      const tier = state.petArmor[pet.id] ?? 0;
+      const next = state.petArmorNext(pet.id);
+      setText(have, `${tier}/${PET_ARMOR.max}`);
+      if (!next) {
+        setHtml(what, `<b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b> ${t(pet.name)}`);
+        setText(action, t('max'));
+        row.disabled = true;
+        row.classList.add('is-done');
+        row.classList.remove('can-smelt');
+        continue;
+      }
+      const can = state.canArmorPet(pet.id);
+      setHtml(what,
+        `<i class="ico ico--sm ico--bar"></i>${fmt(state.refined[next.ore] ?? 0)}/${next.bars} `
+        + `<i class="ico ico--sm ico--plank"></i>${fmt(state.refined[next.log] ?? 0)}/${next.planks}`);
+      setText(action, can ? t('forge') : t('need'));
+      row.disabled = !can;
+      row.classList.toggle('can-smelt', can);
+      row.classList.remove('is-done');
+    }
 
     for (const entry of this.slots.values()) {
       const equipped = state.gear[entry.slot.id];
@@ -2619,7 +2669,7 @@ export class UI {
     const { state, el } = this;
     setText(el.petsCount, `${Object.keys(state.pets).length}/${PETS.length}`);
 
-    for (const { pet, row, lvl, effect, feed, gear } of this.petRows.values()) {
+    for (const { pet, row, lvl, effect, feed } of this.petRows.values()) {
       const level = state.pets[pet.id] ?? 0;
       const tamed = level > 0;
       row.classList.toggle('is-locked', !tamed);
@@ -2631,26 +2681,17 @@ export class UI {
         setText(lvl, t('locked'));
         setHtml(effect, `${t(pet.blurb)}. ${t('Tame: ')}<b>${t(u.desc)}</b>${progress}.`);
         feed.hidden = true;
-        gear.hidden = true;
         continue;
       }
 
       const { fish, cost } = state.petFood(pet.id);
       setText(lvl, t('Lv {0}', level));
-      // Today's buff, then what the next meal buys, then what the pet wears.
+      // Today's buff, what the next meal buys, and what the pet wears; the
+      // piece itself is FORGED on the forge tab, where the bars live.
       const tier = state.petArmor[pet.id] ?? 0;
       const worn = tier
         ? ` &middot; ${t(pet.armor)}: <b>x${(1 + PET_ARMOR.boost * tier).toFixed(2)}</b>` : '';
       setHtml(effect, `${describeNode(pet, level)}${t(' · next: ')}<b>${describeNode(pet, level + 1)}</b>${worn}`);
-
-      // The one fitted piece: its name, how dressed, and the glow when the
-      // refined piles can pay the next rise.
-      gear.hidden = false;
-      const next = state.petArmorNext(pet.id);
-      setHtml(gear, `<i class="ico ico--sm ico--shield"></i> ${t(pet.armor)} &middot; ${tier}/${PET_ARMOR.max}`);
-      gear.disabled = !next;
-      gear.classList.toggle('can-buy', state.canArmorPet(pet.id));
-      gear.classList.toggle('is-done', !next);
 
       feed.hidden = false;
       feed.disabled = !state.canFeedPet(pet.id);

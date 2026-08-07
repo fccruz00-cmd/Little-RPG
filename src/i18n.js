@@ -538,9 +538,9 @@ const PT = {
   'with you': 'com você',
   '{0} WALKS WITH YOU': '{0} ANDA COM VOCÊ',
 
-  // --- pet armor: one fitted piece each ---
+  // --- pet armor: one fitted piece each, forged at the bench ---
+  'Pet armor': 'Armadura de pets',
   '{0} wears {1}': '{0} veste {1}',
-  '{0} asks {1}': '{0} pede {1}',
   'Gel Helm': 'Elmo de Gel',
   'Wing Bands': 'Faixas de Asa',
   'Iron Monocle': 'Monóculo de Ferro',
