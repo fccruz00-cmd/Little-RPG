@@ -1,17 +1,17 @@
-// Omniscience: the ledger of everything you have ever held.
+// Omniscience: the tally of everything you have ever gained.
 //
 // One row per countable pile in the game: the five currencies, every raw
-// resource and every refined one. Each row remembers its RECORD, the most
-// of that thing ever held at once, and the record only climbs: spending,
-// rebirth and awakening take nothing back. Records pay in MARKS, one per
-// power of ten past the row's base, and every mark is a small permanent
-// buff of that row's own flavour.
+// resource and every refined one. Each row counts the LIFETIME TOTAL of
+// that thing the save has ever earned, and the tally only climbs: spend,
+// feed, forge, reset, nothing subtracts. It pays in MARKS, one per power
+// of ten past the row's base, and every mark is a small permanent buff of
+// that row's own flavour.
 //
-// The design debt this pays: the game teaches you to spend every pile the
-// moment it exists (refine it, forge it, brew it), so a full warehouse
-// never felt like anything. Now the biggest pile you ever sat on is a
-// score, in the greenstack spirit: hoarding is a play, not a mistake --
-// but only the PEAK matters, so the game never punishes spending either.
+// The first design (the most ever HELD at once, greenstack-style) died in
+// alpha within a day: it made every fish a dilemma -- feed the pet or
+// fatten the score -- and the whole point of an idle ledger is that it
+// fills itself while you play however you like. A tally has no decisions
+// in it. Farm naturally, the numbers rise.
 //
 // Values are deliberately small. Forty-five rows times up to twelve marks
 // is a wide blanket; each thread has to be thin or the blanket carries

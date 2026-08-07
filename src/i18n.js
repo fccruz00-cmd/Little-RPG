@@ -537,9 +537,9 @@ const PT = {
 
   // --- Omniscience ---
   'Omniscience': 'Onisciência',
-  'Omniscience remembers the most of each pile you have ever <b>held at once</b>. Spending takes nothing back: every mark of ten pays its own permanent buff, and the whole ledger survives every reset.':
-    'A Onisciência lembra o máximo de cada pilha que você já <b>segurou de uma vez</b>. Gastar não tira nada de volta: cada marca de dez paga seu próprio buff permanente, e o livro inteiro sobrevive a todo reset.',
-  'rec.': 'rec.',
+  'Omniscience counts everything you have ever <b>gained</b>, lifetime. Spending never subtracts: the tally grows with your farm on its own, every mark of ten pays its own permanent buff, and the ledger survives every reset.':
+    'A Onisciência conta tudo que você já <b>ganhou</b>, na vida inteira. Gastar nunca desconta: o número cresce sozinho com o seu farm, cada marca de dez paga seu próprio buff permanente, e o livro sobrevive a todo reset.',
+  'total': 'total',
   'first mark at {0}': 'primeira marca em {0}',
   'next mark at {0}': 'próxima marca em {0}',
   'at the summit': 'no topo',

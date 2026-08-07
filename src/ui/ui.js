@@ -2035,10 +2035,9 @@ export class UI {
       const marks = omniTier(record, r.def.base);
       const next = omniNext(record, r.def.base);
       total += marks;
-      // The record, alone. Two numbers a row confused harder than one ever
-      // did; what you HOLD lives on the stock list, and the ledger keeps
-      // only what it is for. The word beside it says which number this is.
-      setHtml(r.have, `${fmt(record)} <span class="omni__tag">${t('rec.')}</span>`);
+      // The lifetime tally, alone, wearing its name. What you HOLD lives
+      // on the stock list; this number only ever grows.
+      setHtml(r.have, `${fmt(record)} <span class="omni__tag">${t('total')}</span>`);
       setText(r.mark, marks ? `${marks}/${OMNI.cap}` : '');
       setHtml(r.what, marks
         ? `<b>${describeNode(r.def, marks)}</b>`
@@ -2064,7 +2063,7 @@ export class UI {
   refreshCosmos() {
     const { state, el } = this;
     if (this.skyView === 'omni') {
-      setHtml(el.cosmosDetail, t('Omniscience remembers the most of each pile you have ever <b>held at once</b>. Spending takes nothing back: every mark of ten pays its own permanent buff, and the whole ledger survives every reset.'));
+      setHtml(el.cosmosDetail, t('Omniscience counts everything you have ever <b>gained</b>, lifetime. Spending never subtracts: the tally grows with your farm on its own, every mark of ten pays its own permanent buff, and the ledger survives every reset.'));
       this.refreshOmni();
       return;
     }

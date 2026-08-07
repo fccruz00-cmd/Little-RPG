@@ -358,8 +358,9 @@ export class GameState {
     this._saveTimer = 0;
     this._spiritTimer = 0;
     this._omniTimer = 0;
+    this._omniLast = null;
     this.omni = { ...(data.omni ?? {}) };
-    // Whatever the save walks in holding is already a record it earned.
+    // Whatever the save walks in holding was gained once: the baseline.
     this.scanOmni();
     this._goldWindow = [];
     // Seconds of SIMULATED time, advanced by the loop, never by the wall
@@ -1576,18 +1577,31 @@ export class GameState {
 
   // --- Omniscience ----------------------------------------------------
   /**
-   * One pass over every ledger row. A record only moves up, and only a
-   * MARK crossing pays anything, so the fold is invalidated exactly then.
-   * Returns whether any mark was crossed.
+   * One pass over every ledger row. The tally is LIFETIME GAINS: each scan
+   * adds what grew since the last look and ignores what shrank, so
+   * spending, feeding and resets never touch it -- no call site anywhere
+   * has to remember the ledger exists. Only a MARK crossing pays anything,
+   * so the fold is invalidated exactly then. Returns whether one was.
    */
   scanOmni() {
     let crossed = false;
+    const first = this._omniLast == null;
+    if (first) this._omniLast = {};
     for (const row of OMNI_ROWS) {
       const value = row.read(this);
-      const record = this.omni[row.id] ?? 0;
-      if (value <= record) continue;
-      if (omniTier(value, row.base) > omniTier(record, row.base)) crossed = true;
-      this.omni[row.id] = value;
+      const before = this.omni[row.id] ?? 0;
+      let total = before;
+      if (first || this._omniLast[row.id] === undefined) {
+        // Baseline: whatever the save walks in holding was gained once,
+        // and an old peak-style record stays as the floor it proved.
+        total = Math.max(before, value);
+      } else if (value > this._omniLast[row.id]) {
+        total = before + (value - this._omniLast[row.id]);
+      }
+      this._omniLast[row.id] = value;
+      if (total === before) continue;
+      if (omniTier(total, row.base) > omniTier(before, row.base)) crossed = true;
+      this.omni[row.id] = total;
     }
     if (crossed) this.invalidateBonus();
     return crossed;

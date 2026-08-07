@@ -230,14 +230,18 @@ it.
 
    The tab's third catalog is **Omniscience**: one ledger row per
    countable pile in the game — the five currencies plus every raw and
-   refined resource, forty-five rows. Each row remembers its **record**,
-   the most of that thing ever held at once, and the record only climbs:
-   spending, rebirth and awakening take nothing back. Records pay in
-   **marks**, one per power of ten past the row's base, and every mark is
-   a small permanent buff of the row's own flavour (ore hits harder, wood
-   moves faster, fish keeps you standing, crops pay the mind). Records
-   accrue from minute one, but the buffs only switch on with the first
-   awakening: the ledger is knowledge the road cannot read.
+   refined resource, forty-five rows. Each row tallies the **lifetime
+   total** of that thing ever gained, and the tally only climbs:
+   spending, feeding, rebirth and awakening take nothing back, the
+   number grows with natural play and asks for no decisions. (The first
+   cut counted the most ever *held* at once, greenstack-style; alpha
+   killed it in a day because it turned every fish into a feed-the-pet
+   or fatten-the-score dilemma.) Tallies pay in **marks**, one per power
+   of ten past the row's base, and every mark is a small permanent buff
+   of the row's own flavour (ore hits harder, wood moves faster, fish
+   keeps you standing, crops pay the mind). Tallies accrue from minute
+   one, but the buffs only switch on with the first awakening: the
+   ledger is knowledge the road cannot read.
 
    The **first planet discovered opens the Constellations**: where a
    planet automates, a charted constellation *empowers* — four reach the
