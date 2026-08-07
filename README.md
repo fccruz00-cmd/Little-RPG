@@ -4,6 +4,11 @@ A browser idle auto-battler, played with the phone turned sideways. The hero
 walks a straight line on its own, runs into monsters, kills them without
 input and clears stages. All you decide is where the gold goes.
 
+**Play it**: <https://fccruz00-cmd.github.io/Little-RPG/> — redeployed by
+a workflow on every push, so the link always serves the latest build.
+`little-rpg.html` at the same address is the whole game in one file, for
+playing offline.
+
 The **UI** keeps the top; under it the **Fight** takes a column of its own
 and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
 **Skills**, **Pets**, **Ancestors**, **Cosmos** and **Ascend**: the

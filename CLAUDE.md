@@ -35,8 +35,13 @@ today.
      editor (idempotent; forces Google-verified devices into the patron
      league whatever their save claims).
 3. **PWA packaging**: the TWA route (PWABuilder/Bubblewrap) needs the
-   game hosted on HTTPS plus a manifest.json and a service worker,
-   neither of which exists yet.
+   game hosted on HTTPS plus a manifest.json and a service worker. The
+   hosting half is DONE: GitHub Pages at
+   https://fccruz00-cmd.github.io/Little-RPG/ , fed by
+   `.github/workflows/pages.yml` (mirrors every push of main and the
+   working branch onto `gh-pages`). manifest.json and the service
+   worker still do not exist. Note the leaderboard is LIVE on that
+   domain: `hasBackend()` is only false on localhost.
 4. **Store compliance**: PRIVACY.md still has placeholders and the
    leaderboard now collects a nickname, so the privacy policy and the
    Play Data Safety form are mandatory; the four third-party asset packs
