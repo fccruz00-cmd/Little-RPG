@@ -38,6 +38,7 @@ import {
 import {
   ANCESTORS, HALL, RESERVES, BOUNTY, spiritUpCost, spiritsAwake,
 } from '../data/ancestors.js';
+import { OMNI_ROWS, omniTier } from '../data/omni.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -149,6 +150,10 @@ function defaults() {
     // The name worn on the leaderboards. Lives in the save (it is the
     // player's, and travels with an export); the DEVICE id does not.
     nick: '',
+
+    // Omniscience: rowId -> the most of that pile ever held at once.
+    // Records only climb; nothing, not even awakening, takes one back.
+    omni: {},
 
     // gems: dungeon payout, spent in the gem shop. Nothing resets them, not
     // rebirth and not awakening, because a purse you can also be sold must
@@ -352,6 +357,10 @@ export class GameState {
     this.hp = this.maxHp;
     this._saveTimer = 0;
     this._spiritTimer = 0;
+    this._omniTimer = 0;
+    this.omni = { ...(data.omni ?? {}) };
+    // Whatever the save walks in holding is already a record it earned.
+    this.scanOmni();
     this._goldWindow = [];
     // Seconds of SIMULATED time, advanced by the loop, never by the wall
     // clock. The background loop fast-forwards a minute of fighting in a few
@@ -433,6 +442,16 @@ export class GameState {
     // monotone (the counters only climb), so it derives instead of storing.
     for (const feat of FEATS) {
       if (featDone(feat, this.stats)) apply(feat, 1);
+    }
+
+    // Omniscience: each record's marks are ranks of that row's own buff.
+    // Records accrue from the first minute, but the eye only OPENS with
+    // the first awakening: the ledger is knowledge the road cannot read.
+    if (this.awakens > 0) {
+      for (const omniRow of OMNI_ROWS) {
+        const marks = omniTier(this.omni[omniRow.id] ?? 0, omniRow.base);
+        if (marks) apply(omniRow, marks);
+      }
     }
 
     // Every tamed pet is one more node, with its level as the ranks, and
@@ -1555,6 +1574,33 @@ export class GameState {
     return n;
   }
 
+  // --- Omniscience ----------------------------------------------------
+  /**
+   * One pass over every ledger row. A record only moves up, and only a
+   * MARK crossing pays anything, so the fold is invalidated exactly then.
+   * Returns whether any mark was crossed.
+   */
+  scanOmni() {
+    let crossed = false;
+    for (const row of OMNI_ROWS) {
+      const value = row.read(this);
+      const record = this.omni[row.id] ?? 0;
+      if (value <= record) continue;
+      if (omniTier(value, row.base) > omniTier(record, row.base)) crossed = true;
+      this.omni[row.id] = value;
+    }
+    if (crossed) this.invalidateBonus();
+    return crossed;
+  }
+
+  /** The ledger's clock: one scan per game second is plenty for records. */
+  tickOmni(dt) {
+    this._omniTimer += dt;
+    if (this._omniTimer < 1) return;
+    this._omniTimer = 0;
+    this.scanOmni();
+  }
+
   /**
    * The hall's clock. `dt` is one frame in the foreground and a whole
    * minute from a background catch-up, so it loops like Herald does,
@@ -1630,7 +1676,7 @@ export class GameState {
 
   // --- prestige -----------------------------------------------------
   get pendingRelics() {
-    return Math.max(0, relicsEarnedAt(this.maxStage) - this.relicsEarned);
+    return Math.max(0, relicsEarnedAt(this.maxStage, this.prestiges) - this.relicsEarned);
   }
 
   /** Rebirth. Returns how many relics came in (0 when it did not fire). */
@@ -1825,7 +1871,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos, ancestors, companion, nick,
+      cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
     } = this;
     return {
@@ -1837,7 +1883,7 @@ export class GameState {
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
       fedTier, fedTimer, keys, deepestKey, bossHeld, pets, potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
-      cosmos, ancestors, companion, nick,
+      cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
     };
   }

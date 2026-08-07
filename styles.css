@@ -1489,6 +1489,19 @@ body { display: flex; justify-content: center; }
 
 .spirit__up[hidden] { display: none; }
 
+/* --- Omniscience: the ledger inside the Cosmos tab --- */
+.omni {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+}
+.omni[hidden] { display: none; }
+.omni-row { cursor: default; grid-template-columns: auto minmax(0, 1fr) auto 44px; }
+.omni-row .key__what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omni-row .ore__smelt { color: var(--gold); }
+
 /* --- the boards: three leagues, two ladders, one modal --- */
 .segmented--ranks { margin: 4px 0 2px; }
 .segmented--ranks button { flex: 1 1 0; min-width: 0; }
@@ -2088,6 +2101,15 @@ body { display: flex; justify-content: center; }
 
 @container panel (min-width: 820px) {
   .shop, .forge, .featlist { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* The ledger reads, it does not tap: one column keeps every buff line
+   whole on a phone panel, and only a truly wide panel splits it. */
+@container panel (min-width: 470px) {
+  .omni { grid-template-columns: 1fr; }
+}
+@container panel (min-width: 820px) {
+  .omni { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* On a tall screen the arena column has height to spare and the canvas does

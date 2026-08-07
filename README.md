@@ -228,6 +228,17 @@ it.
    automates the early friction, the same bargain Herald, Anvil and
    Forager already made.
 
+   The tab's third catalog is **Omniscience**: one ledger row per
+   countable pile in the game — the five currencies plus every raw and
+   refined resource, forty-five rows. Each row remembers its **record**,
+   the most of that thing ever held at once, and the record only climbs:
+   spending, rebirth and awakening take nothing back. Records pay in
+   **marks**, one per power of ten past the row's base, and every mark is
+   a small permanent buff of the row's own flavour (ore hits harder, wood
+   moves faster, fish keeps you standing, crops pay the mind). Records
+   accrue from minute one, but the buffs only switch on with the first
+   awakening: the ledger is knowledge the road cannot read.
+
    The **first planet discovered opens the Constellations**: where a
    planet automates, a charted constellation *empowers* — four reach the
    skills and four reach the equipment, all permanent:
@@ -281,7 +292,10 @@ it.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
-     the same depth does not pay twice. The pane also keeps the **sprint**:
+     the same depth does not pay twice. The **Relic Echo** lifts every
+     payout by a quarter of its base per rebirth already taken this cycle,
+     so rebirth number six pays real relics at depths number one had
+     already milked dry; awakening resets the echo with the counter. The pane also keeps the **sprint**:
      the deepest stage inside a run's first 30 minutes of game time — a
      personal time-trial with no server behind it, because "how fast does my
      build open" is the question each rebirth actually answers.

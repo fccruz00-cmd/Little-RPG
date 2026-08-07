@@ -20,6 +20,7 @@ import { DISHES } from '../data/dishes.js';
 import {
   PLANETS, CONSTELLATIONS, CONSTELLATION_BY_ID, observeTime,
 } from '../data/cosmos.js';
+import { OMNI, OMNI_ROWS, omniTier, omniNext } from '../data/omni.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { ANCESTORS, HALL } from '../data/ancestors.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
@@ -159,6 +160,7 @@ export class UI {
       planetsFound: $('planets-found'), cosmosDetail: $('cosmos-detail'),
       cosmosSwitch: $('cosmos-switch'), skyStars: $('sky-stars'),
       planetarium: $('planetarium'), constellations: $('constellations'),
+      omniList: $('omni-list'),
       pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
@@ -290,6 +292,7 @@ export class UI {
       ['[data-asc="feats"]', 'Feats'],
       ['[data-sky="planetarium"]', 'Planetarium'],
       ['[data-sky="constellations"]', 'Constellations'],
+      ['[data-sky="omni"]', 'Omniscience'],
       ['[data-league="pure"]', 'Pure'], ['[data-league="gilded"]', 'Gilded'],
       ['[data-league="patron"]', 'Patron'],
       ['[data-board="sprint"]', 'Weekly sprint'], ['[data-board="best"]', 'Best stage'],
@@ -1829,6 +1832,10 @@ export class UI {
       this._autoForge = Math.min(this._autoForge, AUTO_FORGE_EVERY);
     }
 
+    // Omniscience keeps its ledger through background catch-ups too: a
+    // record set while you were not looking is still a record.
+    state.tickOmni(dt);
+
     // The hall. The spirits' clock lives in state (they are game rules,
     // not UI convenience), but it ticks from here so they keep shopping
     // through background catch-ups, exactly like Herald and Anvil.
@@ -1990,6 +1997,54 @@ export class UI {
     };
     build(this.el.planetarium, PLANETS);
     build(this.el.constellations, CONSTELLATIONS);
+    this.buildOmni();
+  }
+
+  /** The ledger: one board per pile, currencies first, then the lines. */
+  buildOmni() {
+    const frag = document.createDocumentFragment();
+    this.omniRows = [];
+    for (const rowDef of OMNI_ROWS) {
+      const el = document.createElement('div');
+      el.className = 'ore key omni-row';
+      const name = rowDef.id.startsWith('ref:')
+        ? `${rowDef.name} ${t(SKILLS[GATHER_IDS.find((id) =>
+          SKILLS[id].resources.some((r) => `ref:${r.id}` === rowDef.id))].refinedName)}`
+        : t(rowDef.name);
+      el.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${rowDef.icon}"></i> ${name}</span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt"></span>`;
+      frag.append(el);
+      this.omniRows.push({
+        def: rowDef, el,
+        what: el.querySelector('.key__what'),
+        have: el.querySelector('b'),
+        mark: el.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.omniList.append(frag);
+  }
+
+  refreshOmni() {
+    const { state } = this;
+    let total = 0;
+    for (const r of this.omniRows) {
+      const record = state.omni[r.def.id] ?? 0;
+      const marks = omniTier(record, r.def.base);
+      const next = omniNext(record, r.def.base);
+      total += marks;
+      setText(r.have, fmt(record));
+      setText(r.mark, marks ? `${marks}/${OMNI.cap}` : '');
+      setHtml(r.what, marks
+        ? `<b>${describeNode(r.def, marks)}</b>`
+          + (next ? ` &middot; ${t('next mark at {0}', fmt(next))}` : ` &middot; ${t('at the summit')}`)
+        : t('first mark at {0}', fmt(r.def.base)));
+      r.el.classList.toggle('is-done', marks >= OMNI.cap);
+      r.el.classList.toggle('can-smelt', marks > 0);
+    }
+    setText(this.el.planetsFound, String(total));
   }
 
   showSky(view) {
@@ -1999,11 +2054,17 @@ export class UI {
     }
     this.el.planetarium.hidden = view !== 'planetarium';
     this.el.constellations.hidden = view !== 'constellations';
+    this.el.omniList.hidden = view !== 'omni';
     this.refreshCosmos();
   }
 
   refreshCosmos() {
     const { state, el } = this;
+    if (this.skyView === 'omni') {
+      setHtml(el.cosmosDetail, t('Omniscience remembers the most of each pile you have ever <b>held at once</b>. Spending takes nothing back: every mark of ten pays its own permanent buff, and the whole ledger survives every reset.'));
+      this.refreshOmni();
+      return;
+    }
     const stars = this.skyView === 'constellations';
     const list = stars ? CONSTELLATIONS : PLANETS;
     const found = list.filter((b) => state.planetFound(b.id)).length;
@@ -2554,7 +2615,7 @@ export class UI {
     // The next relic is measured from what the current run is already worth
     // rather than what was collected, otherwise someone on stage 38 with 3
     // pending relics would read "stage 25", which is long gone.
-    const next = nextRelicStage(relicsEarnedAt(state.maxStage));
+    const next = nextRelicStage(relicsEarnedAt(state.maxStage, state.prestiges), state.prestiges);
     setText(el.presNext, isFinite(next) ? t('stage {0}', next) : t('n/a'));
 
     // The sprint: a record only a reset can improve, said next to the

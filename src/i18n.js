@@ -535,6 +535,19 @@ const PT = {
   'with you': 'com você',
   '{0} WALKS WITH YOU': '{0} ANDA COM VOCÊ',
 
+  // --- Omniscience ---
+  'Omniscience': 'Onisciência',
+  'Omniscience remembers the most of each pile you have ever <b>held at once</b>. Spending takes nothing back: every mark of ten pays its own permanent buff, and the whole ledger survives every reset.':
+    'A Onisciência lembra o máximo de cada pilha que você já <b>segurou de uma vez</b>. Gastar não tira nada de volta: cada marca de dez paga seu próprio buff permanente, e o livro inteiro sobrevive a todo reset.',
+  'first mark at {0}': 'primeira marca em {0}',
+  'next mark at {0}': 'próxima marca em {0}',
+  'at the summit': 'no topo',
+  'Gold': 'Ouro',
+  'Soul dust': 'Pó de alma',
+  'Gems': 'Gemas',
+  'Relics': 'Relíquias',
+  'Souls': 'Almas',
+
   // --- the boards ---
   'Leaderboards': 'Placares',
   'Pure': 'Pura',

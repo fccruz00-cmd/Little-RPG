@@ -5,22 +5,33 @@ export const PRESTIGE = {
   minStage: 25,   // nothing pays out before this
   divisor: 7,
   power: 1.35,
+  // The Relic Echo, the rebirth-sized twin of the Soul Echo below: every
+  // rebirth already taken THIS CYCLE lifts later payouts by a quarter of
+  // the base. Rebirth number six pays noticeably better than number one at
+  // the same depth, so taking another one is always worth something -- and
+  // since souls are measured against the cycle's relics, a cycle of eager
+  // rebirths feeds the awakening too. Awakening resets `prestiges` and the
+  // echo with it: each ascension earns its own momentum.
+  echo: 0.25,
 };
 
 /**
- * Total relics a run reaching `stage` has already paid: cumulative, not
- * incremental. A rebirth grants this minus what was already collected, so
- * repeating the same depth does not pay twice.
+ * Total relics a run reaching `stage` has already paid, for a save with
+ * `prestiges` rebirths behind it this cycle: cumulative, not incremental.
+ * A rebirth grants this minus what was already collected, so repeating
+ * the same depth does not pay twice -- though with the echo, the same
+ * depth IS worth more each time the counter climbs.
  */
-export function relicsEarnedAt(stage) {
+export function relicsEarnedAt(stage, prestiges = 0) {
   if (stage < PRESTIGE.minStage) return 0;
-  return Math.floor(Math.pow((stage - PRESTIGE.minStage + PRESTIGE.divisor) / PRESTIGE.divisor, PRESTIGE.power));
+  const base = Math.pow((stage - PRESTIGE.minStage + PRESTIGE.divisor) / PRESTIGE.divisor, PRESTIGE.power);
+  return Math.floor(base * (1 + PRESTIGE.echo * prestiges));
 }
 
 /** Stage where the next relic drops, starting from `earned`. */
-export function nextRelicStage(earned) {
+export function nextRelicStage(earned, prestiges = 0) {
   for (let s = PRESTIGE.minStage; s < 10000; s++) {
-    if (relicsEarnedAt(s) > earned) return s;
+    if (relicsEarnedAt(s, prestiges) > earned) return s;
   }
   return Infinity;
 }
