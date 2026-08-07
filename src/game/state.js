@@ -1508,7 +1508,7 @@ export class GameState {
   }
 
   // --- the Ancestral Bounty -------------------------------------------
-  /** Extra types each gather pays on top of its own (0, 1 or 2). */
+  /** Extra types each gather pays on top of its own (0 up to 4). */
   get bounty() {
     return this.ancestors.bounty;
   }

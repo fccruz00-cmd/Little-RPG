@@ -5,8 +5,9 @@ walks a straight line on its own, runs into monsters, kills them without
 input and clears stages. All you decide is where the gold goes.
 
 The **UI** keeps the top; under it the **Fight** takes a column of its own
-and the tabbed panel takes another — **Shop**, **Talents**, **Skills**,
-**Cosmos**, **Forge**, **Ancestors**, **Pets** and **Ascend**.
+and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
+**Skills**, **Pets**, **Ancestors**, **Cosmos** and **Ascend**: the
+journey reads left to right, work, friends, the dead, the sky, the leap.
 
 ```
 +--------------------------------------------------+
@@ -196,10 +197,48 @@ it.
      an awakening takes it.
    - *Souls*, the awakening web, paid with **souls**. Survives everything.
      The switch only appears once an awakening has paid for it.
-3. **Skills**: the seven skills behind one switch — Mining, Chopping,
+3. **Forge**: only appears after the first rebirth.
+4. **Skills**: the seven skills behind one switch — Mining, Chopping,
    Fishing and Farming on the line; Smithing at the workshop, Alchemy at
    the cauldron, Cooking at the kitchen.
-4. **Cosmos**: only appears after the first awakening. Two catalogs behind
+5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
+6. **Ancestors**: the Hall of Ancestors, open from the first reset ever
+   taken and never closed again. Every rebirth — and every awakening —
+   leaves behind a **spirit of the hero you were**, and each spirit can be
+   assigned **one Shop row** to keep bought, forever: through the rest of
+   the run, through rebirth, through awakening. Spirits wake on *lifetime*
+   rebirths (a counter nothing resets):
+
+   | spirit | wakes at |
+   |---|---:|
+   | The Founder | 1 |
+   | The Keeper  | 2 |
+   | The Blade   | 3 |
+   | The Miser   | 5 |
+   | The Sage    | 8 |
+   | The Warden  | 12 |
+   | The Reaper  | 17 |
+   | The Eternal | 23 |
+
+   A spirit visits the shop every **8 s** and buys up to its **level** in
+   levels of its row; **dust** raises a spirit (40 → 120 → 360 → 1080, to
+   level 5), which gives dust something to want besides the forge. An
+   assigned board wears its receipt: the row's current shop level and
+   what that level pays right now, in the shop's own words. The
+   **gold reserve** (0/25/50/75%) is the slice of the purse the whole hall
+   must leave untouched, so the spirits never starve a boss build or a
+   forge session. Same law as Herald and Anvil: a spirit only does what a
+   finger could — the shelf gates hold, capped rows stop at their caps,
+   and everything comes out of the one purse.
+
+   The hall also sells the **Ancestral Bounty** (750 → 3,000 → 12,000 →
+   48,000 dust, four levels): every gather pays **the same haul again in
+   the line's other types**, up to the whole line in one swing at level
+   four — work a pine and the oak comes along, then the ash. It reaches
+   *up* while the tool allows and falls back down after, because the dead
+   widen your hands but cannot sharpen your axe. The blessing is a rule of
+   gathering itself, so the Cosmos' planets work with blessed hands too.
+7. **Cosmos**: only appears after the first awakening. Two catalogs behind
    one switch — the **Planetarium** and the **Constellations** — drawn as
    sideways-scrolling rows of card portraits joined O → O → O, sharing
    **one telescope**: an hour spent charting The Sword is an hour Jupiter
@@ -257,41 +296,6 @@ it.
    | The River   | 7   | 16% faster work, every gathering skill |
    | The Twins   | 9   | enchants +60% stronger |
    | The Crown   | 12  | the set bonus +60% stronger |
-5. **Forge**: only appears after the first rebirth.
-6. **Ancestors**: the Hall of Ancestors, open from the first reset ever
-   taken and never closed again. Every rebirth — and every awakening —
-   leaves behind a **spirit of the hero you were**, and each spirit can be
-   assigned **one Shop row** to keep bought, forever: through the rest of
-   the run, through rebirth, through awakening. Spirits wake on *lifetime*
-   rebirths (a counter nothing resets):
-
-   | spirit | wakes at |
-   |---|---:|
-   | The Founder | 1 |
-   | The Keeper  | 2 |
-   | The Blade   | 3 |
-   | The Miser   | 5 |
-   | The Sage    | 8 |
-   | The Warden  | 12 |
-   | The Reaper  | 17 |
-   | The Eternal | 23 |
-
-   A spirit visits the shop every **8 s** and buys up to its **level** in
-   levels of its row; **dust** raises a spirit (40 → 120 → 360 → 1080, to
-   level 5), which gives dust something to want besides the forge. The
-   **gold reserve** (0/25/50/75%) is the slice of the purse the whole hall
-   must leave untouched, so the spirits never starve a boss build or a
-   forge session. Same law as Herald and Anvil: a spirit only does what a
-   finger could — the shelf gates hold, capped rows stop at their caps,
-   and everything comes out of the one purse.
-
-   The hall also sells the **Ancestral Bounty** (750 then 3,000 dust, two
-   levels): every gather pays **the same haul again in the line's other
-   types** — work a pine and the oak comes along, then the ash. It reaches
-   *up* while the tool allows and falls back down after, because the dead
-   widen your hands but cannot sharpen your axe. The blessing is a rule of
-   gathering itself, so the Cosmos' planets work with blessed hands too.
-7. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
 8. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since

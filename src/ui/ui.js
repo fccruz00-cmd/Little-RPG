@@ -595,6 +595,7 @@ export class UI {
         <span class="pet__body">
           <span class="pet__name">${t(spirit.name)} <em class="pet__lvl"></em></span>
           <select class="spirit__task" aria-label="${t('Assignment')}"></select>
+          <span class="pet__effect spirit__gain"></span>
           <span class="pet__effect spirit__locked"></span>
         </span>
         <button class="equip pet__feed spirit__up" type="button"></button>`;
@@ -604,6 +605,7 @@ export class UI {
         spirit, i, row,
         lvl: row.querySelector('.pet__lvl'),
         task: row.querySelector('.spirit__task'),
+        gain: row.querySelector('.spirit__gain'),
         locked: row.querySelector('.spirit__locked'),
         up: row.querySelector('.spirit__up'),
         options: '',
@@ -666,6 +668,7 @@ export class UI {
       if (!woken) {
         setText(r.locked, t('wakes at {0} lifetime rebirth(s)', r.spirit.at));
         setText(r.lvl, '');
+        r.gain.hidden = true;
         continue;
       }
       setText(r.lvl, `Lv. ${state.spiritLevel(r.i)}`);
@@ -679,6 +682,14 @@ export class UI {
       }
       const want = state.ancestors.assign[r.i] ?? '';
       if (r.task.value !== want) r.task.value = want;
+      // The receipt: the shop level this spirit keeps bought and what that
+      // level pays right now, in the shop row's own words.
+      const chore = want && UPGRADES.find((u) => u.key === want);
+      r.gain.hidden = !chore;
+      if (chore) {
+        const lvl = state.levels[want] ?? 0;
+        setText(r.gain, `Lv. ${lvl}: ${chore.describe(lvl)}`);
+      }
       const maxed = state.spiritLevel(r.i) >= HALL.maxLevel;
       setHtml(r.up, maxed ? 'MAX'
         : `<i class="ico ico--sm ico--dust"></i> ${fmt(state.spiritUpCost(r.i))}`);
@@ -968,7 +979,7 @@ export class UI {
     el.hallBless.addEventListener('click', () => {
       if (!state.buyBounty()) return;
       this.sfx.play('jingle');
-      this.toast({ text: t('ANCESTRAL BOUNTY {0}', ['I', 'II'][state.bounty - 1] ?? state.bounty) });
+      this.toast({ text: t('ANCESTRAL BOUNTY {0}', ['I', 'II', 'III', 'IV'][state.bounty - 1] ?? state.bounty) });
       this.refreshHall();
     });
     for (const r of this.spiritRows) {
@@ -978,6 +989,7 @@ export class UI {
           return;
         }
         this.sfx.play('buy');
+        this.refreshHall();   // the receipt under the select follows it
       });
       r.up.addEventListener('click', () => {
         if (!state.upgradeSpirit(r.i)) return;

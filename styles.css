@@ -1470,6 +1470,10 @@ body { display: flex; justify-content: center; }
 .spirit__locked { display: block; }
 .spirit__locked[hidden] { display: none; }
 
+/* The receipt under the chore: what the kept row pays right now. */
+.spirit__gain { display: block; color: var(--accent); }
+.spirit__gain[hidden] { display: none; }
+
 /* A native select, dressed like the boards around it. Native on purpose:
    the picker a phone opens for it beats anything hand-rolled here. */
 .spirit__task {
