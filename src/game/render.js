@@ -11,7 +11,15 @@ const TARGET_WORLD_H = 92;
 // The CSS pins the canvas to a wide box so this rarely binds; it is here so a
 // future layout change cannot starve the camera without anyone noticing.
 const MIN_WORLD_W = 100;
+// There is deliberately NO ceiling to go with that floor. A wide band shows a
+// lot of road -- 480 units on a 1920px screen against a phone's 117 -- and
+// zooming in to fix it was tried and reverted: it made the sprites huge and,
+// because band height is what buys the zoom, it ate the panel. The framing
+// on a wide screen is a trade with no free side; see LAYOUT in the README.
 const GROUND_FROM_BOTTOM = 16;
+// The ground line of the world the scenery was drawn against: 92 tall less
+// the 16 under the ground. Every parallax height below is a fraction of this.
+const REFERENCE_GROUND_Y = TARGET_WORLD_H - GROUND_FROM_BOTTOM;
 
 /** Deterministic noise: same input, same scenery, no popping. */
 function hash(n) {
@@ -86,12 +94,110 @@ export class Renderer {
     this.width = 200;
     this.height = 64;
     this.dpr = 1;
+    this.grid = 3;   // resize() owns these; sane values until it first runs
+    this.sky = 1;
 
     // scratch canvas for the white hit flash
     this.scratch = document.createElement('canvas');
     this.scratch.width = FRAME;
     this.scratch.height = FRAME;
     this.scratchCtx = this.scratch.getContext('2d');
+
+    // Scenery layers (PixelLab art baked into masks; see assets/bg/). They
+    // load in the background and the procedural silhouettes keep drawing
+    // until they land, so a slow disk never blanks the arena.
+    this.layers = null;
+    this._tintCache = new Map();
+    this.loadScenery();
+  }
+
+  /**
+   * The background art is shipped as WHITE alpha masks and tinted at draw
+   * time with the biome's own colours -- one set of images serves all
+   * fourteen palettes, and hell keeps looking like hell for free.
+   */
+  loadScenery() {
+    const one = (src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = globalThis.__ASSET_MAP?.[src] ?? src;
+    });
+    Promise.all([
+      one('assets/bg/far.png'), one('assets/bg/mid.png'), one('assets/bg/trees.png'),
+      one('assets/bg/ground.png'), one('assets/bg/moon.png'),
+      one('assets/bg/node_tree.png'),
+    ]).then(([far, mid, trees, ground, moon, tree]) => {
+      if (far && mid && trees && ground && moon) {
+        this.layers = { far, mid, trees, ground, moon };
+        if (tree) this.layers.nodes = { tree };
+      }
+    });
+  }
+
+  /**
+   * Gathering-node sprite tinted to a RESOURCE. The tintable part ships
+   * keyed in two magentas (lit #ff00ff, shaded #b000b0); this swaps them
+   * for the resource's colour and a darker cut of it, once per pair.
+   */
+  nodeSprite(kind, color) {
+    const key = `node|${kind}|${color}`;
+    let out = this._tintCache.get(key);
+    if (out) return out;
+    const img = this.layers.nodes[kind];
+    out = document.createElement('canvas');
+    out.width = img.width;
+    out.height = img.height;
+    const c = out.getContext('2d');
+    c.drawImage(img, 0, 0);
+    const data = c.getImageData(0, 0, out.width, out.height);
+    const px = data.data;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] === 0) continue;
+      if (px[i] === 255 && px[i + 1] === 0 && px[i + 2] === 255) {
+        px[i] = r; px[i + 1] = g; px[i + 2] = b;
+      } else if (px[i] === 176 && px[i + 1] === 0 && px[i + 2] === 176) {
+        px[i] = (r * 0.62) | 0; px[i + 1] = (g * 0.62) | 0; px[i + 2] = (b * 0.62) | 0;
+      }
+    }
+    c.putImageData(data, 0, 0);
+    this._tintCache.set(key, out);
+    return out;
+  }
+
+  /** A mask filled with `color`, cached per (layer, colour). */
+  tinted(name, img, color, alpha = 0.6) {
+    const key = `${name}|${color}`;
+    let out = this._tintCache.get(key);
+    if (out) return out;
+    out = document.createElement('canvas');
+    out.width = img.width;
+    out.height = img.height;
+    const c = out.getContext('2d');
+    c.drawImage(img, 0, 0);
+    // Masks are solid white, so 'source-in' paints the silhouette; the moon
+    // keeps its craters through 'source-atop' at partial strength.
+    c.globalCompositeOperation = name === 'moon' ? 'source-atop' : 'source-in';
+    if (name === 'moon') c.globalAlpha = alpha;
+    c.fillStyle = color;
+    c.fillRect(0, 0, out.width, out.height);
+    this._tintCache.set(key, out);
+    return out;
+  }
+
+  /** Tiles one parallax band across the view, snapped to device pixels. */
+  tileLayer(name, img, color, parallax, camX, baseY, worldH) {
+    const { ctx } = this;
+    const tile = this.tinted(name, img, color);
+    const dh = Math.round(worldH);
+    const dw = Math.max(1, Math.round(img.width * (dh / img.height)));
+    let x = -(((camX * parallax) % dw + dw) % dw);
+    for (; x < this.width; x += dw) {
+      ctx.drawImage(tile, this.q(x), Math.round(baseY - dh), dw, dh);
+    }
   }
 
   /** Recomputes the logical resolution. Returns the visible world width. */
@@ -100,6 +206,16 @@ export class Renderer {
     const cssW = Math.max(1, rect.width);
     const cssH = Math.max(1, rect.height);
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    // Safari silently blanks any canvas whose backing store passes about
+    // 16.7M pixels -- no throw, no warning, just a black rectangle where
+    // the game should be. A big Retina window (4K fullscreen at dpr 2)
+    // walks straight into it. Give the cap a margin and pay for oversized
+    // frames with resolution instead of with a black screen.
+    const MAX_AREA = 15e6;
+    const area = cssW * cssH * this.dpr * this.dpr;
+    if (area > MAX_AREA) {
+      this.dpr = Math.max(1, Math.sqrt(MAX_AREA / (cssW * cssH)));
+    }
     // Height picks the zoom; width vetoes it. `floor` on the width term, not
     // `round`: rounding UP is exactly the case that lands the world under
     // MIN_WORLD_W, which is the number the term exists to protect.
@@ -114,7 +230,35 @@ export class Renderer {
     this.width = cssW / this.scale;
     this.height = cssH / this.scale;
     this.groundY = this.height - GROUND_FROM_BOTTOM;
+    // Device pixels per world unit: the grid everything that MOVES snaps to.
+    this.grid = this.dpr * this.scale;
+    // How much sky there is to fill, against the world the art was drawn for.
+    // The parallax heights were literals -- 46 units of far hill over a 72
+    // unit ground line -- which is two thirds of a phone's sky and a fifth of
+    // a 1440p column's. The bands scale with the sky instead, so the same
+    // silhouette sits at the same HEIGHT in the frame at any size. Floored at
+    // 1 so no screen ever gets less scenery than the phone was drawn with.
+    this.sky = Math.max(1, Math.min(2, this.groundY / REFERENCE_GROUND_Y));
     return this.width;
+  }
+
+  /**
+   * Snap a world coordinate to the screen's pixel grid, not the world's.
+   *
+   * Everything used to round to whole world units, so the world only moved on
+   * the frames where it had accumulated a whole unit -- 50 distinct positions
+   * over 120 frames, on every screen. It reads as a stutter and it is not
+   * one; the fight is running at 60. Rounding to DEVICE pixels instead makes
+   * the step one screen pixel, which is 87 positions over the same 120
+   * frames and is what "smooth" means here.
+   *
+   * It costs no sharpness. `grid` is dpr x scale, so a snapped sprite origin
+   * lands on a whole device pixel and each source pixel still covers exactly
+   * `grid` of them -- the art stays on the grid, only the camera gets to move
+   * between world pixels.
+   */
+  q(v) {
+    return Math.round(v * this.grid) / this.grid;
   }
 
   /** @param {import('./battle.js').Battle} battle */
@@ -126,7 +270,21 @@ export class Renderer {
     ctx.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, 0, 0);
     ctx.imageSmoothingEnabled = false;
 
-    this.drawBackground(camX, biome, tier, time);
+    // If the image-layer path fails on some browser or driver, drop the
+    // layers for good and let the procedural scenery carry the frame: a
+    // plainer sky beats a black screen, permanently and loudly.
+    try {
+      this.drawBackground(camX, biome, tier, time);
+    } catch (err) {
+      if (this.layers) {
+        console.warn('scenery layers failed, falling back to procedural', err);
+        this.layers = null;
+        this._tintCache.clear();
+        this.drawBackground(camX, biome, tier, time);
+      } else {
+        throw err;
+      }
+    }
     this.drawProps(battle, camX, time);
     this.drawNodes(battle, camX);
 
@@ -169,22 +327,42 @@ export class Renderer {
         if (y < 0) y += field;
       }
       ctx.globalAlpha = 0.25 + hash(i + 77) * 0.5;
-      ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+      ctx.fillRect(this.q(x), this.q(y), 1, 1);
     }
     ctx.globalAlpha = 1;
 
-    // moon: bone over the overworld, blood over hell, ash in the depths
+    // moon: bone over the overworld, blood over hell, ash in the depths.
+    // A cratered sprite when the art has landed, the plain disc until then.
     const moonX = 20 - ((camX * 0.02) % (W + 60));
-    ctx.fillStyle = tier.moon;
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.arc(moonX + W * 0.7, 12, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    if (this.layers) {
+      const d = Math.round(11 * this.sky);
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(this.tinted('moon', this.layers.moon, tier.moon),
+        this.q(moonX + W * 0.7 - d / 2), Math.round(12 * this.sky - d / 2), d, d);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = tier.moon;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(moonX + W * 0.7, 12 * this.sky, 5 * this.sky, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
 
-    this.drawHills(camX * 0.15, groundY + 2, 26, 46, biome.far, 26);
-    this.drawHills(camX * 0.38, groundY + 2, 16, 31, biome.mid, 16);
-    this.drawTrees(camX * 0.62, groundY, biome.tree);
+    if (this.layers) {
+      // The PixelLab bands: ridge, wooded hills, pine treeline -- shipped
+      // as masks, tinted with this biome's own far/mid/tree colours, and
+      // mirror-baked so the tiling has no seam to find.
+      this.tileLayer('far', this.layers.far, biome.far, 0.15, camX, groundY + 2, 52 * this.sky);
+      this.tileLayer('mid', this.layers.mid, biome.mid, 0.38, camX, groundY + 2, 34 * this.sky);
+      this.tileLayer('trees', this.layers.trees, biome.tree, 0.62, camX, groundY + 1, 24 * this.sky);
+    } else {
+      // The seeds stay 26 and 16: they are what makes the two bands
+      // different silhouettes, and they must not move when the heights do.
+      this.drawHills(camX * 0.15, groundY + 2, 26 * this.sky, 46 * this.sky, biome.far, 26);
+      this.drawHills(camX * 0.38, groundY + 2, 16 * this.sky, 31 * this.sky, biome.mid, 16);
+      this.drawTrees(camX * 0.62, groundY, biome.tree);
+    }
 
     // ground
     ctx.fillStyle = biome.ground;
@@ -192,15 +370,26 @@ export class Renderer {
     ctx.fillStyle = biome.grass;
     ctx.fillRect(0, groundY, W, 2);
 
-    // ground detail (scrolls with the world)
-    ctx.fillStyle = '#00000038';
-    const step = 7;
-    const first = Math.floor(camX / step);
-    for (let k = first; k * step - camX < W + step; k++) {
-      const r = hash(k * 31 + 5);
-      if (r > 0.55) continue;
-      const x = Math.floor(k * step - camX + r * 4);
-      ctx.fillRect(x, groundY + 4 + Math.floor(r * 8), 2 + Math.floor(r * 4), 1);
+    if (this.layers) {
+      // Real dirt: a detail map (translucent darks and lights) laid over
+      // the biome's ground colour, scrolling with the world at full speed.
+      const g = this.layers.ground;
+      const dw = g.width;
+      let x = -(((camX % dw) + dw) % dw);
+      for (; x < W; x += dw) {
+        ctx.drawImage(g, this.q(x), groundY, dw, GROUND_FROM_BOTTOM);
+      }
+    } else {
+      // ground detail (scrolls with the world)
+      ctx.fillStyle = '#00000038';
+      const step = 7;
+      const first = Math.floor(camX / step);
+      for (let k = first; k * step - camX < W + step; k++) {
+        const r = hash(k * 31 + 5);
+        if (r > 0.55) continue;
+        const x = this.q(k * step - camX + r * 4);
+        ctx.fillRect(x, groundY + 4 + Math.floor(r * 8), 2 + Math.floor(r * 4), 1);
+      }
     }
 
     // foreground grass tufts
@@ -208,10 +397,10 @@ export class Renderer {
     for (let k = Math.floor(camX / 11); k * 11 - camX < W + 11; k++) {
       const r = hash(k * 17 + 3);
       if (r > 0.45) continue;
-      const x = Math.floor(k * 11 - camX);
+      const x = this.q(k * 11 - camX);
       const h = 2 + Math.floor(r * 6);
       const sway = Math.sin(time * 1.6 + k) * 0.5;
-      ctx.fillRect(x + Math.round(sway), groundY - h + 1, 1, h);
+      ctx.fillRect(this.q(x + sway), groundY - h + 1, 1, h);
       ctx.fillRect(x + 1, groundY - h + 3, 1, h - 2);
     }
   }
@@ -242,6 +431,11 @@ export class Renderer {
     ctx.fill();
   }
 
+  /**
+   * Height scales with the sky; SPACING does not. Scaling the span too
+   * thinned the treeline out -- the same one-in-three filter over a stride
+   * half again as long is half the trees across the same stretch of road.
+   */
   drawTrees(offset, baseY, color) {
     const { ctx, width: W } = this;
     const span = 26;
@@ -249,8 +443,8 @@ export class Renderer {
     for (let k = Math.floor(offset / span) - 1; k * span - offset < W + span; k++) {
       const r = hash(k * 13 + 101);
       if (r > 0.6) continue;
-      const x = Math.round(k * span - offset + r * 12);
-      const h = 12 + Math.round(r * 14);
+      const x = this.q(k * span - offset + r * 12);
+      const h = Math.round((12 + r * 14) * this.sky);
       ctx.fillRect(x, baseY - h, 2, h);
       ctx.beginPath();
       ctx.moveTo(x - 5, baseY - h + 4);
@@ -273,7 +467,7 @@ export class Renderer {
   drawProps(battle, camX, time) {
     const { ctx, groundY } = this;
     for (const prop of battle.props) {
-      const x = Math.round(prop.x - camX);
+      const x = this.q(prop.x - camX);
       if (x < -16 || x > this.width + 16) continue;
       if (prop.kind === 'chest') {
         // a squat box with a gold band and a keyhole glint
@@ -285,6 +479,33 @@ export class Renderer {
         ctx.fillRect(x - 4, groundY - 4, 9, 1);
         ctx.fillStyle = '#ffe9ae';
         ctx.fillRect(x, groundY - 4, 1, 1);
+      } else if (prop.kind === 'merchant') {
+        // a hand cart under a striped awning
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(x - 5, groundY - 5, 10, 4);        // cart bed
+        ctx.fillStyle = '#3b3b4a';
+        ctx.fillRect(x - 3, groundY - 2, 2, 2);         // wheels
+        ctx.fillRect(x + 2, groundY - 2, 2, 2);
+        ctx.fillStyle = '#5c3a21';
+        ctx.fillRect(x - 5, groundY - 8, 1, 3);         // awning posts
+        ctx.fillRect(x + 4, groundY - 8, 1, 3);
+        ctx.fillStyle = '#b74132';
+        ctx.fillRect(x - 6, groundY - 10, 12, 2);       // awning
+        ctx.fillStyle = '#e6dccb';
+        ctx.fillRect(x - 5, groundY - 9, 2, 1);         // stripes
+        ctx.fillRect(x - 1, groundY - 9, 2, 1);
+        ctx.fillRect(x + 3, groundY - 9, 2, 1);
+      } else if (prop.kind === 'caravan') {
+        // a stranded covered wagon with a torn red rag
+        ctx.fillStyle = '#7a4f2c';
+        ctx.fillRect(x - 6, groundY - 6, 12, 5);        // wagon body
+        ctx.fillStyle = '#3b3b4a';
+        ctx.fillRect(x - 4, groundY - 2, 3, 2);         // wheels
+        ctx.fillRect(x + 2, groundY - 2, 3, 2);
+        ctx.fillStyle = '#dacea4';
+        ctx.fillRect(x - 5, groundY - 9, 10, 3);        // canvas cover
+        ctx.fillStyle = '#b74132';
+        ctx.fillRect(x + 3, groundY - 10, 2, 1);        // the rag
       } else {
         // an obelisk with a breathing light on top
         ctx.fillStyle = '#3b3b4a';
@@ -303,7 +524,7 @@ export class Renderer {
   drawNodes(battle, camX) {
     const { ctx, groundY } = this;
     for (const node of battle.nodes) {
-      const x = Math.round(node.x - camX);
+      const x = this.q(node.x - camX);
       if (x < -24 || x > this.width + 24) continue;
       const nudge = node.shake > 0 ? (Math.random() < 0.5 ? 1 : 0) : 0;
       const bx = x - 5 + nudge;
@@ -314,8 +535,18 @@ export class Renderer {
         continue;
       }
 
-      if (node.kind === 'vein') this.drawVein(bx, groundY, node);
+      // Only the TREE wears PixelLab art (green canopy, tier-coloured
+      // fruit); the vein, pool and plot keep the original hand-pixelled
+      // drawings, which read better at ten pixels than any generated
+      // sprite did -- measured by the only judge that counts.
+      if (node.kind === 'tree' && this.layers?.nodes) {
+        const color = node.locked ? '#4a4842' : node.resource.color;
+        ctx.globalAlpha = node.locked ? 0.6 : 1;
+        ctx.drawImage(this.nodeSprite('tree', color), bx - 7, groundY - 25, 26, 26);
+        ctx.globalAlpha = 1;
+      } else if (node.kind === 'vein') this.drawVein(bx, groundY, node);
       else if (node.kind === 'tree') this.drawTreeNode(bx, groundY, node);
+      else if (node.kind === 'plot') this.drawPlot(bx, groundY, node);
       else this.drawPool(bx, groundY, node);
 
       if (node.locked) {
@@ -372,6 +603,29 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
+  /** A plot is tilled rows with the crop poking out in its own colour. */
+  drawPlot(bx, groundY, node) {
+    const { ctx } = this;
+    // the tilled mound: two ridges of turned earth
+    ctx.fillStyle = node.locked ? '#3a3531' : '#4d3624';
+    ctx.fillRect(bx, groundY - 2, 11, 2);
+    ctx.fillStyle = node.locked ? '#453f39' : '#5f452e';
+    ctx.fillRect(bx + 1, groundY - 3, 4, 1);
+    ctx.fillRect(bx + 6, groundY - 3, 4, 1);
+    // the crop: three sprouts in the resource's colour
+    ctx.fillStyle = node.locked ? '#4a4842' : node.resource.color;
+    ctx.globalAlpha = node.locked ? 0.5 : 1;
+    ctx.fillRect(bx + 2, groundY - 6, 2, 3);
+    ctx.fillRect(bx + 5, groundY - 7, 2, 4);
+    ctx.fillRect(bx + 8, groundY - 6, 2, 3);
+    // green stems under the taller heads
+    if (!node.locked) {
+      ctx.fillStyle = '#6dba79';
+      ctx.fillRect(bx + 5, groundY - 4, 2, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
   /** A pool sits IN the ground rather than on it, so it reads as water. */
   drawPool(bx, groundY, node) {
     const { ctx } = this;
@@ -394,8 +648,8 @@ export class Renderer {
     const frame = actor.anim.frame;
     const sx = frame * FRAME;
     const hover = actor.hover ? Math.sin(performance.now() / 260 + actor.bob) * 1.5 - actor.hover : 0;
-    const dx = Math.round(actor.x - camX - FRAME / 2);
-    const dy = Math.round(this.groundY - GROUND_LINE + hover);
+    const dx = this.q(actor.x - camX - FRAME / 2);
+    const dy = this.q(this.groundY - GROUND_LINE + hover);
     const scale = actor.scale ?? 1;
 
     ctx.save();
@@ -547,8 +801,8 @@ export class Renderer {
    */
   bar(x, y, w, ratio, tones, rail = BAR_RAIL_DIM) {
     const { ctx } = this;
-    const px = Math.round(x);
-    const py = Math.round(y);
+    const px = this.q(x);
+    const py = this.q(y);
     const h = tones.length;             // one row per tone, 3 by default
     ctx.fillStyle = '#000000aa';
     ctx.fillRect(px - 1, py - 1, w + 2, h + 3);

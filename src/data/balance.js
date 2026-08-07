@@ -63,15 +63,50 @@ export const STATS = {
   lifesteal: { base: 0,    step: 0.004,   cost: 260, costGrowth: 1.300, cap: 0.10 },
   ferocity:  { base: 0,    step: 0.008,   cost: 320, costGrowth: 1.310, cap: 0.20 },
   insight:   { base: 1,    step: 0.06,    cost: 150, costGrowth: 1.290, cap: 3 },
+
+  // The third and fourth shelves, gated by `gate`: six open with the first
+  // rebirth, three with the first awakening. They exist because the shop went
+  // quiet exactly when the player had the most gold multipliers to spend --
+  // and because a wide panel had the room. All CAPPED, same reason as the
+  // second shelf; the gate keys are wired in battle.js/state.js, not here.
+  bossDamage:{ base: 0,    step: 0.05,    cost: 400,  costGrowth: 1.300, cap: 1.0,  gate: 'prestige' },
+  thorns:    { base: 0,    step: 0.012,   cost: 350,  costGrowth: 1.280, cap: 0.24, gate: 'prestige' },
+  overkill:  { base: 0,    step: 0.025,   cost: 500,  costGrowth: 1.300, cap: 0.5,  gate: 'prestige' },
+  dustFind:  { base: 0,    step: 0.012,   cost: 450,  costGrowth: 1.290, cap: 0.24, gate: 'prestige' },
+  respawn:   { base: 0,    step: 0.04,    cost: 300,  costGrowth: 1.300, cap: 0.4,  gate: 'prestige' },
+  warChest:  { base: 0,    step: 0.06,    cost: 380,  costGrowth: 1.280, cap: 1.2,  gate: 'prestige' },
+  might:     { base: 0,    step: 0.02,    cost: 2000, costGrowth: 1.350, cap: 0.4,  gate: 'awaken' },
+  reap:      { base: 0,    step: 0.005,   cost: 2500, costGrowth: 1.400, cap: 0.10, gate: 'awaken' },
+  phoenix:   { base: 0,    step: 0.02,    cost: 1800, costGrowth: 1.350, cap: 0.30, gate: 'awaken' },
 };
 
-/** Value of a stat at a given level. */
+/**
+ * Whether a gated stat's shelf is open for this save. `prestiges` goes back
+ * to zero on an awakening, so the rebirth shelf honours `awakens` too --
+ * without that, the player who went deepest would watch six upgrades vanish.
+ */
+export function statUnlocked(key, state) {
+  const gate = STATS[key].gate;
+  if (!gate) return true;
+  if (gate === 'awaken') return state.awakens > 0;
+  return state.prestiges > 0 || state.awakens > 0;
+}
+
+/** Value of a stat at a given level. Memoized: the damage/health getters
+ *  sit on the hottest paths in the game and levels are small integers, so
+ *  the Math.pow is paid once per (stat, level) ever instead of per read.
+ *  An array per stat, not a keyed map: the map's string key allocated on
+ *  every hit and promptly showed up in the profile itself. */
+const VALUE_MEMO = Object.create(null);
 export function statValue(key, lvl) {
+  const arr = VALUE_MEMO[key] ?? (VALUE_MEMO[key] = []);
+  const hit = arr[lvl];
+  if (hit !== undefined) return hit;
   const s = STATS[key];
   const v = s.growth != null
     ? s.base * Math.pow(s.growth, lvl)
     : s.base + s.step * lvl;
-  return s.cap != null ? Math.min(s.cap, v) : v;
+  return arr[lvl] = s.cap != null ? Math.min(s.cap, v) : v;
 }
 
 /** Last useful level of a capped stat (Infinity when uncapped). */

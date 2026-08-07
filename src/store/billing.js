@@ -30,6 +30,8 @@
  * would be wrong for most of the planet on day one.
  */
 
+import { reportPurchase } from '../net/leaderboard.js';
+
 /**
  * What money buys. Only the SKU and the gem count live here; the price comes
  * back from the store at runtime and the SKUs must match the managed products
@@ -180,7 +182,13 @@ export class Billing {
   /** Credits through the state's ledger, and tells the UI if anything landed. */
   deliver(token, pack) {
     const gems = this.state.redeemPurchase(token, pack.gems);
-    if (gems > 0) this.onCredit(gems, pack);
+    if (gems > 0) {
+      this.onCredit(gems, pack);
+      // The leaderboard's patron shield: the token goes to the backend,
+      // which asks Google whether it is real. Fire and forget; a purchase
+      // must never wait on, or fail because of, a score table.
+      reportPurchase(pack.sku, token);
+    }
     return gems;
   }
 

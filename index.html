@@ -32,6 +32,14 @@
            beside it and only exists when a real one answered: see
            src/store/billing.js. -->
       <span class="hud__tools">
+        <!-- Sim speed. x2 opens with the first rebirth, x3 with the first
+             awakening; a tap past the gate says which door is shut. -->
+        <button class="hud__btn hud__btn--speed" id="btn-speed" type="button"
+                aria-label="Game speed">x1</button>
+        <!-- The boards. Only exists when a backend is configured
+             (src/net/config.js); an unconfigured build stays fully offline. -->
+        <button class="hud__btn" id="btn-ranks" type="button" hidden
+                aria-label="Leaderboards"><i class="ico ico--crown"></i></button>
         <button class="hud__btn" id="btn-store" type="button"
                 aria-label="Store"><i class="ico ico--shop"></i></button>
         <button class="hud__btn" id="btn-options" type="button"
@@ -94,21 +102,31 @@
       <button class="tab" data-tab="talents" type="button" role="tab">
         Talents<i class="pip" id="pip-talents" hidden></i>
       </button>
-      <button class="tab" data-tab="skills" type="button" role="tab">
-        Skills<i class="pip" id="pip-skills" hidden></i>
-      </button>
       <button class="tab" data-tab="forge" type="button" role="tab" id="tab-forge" hidden>
         Forge<i class="pip" id="pip-forge" hidden></i>
       </button>
+      <!-- from here the strip reads as the journey: work, friends, the
+           dead, the sky, the leap -->
+      <button class="tab" data-tab="skills" type="button" role="tab">
+        Skills<i class="pip" id="pip-skills" hidden></i>
+      </button>
       <button class="tab" data-tab="pets" type="button" role="tab">
         Pets<i class="pip" id="pip-pets" hidden></i>
+      </button>
+      <!-- the hall a rebirth opens: your past lives shop for you -->
+      <button class="tab" data-tab="hall" type="button" role="tab" id="tab-hall" hidden>
+        Ancestors<i class="pip" id="pip-hall" hidden></i>
+      </button>
+      <!-- the layer an awakening opens above the road -->
+      <button class="tab" data-tab="cosmos" type="button" role="tab" id="tab-cosmos" hidden>
+        Cosmos<i class="pip" id="pip-cosmos" hidden></i>
       </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
         Ascend<i class="pip" id="pip-prestige" hidden></i>
       </button>
     </nav>
 
-    <!-- tab 1: gold upgrades -->
+    <!-- tab 1: gold upgrades, with the day's contracts pinned on top -->
     <div class="pane is-on" id="pane-upgrades">
       <div class="pane__head">
         <span class="pane__hint" id="shop-hint"></span>
@@ -117,7 +135,14 @@
           <span>Buy max</span>
         </label>
       </div>
-      <ul class="shop" id="shop-list"></ul>
+      <ul class="shop" id="shop-list">
+        <li class="quests" id="quests-wrap">
+          <h3 class="sect sect--quests"><i class="ico ico--sm ico--gem"></i>
+            <span id="quests-title">Contracts</span>
+            <em class="quests__next" id="quests-next"></em></h3>
+          <div class="keys" id="quests"></div>
+        </li>
+      </ul>
     </div>
 
     <!-- tab 2: skill trees (levels and relics) -->
@@ -146,7 +171,10 @@
           <button class="is-on" data-skill="mining" type="button">Mining</button>
           <button data-skill="chopping" type="button">Chopping</button>
           <button data-skill="fishing" type="button">Fishing</button>
+          <button data-skill="farming" type="button">Farming</button>
           <button data-skill="smithing" type="button">Smithing</button>
+          <button data-skill="alchemy" type="button">Alchemy</button>
+          <button data-skill="cooking" type="button">Cooking</button>
         </div>
         <button class="link" id="btn-respec-skill" type="button">respec</button>
       </div>
@@ -169,8 +197,6 @@
       <div class="workshop" id="workshop" hidden>
         <h3 class="sect"><i class="ico ico--sm ico--relic"></i> Dungeon keys</h3>
         <div class="keys" id="keys"></div>
-        <h3 class="sect"><i class="ico ico--sm ico--regen"></i> Cauldron</h3>
-        <div class="keys" id="cauldron"></div>
         <h3 class="sect"><i class="ico ico--sm ico--dust"></i> What smithing gives you</h3>
         <dl class="odds" id="smith-odds"></dl>
         <dl class="facts">
@@ -179,6 +205,19 @@
           <div><dt>Dust back on a miss</dt><dd id="smith-scrap">30%</dd></div>
           <div><dt>Never rolls below</dt><dd id="smith-floor">Common</dd></div>
         </dl>
+      </div>
+
+      <!-- alchemy has no line either: its bench is the cauldron, and every
+           brew levels the skill. Shown only on the Alchemy switch. -->
+      <div class="workshop" id="cauldron-wrap" hidden>
+        <h3 class="sect" id="cauldron-title"><i class="ico ico--sm ico--regen"></i> Cauldron</h3>
+        <div class="keys" id="cauldron"></div>
+      </div>
+
+      <!-- cooking's bench: dishes out of farming's crates -->
+      <div class="workshop" id="kitchen-wrap" hidden>
+        <h3 class="sect" id="kitchen-title"><i class="ico ico--sm ico--cookpot"></i> Kitchen</h3>
+        <div class="keys" id="kitchen"></div>
       </div>
 
       <div class="mine-tools" id="tool-wrap">
@@ -197,6 +236,29 @@
       <div class="tree-scroll" id="tree-chopping" hidden></div>
       <div class="tree-scroll" id="tree-fishing" hidden></div>
       <div class="tree-scroll" id="tree-smithing" hidden></div>
+      <div class="tree-scroll" id="tree-alchemy" hidden></div>
+      <div class="tree-scroll" id="tree-farming" hidden></div>
+      <div class="tree-scroll" id="tree-cooking" hidden></div>
+    </div>
+
+    <!-- tab: the cosmos (shows up after the first awakening). Two catalogs
+         share one telescope: planets automate, constellations empower. -->
+    <div class="pane" id="pane-cosmos">
+      <div class="pane__head">
+        <div class="segmented" id="cosmos-switch">
+          <button class="is-on" data-sky="planetarium" type="button">Planetarium</button>
+          <button data-sky="constellations" type="button" id="sky-stars">Constellations</button>
+          <button data-sky="omni" type="button">Omniscience</button>
+        </div>
+        <span class="pane__points">
+          <i class="ico ico--sm ico--telescope"></i> <b id="planets-found">0/8</b>
+        </span>
+      </div>
+      <p class="pane__detail" id="cosmos-detail"></p>
+      <div class="skyline" id="planetarium"></div>
+      <div class="skyline" id="constellations" hidden></div>
+      <!-- Omniscience: the ledger of every pile ever held, one buff each -->
+      <div class="keys omni" id="omni-list" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->
@@ -213,10 +275,38 @@
         you wear and it swaps itself in, worse and it turns back into dust.
       </p>
       <div class="forge" id="forge-list"></div>
+      <!-- Rare-or-better pieces carry an affix; dust rerolls it. Hidden
+           until the first enchanted item exists to argue about. -->
+      <div class="quests" id="ench-wrap" hidden>
+        <h3 class="sect"><i class="ico ico--sm ico--dust"></i> <span id="ench-title">Enchants</span></h3>
+        <div class="keys" id="ench-list"></div>
+      </div>
       <dl class="odds" id="odds"></dl>
       <p class="foot-note">Odds move with <b>Smithing</b>, on the Skills tab.
         Dungeon <b>keys</b> are forged there too.<br>
         <span id="set-status"></span></p>
+    </div>
+
+    <!-- tab: the Hall of Ancestors (opens with the first rebirth). Every
+         reset leaves a spirit; each one auto-buys the shop row you assign
+         it, out of whatever the gold reserve leaves free. -->
+    <div class="pane" id="pane-hall">
+      <div class="pane__head">
+        <span class="pane__hint" id="hall-reserve-label">Gold reserve</span>
+        <div class="segmented" id="reserve-switch">
+          <button data-reserve="0" type="button">0%</button>
+          <button class="is-on" data-reserve="0.25" type="button">25%</button>
+          <button data-reserve="0.5" type="button">50%</button>
+          <button data-reserve="0.75" type="button">75%</button>
+        </div>
+        <span class="pane__points">
+          <i class="ico ico--sm ico--orb"></i> <b id="spirits-n">0/8</b>
+        </span>
+      </div>
+      <p class="pane__detail" id="hall-detail"></p>
+      <!-- the hall-wide blessing: every gather pays more types of its line -->
+      <div class="keys" id="hall-bless"></div>
+      <div class="pets" id="hall-list"></div>
     </div>
 
     <!-- tab 5: pets. The slime is free; the rest are objectives. -->
@@ -227,9 +317,9 @@
       </div>
       <p class="pane__detail" id="pet-detail">
         Pets are tamed by <b>playing the game's pillars</b> and levelled by
-        <b>feeding them raw fish</b> of their own water. All of them follow
-        you, all their buffs stack, and levels survive <b>everything</b>,
-        rebirth and awakening alike.
+        <b>feeding them raw fish</b> of their own water. All their buffs
+        stack and levels survive <b>everything</b>. And <b>one of them,
+        your pick, walks beside you</b>.
       </p>
       <div class="pets" id="pets-list"></div>
     </div>
@@ -262,6 +352,9 @@
           <div><dt>Rebirths</dt><dd id="pres-count">0</dd></div>
           <div><dt>Deepest stage</dt><dd id="pres-best">1</dd></div>
           <div><dt>Next relic</dt><dd id="pres-next">stage 25</dd></div>
+          <!-- the sprint: deepest stage inside a run's first 30 minutes -->
+          <div><dt>Best sprint</dt><dd id="pres-sprint">n/a</dd></div>
+          <div><dt>This run</dt><dd id="pres-clock">0m</dd></div>
         </dl>
 
         <p class="prestige__note">
@@ -306,6 +399,14 @@
           <div><dt>Souls spent</dt><dd id="awk-spent">0</dd></div>
           <div><dt>Next soul</dt><dd id="awk-next">50 relics</dd></div>
         </dl>
+
+        <!-- The path: one free choice per awakening. Hidden until the
+             first awakening puts a choice on the table. -->
+        <section class="quests" id="paths" hidden>
+          <h3 class="sect"><i class="ico ico--sm ico--orb"></i> <span id="paths-title">Path</span></h3>
+          <div class="keys" id="path-list"></div>
+          <p class="pane__detail" id="path-note"></p>
+        </section>
 
         <p class="prestige__note">
           Awakening wipes everything Rebirth wipes <b>plus relics, the relic
@@ -358,6 +459,18 @@
         <button class="equip" id="btn-export" type="button">Export save</button>
         <button class="equip" id="btn-import" type="button">Import save</button>
       </div>
+      <!-- The import pane: a real textarea instead of window.prompt, which
+           some Android webviews swallow whole and phone keyboards truncate. -->
+      <div class="import-pane" id="import-pane" hidden>
+        <textarea id="import-text" rows="4" spellcheck="false"></textarea>
+        <div class="opt-row opt-row--buttons">
+          <label class="equip" id="import-file-label">Read a file
+            <input type="file" id="import-file" accept=".txt,text/plain" hidden>
+          </label>
+          <button class="equip" id="import-go" type="button">Replace and load</button>
+        </div>
+        <p class="opt-note" id="import-note">This replaces the current save on this device.</p>
+      </div>
     </div>
     <button class="act-btn" id="options-close" type="button">Close</button>
   </div>
@@ -382,6 +495,34 @@
   </div>
 </div>
 
+<!-- The boards: three leagues split by how the save was funded, two boards
+     each. Scores are honest claims, not proofs -- see src/net/leaderboard.js
+     for the trust model, supabase/schema.sql for the server's manners. -->
+<div class="modal" id="ranks" hidden>
+  <div class="modal__box">
+    <h3 class="sect" id="ranks-title"><i class="ico ico--sm ico--crown"></i> Leaderboards</h3>
+    <div class="modal__scroll">
+      <div class="segmented segmented--ranks" id="league-switch">
+        <button data-league="pure" type="button">Pure</button>
+        <button data-league="gilded" type="button">Gilded</button>
+        <button data-league="patron" type="button">Patron</button>
+      </div>
+      <div class="segmented segmented--ranks" id="board-switch">
+        <button class="is-on" data-board="sprint" type="button">Weekly sprint</button>
+        <button data-board="best" type="button">Best stage</button>
+      </div>
+      <p class="opt-note" id="ranks-note"></p>
+      <div class="ranklist" id="rank-list"></div>
+      <div class="opt-row opt-row--buttons">
+        <input class="rank-name" id="rank-name" maxlength="16" autocomplete="off">
+        <button class="equip" id="rank-save" type="button">Save name</button>
+      </div>
+      <p class="opt-note" id="ranks-foot"></p>
+    </div>
+    <button class="act-btn" id="ranks-close" type="button">Close</button>
+  </div>
+</div>
+
 <!-- The store. The ONLY place in the game that asks for money, and it only
      exists when a real store answered -- see src/store/billing.js. -->
 <div class="modal" id="store" hidden>
@@ -399,7 +540,7 @@
       <p class="opt-note" id="store-empty" hidden>
         <b>This copy of the game sells nothing.</b> There is no app store
         attached to it, so there is nothing here to buy and no way for it to
-        take your money. Every gem in the game comes out of a dungeon — forge
+        take your money. Every gem in the game comes out of a dungeon: forge
         a key on the Skills tab and go spend it.
       </p>
     </div>

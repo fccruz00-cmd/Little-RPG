@@ -19,9 +19,14 @@ export class SFX {
     this.ctx = null;
     this.master = null;
     this.last = {};
+    // Dormant means play() is one boolean check: no context yet, or a
+    // context the browser is keeping suspended. The first gesture wakes it.
+    this.asleep = false;
     // The unlock: first gesture anywhere builds the context.
     const unlock = () => {
       this.ensure();
+      this.asleep = false;
+      if (this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {});
       removeEventListener('pointerdown', unlock);
       removeEventListener('keydown', unlock);
     };
@@ -81,14 +86,26 @@ export class SFX {
   }
 
   play(name) {
-    if (this.isMuted() || document.hidden) return;
-    this.ensure();
-    if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-
+    // Dormancy FIRST: a page whose context cannot sound (no gesture yet, a
+    // headless test, a browser refusing resume) must pay ONE boolean per
+    // dropped effect, not a context check and a resume promise per swing --
+    // that chain profiled at a quarter of the whole simulation.
+    if (this.asleep) return;
     const now = performance.now();
     const gap = THROTTLE[name] ?? THROTTLE.default;
     if (now - (this.last[name] ?? 0) < gap) return;
+    if (this.isMuted() || document.hidden) return;
+    this.ensure();
+    if (!this.ctx) { this.asleep = true; return; }
+    if (this.ctx.state === 'suspended') {
+      // Sleep until the resume settles; the unlock gesture also wakes us.
+      this.asleep = true;
+      this.ctx.resume().then(
+        () => { this.asleep = false; },
+        () => {},
+      );
+      return;
+    }
     this.last[name] = now;
 
     const jitter = 0.9 + Math.random() * 0.2;

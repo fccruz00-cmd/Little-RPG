@@ -1,0 +1,35 @@
+# Publishes the game to GitHub Pages on every push: the site IS the repo,
+# snapshotted onto the gh-pages branch as one orphan commit per deploy.
+# Both branches below feed it, so testers always play the latest build
+# whether the work has merged to main yet or not; last push wins.
+name: pages
+
+on:
+  push:
+    branches:
+      - main
+      - claude/reduce-size-more-content-lrbx34
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Snapshot this commit onto gh-pages
+        run: |
+          # .nojekyll: serve files as-is, no Jekyll pass.
+          touch .nojekyll
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git checkout --orphan pages-snapshot
+          git add -A
+          git commit -m "pages: ${GITHUB_SHA::7}"
+          git push -f origin pages-snapshot:gh-pages

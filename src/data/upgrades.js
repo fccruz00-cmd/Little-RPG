@@ -56,4 +56,42 @@ export const UPGRADES = [
     key: 'insight', icon: 'book', name: 'Insight',
     describe: (lvl) => t('{0} XP', mult(statValue('insight', lvl))),
   },
+  // --- the rebirth shelf: opens with the first rebirth ---
+  {
+    key: 'bossDamage', icon: 'boss', name: 'Giant Slayer',
+    describe: (lvl) => t('+{0} damage to bosses and mini bosses', pct(statValue('bossDamage', lvl))),
+  },
+  {
+    key: 'thorns', icon: 'shield', name: 'Barbs',
+    describe: (lvl) => t('throws {0} of the damage you take back', pct(statValue('thorns', lvl))),
+  },
+  {
+    key: 'overkill', icon: 'crit_power', name: 'Overkill',
+    describe: (lvl) => t('{0} of overkill damage hits the next enemy', pct(statValue('overkill', lvl))),
+  },
+  {
+    key: 'dustFind', icon: 'dust', name: 'Dust Magnet',
+    describe: (lvl) => t('+{0} dust chance', pct(statValue('dustFind', lvl))),
+  },
+  {
+    key: 'respawn', icon: 'regen', name: 'Second Wind',
+    describe: (lvl) => t('{0} faster to get up', pct(statValue('respawn', lvl))),
+  },
+  {
+    key: 'warChest', icon: 'bag', name: 'War Chest',
+    describe: (lvl) => t('+{0} gold from bosses and mini bosses', pct(statValue('warChest', lvl))),
+  },
+  // --- the awakened shelf: opens with the first awakening ---
+  {
+    key: 'might', icon: 'torch', name: 'Ascendant Might',
+    describe: (lvl) => t('+{0} damage and health', pct(statValue('might', lvl))),
+  },
+  {
+    key: 'reap', icon: 'dagger', name: 'Reap',
+    describe: (lvl) => t('slays non-bosses below {0} health', pct(statValue('reap', lvl))),
+  },
+  {
+    key: 'phoenix', icon: 'health', name: 'Phoenix Heart',
+    describe: (lvl) => t('{0} chance to survive a killing blow', pct(statValue('phoenix', lvl))),
+  },
 ];

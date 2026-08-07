@@ -4,9 +4,15 @@ A browser idle auto-battler, played with the phone turned sideways. The hero
 walks a straight line on its own, runs into monsters, kills them without
 input and clears stages. All you decide is where the gold goes.
 
+**Play it**: <https://fccruz00-cmd.github.io/Little-RPG/> — redeployed by
+a workflow on every push, so the link always serves the latest build.
+`little-rpg.html` at the same address is the whole game in one file, for
+playing offline.
+
 The **UI** keeps the top; under it the **Fight** takes a column of its own
-and the tabbed panel takes another — **Shop**, **Talents**, **Skills**,
-**Forge**, **Pets** and **Ascend**.
+and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
+**Skills**, **Pets**, **Ancestors**, **Cosmos** and **Ascend**: the
+journey reads left to right, work, friends, the dead, the sky, the leap.
 
 ```
 +--------------------------------------------------+
@@ -53,7 +59,12 @@ python3 tools/build_single_file.py
 - **Losing a boss holds the stage.** The boss used to respawn on a 1.2 s
   timer, which turned a wall into an unwatchable loop of dying to the same
   boss forever. Now mobs keep coming so the run still earns, and the boss
-  waits behind a **Try boss** button in the arena until you say go.
+  waits behind a **Try boss** button in the arena until you say go — or
+  until **60 seconds pass**, when it walks back in on its own. The hold
+  fixed the watched game and broke the idle one: a player who closed the
+  app on a held boss farmed the same stage forever, because nobody was
+  there to press the button. Retrying is free either way, so the timer
+  only costs an idle run its cadence.
 - **Combat** has the hero walk into range, stop, and swing at the pace of the
   Attack Speed stat. Enemies do the same. When the hero falls it gets up in 2 s.
 - **Gold** drops from every kill and scales with the stage. Mini bosses pay 5x,
@@ -81,7 +92,7 @@ count the same growth twice and dump the second count straight onto the
 timer. The hell bosses ramp `dmg` instead, which is threat the player can
 answer with health and regen.
 
-### The shop: twelve upgrades, not eight
+### The shop: twelve upgrades, then two more shelves
 
 Eight was what fitted a phone column. A landscape panel shows twelve without
 scrolling, and the early game — the part you sit and watch — had nothing left
@@ -106,7 +117,37 @@ Two of them share a bonus key with a talent node, so `GameState` sums the
 shop level and the tree bonus in one getter (`state.lifesteal`,
 `state.doubleHit`) and `battle.js` reads *those*. Reading `bonus.x` directly
 would have silently ignored the shop level the moment the tree granted the
-same thing.
+same thing. (Barbs joined that club later: `state.thorns` sums the shop
+level with the Thorns keystone.)
+
+The shop then went quiet exactly when the player had the most gold
+multipliers to spend, so two more shelves open with the reset layers
+(`gate` in `balance.js`, enforced in `bulkFor` so a locked stat cannot be
+bought even by script). **Six with the first rebirth:**
+
+| upgrade | what it does | cap |
+|---|---|---|
+| **Giant Slayer** | more damage to bosses and mini bosses | +100% |
+| **Barbs** | throws damage taken back (sums with the Thorns keystone) | 24% |
+| **Overkill** | excess of a killing blow lands on the next enemy | 50% |
+| **Dust Magnet** | more dust chance | +24% |
+| **Second Wind** | faster to get up | 40% |
+| **War Chest** | more gold from bosses and mini bosses | +120% |
+
+**And three with the first awakening**, allowed to bend combat rules a
+little because everything above them already exists:
+
+| upgrade | what it does | cap |
+|---|---|---|
+| **Ascendant Might** | damage *and* health together | +40% |
+| **Reap** | non-bosses below the threshold die outright | 10% |
+| **Phoenix Heart** | chance a killing blow leaves you at 30% instead | 30% |
+
+The rebirth shelf honours `awakens` too — `prestiges` resets to zero on an
+awakening, and the player who went deepest must not watch six upgrades
+vanish. Reap exempts bosses on purpose: their timer *is* the fight, and no
+shop row is allowed to shave it. Overkill's carry is floored at 1 hp so a
+cascade can never chain-kill on its own.
 
 ### Reading the screen
 
@@ -138,9 +179,10 @@ Three details make it hold together:
   its frames throttled without ever firing `visibilitychange`, so a frame gap
   longer than 250 ms is caught up the same way instead of being clamped away.
 - **Anything nobody simulated still pays.** If the browser froze the tab or
-  the machine slept, that span is banked as gold at 50%, capped at 8 hours,
-  which is also what happens while the game is fully closed. Gold only:
-  there is no fight to read kills, experience or dust from.
+  the machine slept, that span is banked as gold at 50% (100% once the
+  Gilded Idol is owned), capped at 8 hours, which is also what happens while
+  the game is fully closed. Gold only: there is no fight to read kills,
+  experience or dust from.
 
 The catch that made this work at all: gold per second is measured against a
 **simulation clock**, not the wall clock. A background wake plays a minute of
@@ -148,52 +190,179 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The six tabs
+### The eight tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
-2. **Talents**: three trees behind one switch at the top.
+2. **Talents**: three webs behind one switch at the top. All three are the
+   same shape — three lanes, links between them — and a node opens because
+   something touching it is already yours. See *Every tree is a web*.
    - *Talents*, paid with **level points** (one per level). Wiped on rebirth,
      and you can respec at any time.
-   - *Relics*, the prestige tree, paid with **relics**. Survives rebirth, and
+   - *Relics*, the prestige web, paid with **relics**. Survives rebirth, and
      an awakening takes it.
-   - *Souls*, the awakening tree, paid with **souls**. Survives everything.
+   - *Souls*, the awakening web, paid with **souls**. Survives everything.
      The switch only appears once an awakening has paid for it.
-   - In all three, a node only opens once the previous one in its branch has
-     a point.
-3. **Skills**: gathering. Mining, Chopping and Fishing, see below.
-4. **Forge**: only appears after the first rebirth.
+3. **Forge**: only appears after the first rebirth.
+4. **Skills**: the seven skills behind one switch — Mining, Chopping,
+   Fishing and Farming on the line; Smithing at the workshop, Alchemy at
+   the cauldron, Cooking at the kitchen.
 5. **Pets**: the slime is free, the rest are objectives. See *Pets* below.
-6. **Ascend**: the two reset layers behind one switch.
+6. **Ancestors**: the Hall of Ancestors, open from the first reset ever
+   taken and never closed again. Every rebirth — and every awakening —
+   leaves behind a **spirit of the hero you were**, and each spirit can be
+   assigned **one Shop row** to keep bought, forever: through the rest of
+   the run, through rebirth, through awakening. Spirits wake on *lifetime*
+   rebirths (a counter nothing resets):
+
+   | spirit | wakes at |
+   |---|---:|
+   | The Founder | 1 |
+   | The Keeper  | 2 |
+   | The Blade   | 3 |
+   | The Miser   | 5 |
+   | The Sage    | 8 |
+   | The Warden  | 12 |
+   | The Reaper  | 17 |
+   | The Eternal | 23 |
+
+   A spirit visits the shop every **8 s** and buys up to its **level** in
+   levels of its row; **dust** raises a spirit (40 → 120 → 360 → 1080, to
+   level 5), which gives dust something to want besides the forge. An
+   assigned board wears its receipt: the row's current shop level and
+   what that level pays right now, in the shop's own words. The
+   **gold reserve** (0/25/50/75%) is the slice of the purse the whole hall
+   must leave untouched, so the spirits never starve a boss build or a
+   forge session. Same law as Herald and Anvil: a spirit only does what a
+   finger could — the shelf gates hold, capped rows stop at their caps,
+   and everything comes out of the one purse.
+
+   The hall also sells the **Ancestral Bounty** (750 → 3,000 → 12,000 →
+   48,000 dust, four levels): every gather pays **the same haul again in
+   the line's other types**, up to the whole line in one swing at level
+   four — work a pine and the oak comes along, then the ash. It reaches
+   *up* while the tool allows and falls back down after, because the dead
+   widen your hands but cannot sharpen your axe. The blessing is a rule of
+   gathering itself, so the Cosmos' planets work with blessed hands too.
+7. **Cosmos**: only appears after the first awakening. Two catalogs behind
+   one switch — the **Planetarium** and the **Constellations** — drawn as
+   sideways-scrolling rows of card portraits joined O → O → O, sharing
+   **one telescope**: an hour spent charting The Sword is an hour Jupiter
+   is not being found, and that is the whole decision. Observation runs on
+   game time (the speed toggle turns the sky faster), partial progress is
+   kept per body, and every discovery is permanent — it survives rebirth
+   *and* awakening. Each of the eight planets automates one thing you were
+   doing by hand:
+
+   | body | hours | automates |
+   |---|---:|---|
+   | Luna    | 0.3 | fishing runs in the background |
+   | Mercury | 0.75 | claims finished contracts |
+   | Venus   | 1.5 | farming runs in the background |
+   | Mars    | 2.5 | mining runs in the background |
+   | Jupiter | 4   | chopping runs in the background |
+   | Saturn  | 6   | re-brews a lapsing potion |
+   | Uranus  | 9   | re-plates a lapsing dish |
+   | Neptune | 13  | feeds the walking companion on its own |
+
+   A gathering planet pays one full node per 15 s tick on its line and
+   skips the line your tool is on — roughly a third of working it by
+   hand, so the tool slot keeps its weight. Bench planets only do what a
+   finger could: Saturn and Uranus top up only effects **you** set going,
+   and nothing happens when the materials are not there. The endgame
+   automates the early friction, the same bargain Herald, Anvil and
+   Forager already made.
+
+   The tab's third catalog is **Omniscience**: one ledger row per
+   countable pile in the game — the five currencies plus every raw and
+   refined resource, forty-five rows. Each row tallies the **lifetime
+   total** of that thing ever gained, and the tally only climbs:
+   spending, feeding, rebirth and awakening take nothing back, the
+   number grows with natural play and asks for no decisions. (The first
+   cut counted the most ever *held* at once, greenstack-style; alpha
+   killed it in a day because it turned every fish into a feed-the-pet
+   or fatten-the-score dilemma.) Tallies pay in **marks**, one per power
+   of ten past the row's base, and every mark is a small permanent buff
+   of the row's own flavour (ore hits harder, wood moves faster, fish
+   keeps you standing, crops pay the mind). Tallies accrue from minute
+   one, but the buffs only switch on with the first awakening: the
+   ledger is knowledge the road cannot read.
+
+   The **first planet discovered opens the Constellations**: where a
+   planet automates, a charted constellation *empowers* — four reach the
+   skills and four reach the equipment, all permanent:
+
+   | constellation | hours | grants |
+   |---|---:|---|
+   | The Sword   | 0.5 | every equipped item +25% stronger |
+   | The Plough  | 1   | +20% yield, every gathering skill |
+   | The Owl     | 2   | +30% skill XP, every skill |
+   | The Anvil   | 3   | +0.5 forge quality (odds up the ladder) |
+   | The Chalice | 5   | potions *and* dishes +25% stronger |
+   | The River   | 7   | 16% faster work, every gathering skill |
+   | The Twins   | 9   | enchants +60% stronger |
+   | The Crown   | 12  | the set bonus +60% stronger |
+8. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
-     the same depth does not pay twice.
+     the same depth does not pay twice. The **Relic Echo** lifts every
+     payout by a quarter of its base per rebirth already taken this cycle,
+     so rebirth number six pays real relics at depths number one had
+     already milked dry; awakening resets the echo with the counter. The pane also keeps the **sprint**:
+     the deepest stage inside a run's first 30 minutes of game time — a
+     personal time-trial with no server behind it, because "how fast does my
+     build open" is the question each rebirth actually answers.
    - *Awaken* is the layer above: it wipes everything Rebirth wipes **plus
      relics, the relic tree, rebirths, dust and gear**, and pays **souls**.
      Souls are measured against every relic the ascension earned, from all
      three sources: banked by past rebirths, still pending in the current
      run, and paid by dungeon clears. The first soul lands at 50 relics.
      Souls and the soul tree survive every later awakening, as does the
-     Skills tab.
+     Skills tab. The **Soul Echo** lifts every payout by half its base per
+     awakening already taken, so cycles climb instead of repeating, and
+     the two uncapped rails at the ends of the soul lanes (Transcendence
+     and Undying, +12% damage or health a rank at ever-steeper cost) make
+     sure a soul never arrives with nowhere to go.
 
-### The talent tree, and why it was rebuilt
+### The talent web
 
 It used to be twelve nodes holding **80 points**, so it filled at level 81 —
 and a four-hour run reaches level 92 before the relic tree's +18 free points
 are even counted. The tree you touch most, once per level, was the one that
 ran out. Every level after that paid nothing.
 
-It now holds **176 across 21 nodes**, three branches of seven. The first four
-of each branch are the old percentages; the next two are effects the relic
-tree used to hoard (Rupture, Onslaught, Mending, Bulwark, Prospector, Vigil);
-and the last is a **keystone**.
+Making it deeper fixed the ceiling but not the shape: three independent
+columns is a shopping list, and every point in it is obvious. It is now a
+**web** (`src/data/skilltree.js`) — the small version of what Path of Exile
+does, a graph you travel, where a node opens because something *touching* it
+is already yours.
 
-A keystone does not open until the node before it is **full**, not merely
-started — `needs: 'max'`. That is the whole point: it costs a committed
-branch rather than a spare point, and it buys something that changes how a
-fight goes instead of how big a number is.
+```
+FURY     ●──●──●──●──●──●──◆        ● node   ○ crossing   ◆ keystone
+            │        │
+            ○        ○              a crossing costs a point,
+            │        │              and carries a stat both lanes want
+GUARD    ●──●──●──●──●──●──◆
+            │        │
+            ○        ○
+            │        │
+FORTUNE  ●──●──●──●──●──●──◆
+```
 
-| branch | keystone | what it does |
+**25 nodes, 204 points.** Three things follow from the shape, and they are the
+whole design:
+
+1. **You pick a door.** All three lane heads are open from the first point, so
+   the first thing the game asks is what kind of hero this run is.
+2. **Crossing costs.** The link between lanes is a *node*, not a free edge, so
+   splitting your points is a real price rather than a shrug — and the four
+   crossings carry hybrid stats, so the price buys something.
+3. **The end of a lane is earned.** A **keystone** does not open until the node
+   before it is **full**, not merely started. It costs a committed lane rather
+   than a spare point, and it buys something that changes how a fight goes
+   instead of how big a number is.
+
+| lane | keystone | what it does |
 |---|---|---|
 | **Fury** | Frenzy | +attack speed per kill in a streak, up to 15 — and the streak dies with you |
 | **Guard** | Thorns | throws a share of the damage you take back at whatever hit you |
@@ -206,8 +375,50 @@ opposite of a reward for pushing. Thorns is measured off the damage that
 goes in — off the raw hit, the tankiest build would be paid most for being
 hit hardest, which is backwards.
 
-The relic tree has six branches: **Power**, **Wealth**, **Essence**,
-**Automation**, **Skills** and **Time**.
+### Every tree is a web
+
+The same silhouette runs through all ten trees in the game — talents,
+relics, souls, and one per skill. `web.js` holds the machinery
+and `skilltree.js` holds nothing but topology; a node's data (`max`, `cost`,
+`key`, `mode`, `per`) stays in the file that owns its tree, so there is one
+place to change what a node *does*.
+
+Three lanes and not four is a layout fact, not a taste: the panel gives a tree
+about 200px of height on the phone this game is built for, and five rows of
+node is exactly what fits. What differs between the webs is how much a link
+costs.
+
+| web | shape | crossing |
+|---|---|---|
+| **Talents** | 3 × 7, 25 nodes, 204 points | four nodes, and keystones at the ends |
+| **Relics** | 3 × 7ish, 24 nodes | Veteran, Respite, Forager, Anvil — the four things every build wants |
+| **Souls** | 3 × 4, 16 nodes | Menagerie and Harvest *became* the crossings: pets and gathering sit between the pillars |
+| **Mining / Chopping / Fishing / Smithing** | 3 × 4, 12 nodes | none — the lanes link directly |
+
+The six relic branches became three lanes, and the two-node soul branches
+became crossings, because a lane you can only reach through another lane is
+what makes a web a web. Nothing was renamed: **node ids are save keys**, and
+every id the old columns used is still there.
+
+That relayout does mean a node that used to be a *branch head* — Herald,
+Respite, Pack Leader, Green Thumb — now sits in the middle of somebody else's
+lane. So `webUnlocked` opens a node you have **already bought**, always. Without
+that, an old save would keep its points and its bonus but be unable to add to
+them, which reads as the game eating a purchase. It cannot be exploited: the
+*first* point in a node still needs a path to it.
+
+Keystones stayed out of the prestige webs on purpose. Making an existing node
+demand a *full* neighbour would lock points people had already spent.
+
+Coordinates are grid units, not pixels, and the track weights (`cols()`,
+`ROW_H`) drive **both** the CSS grid and the SVG wire endpoints. That is the
+only reason a wire lands on a node centre from a 190px panel to a 620px one —
+put a track size in the stylesheet instead and the two halves drift apart.
+
+The **shop** is not a web and should not be: its upgrades are repeatable
+purchases on a gold curve with no prerequisites *between them* — the two
+gated shelves gate on the reset layers, not on each other. A graph needs
+something to gate.
 
 Three things live outside the tabs entirely, all in the HUD:
 
@@ -231,40 +442,94 @@ look like part of the first.
 
 Souls are roughly an order of magnitude scarcer than relics: one at 50 relics
 earned, seven at 260, seventeen at 500. So the tree is short, expensive and
-made only of things the relic tree cannot reach. Three branches:
+made only of things the relic tree cannot reach. Three lanes and four
+crossings:
 
-| branch | what it buys |
+| lane | what it buys |
 |---|---|
 | **Ascendant** | Soulfire (+40% damage a rank), Rend, Annihilate, Cataclysm |
 | **Eternity**  | Memory (start +3 stages), Bloodline, Aegis, Eternal Hour |
 | **Dominion**  | Avarice (+45% gold a rank), Epiphany, Hoard, Conquest |
+| *crossings*   | Pack Leader and Keeper's Table (pets), Green Thumb and Quick Hands (gathering) |
 
 A point costs `node cost + ranks already in it`, the same ramp as relics; the
 nodes are shallower instead, because souls arrive in ones and twos. The whole
 tree is about 226 souls, which is many awakenings deep on purpose.
 
+**Paths.** Before paths, the second ascension was the first one again,
+faster. Each awakening now grants **one free choice** of a build lens on the
+Awaken pane — real tradeoffs, folded like any other bonus source:
+
+| path | grants |
+|---|---|
+| **Berserker** | +25% damage, +15% attack speed, **−20% health** |
+| **Sentinel** | +30% health, +30% regen, +10% thorns, **−10% damage** |
+| **Plunderer** | +30% gold, +15% XP, +10% dust chance, **−10% damage** |
+
+The choice is spent when you pick and returned by the next awakening —
+without that rule the picker is a free stat toggle you flip before every
+boss, which is a chore pretending to be a choice. Saves that had already
+awakened when paths shipped get their pick on load.
+
 ### Pets
 
-Five companions. The slime is with you from the start; the other four are
-locked behind **objectives, one per pillar of the game**, so the collection
-doubles as a tour of the systems. Objectives are checked against live state
-every tick, a tame lands the moment it is earned, and nothing ever comes
-undone: an old save walks out of load with everything it already qualifies
-for.
+Twenty-two companions. The slime is with you from the start; the other
+twenty-one are locked behind **objectives, one per pillar of the game**, so
+the collection doubles as a tour of the systems. Objectives are checked
+against live state every tick, a tame lands the moment it is earned, and
+nothing ever comes undone: an old save walks out of load with everything it
+already qualifies for.
 
-**Every tamed pet is active at once.** All of them trail the hero in a
-little parade, drawn from the enemy roster's own sheets at pet scale, and
-all their buffs stack. The choice lives in the taming, not in a slot.
+**Every tamed pet's buff is active at once** — the choice never moved into
+a slot. What did move is the road: **one pet, your pick, walks beside the
+hero** (the `follow` button on any tamed row), drawn from the enemy
+roster's own sheets at pet scale. Twenty-two of them was a traffic jam
+that buried the fight; the buffs never left, the parade just stopped
+being one.
 
 | pet | tamed by | eats | buff per level |
 |---|---|---|---|
-| Pocket Slime   | with you from the start | Minnows  | +4% health |
-| Belfry Bat     | Mining level 10         | Carp     | +1.5% attack speed |
-| Little Watcher | first rebirth           | Salmon   | +0.4% crit chance |
-| Hellpup        | clearing any dungeon    | Trout    | +4% damage |
-| Cinder Slime   | first awakening         | Sturgeon | +5% gold |
+| Pocket Slime   | with you from the start   | Minnows  | +4% health |
+| Belfry Bat     | Mining level 10           | Carp     | +1.5% attack speed |
+| Little Watcher | first rebirth             | Salmon   | +0.4% crit chance |
+| Hellpup        | clearing any dungeon      | Trout    | +4% damage |
+| Cinder Slime   | first awakening           | Sturgeon | +5% gold |
+| Bone Buddy     | falling in battle 25 times| Minnows  | +6% regeneration |
+| Wisp           | Fishing level 15          | Carp     | +3% XP |
+| Bloodling      | a blood moon clear        | Trout    | +0.2% lifesteal |
+| Ember Golem    | forging a legendary       | Salmon   | +4% dust |
+| Imp            | reaching stage 100        | Sturgeon | +0.4% to strike twice |
+| Ash Bat        | Chopping level 15         | Carp     | +2% stride |
+| Urchin         | Farming level 15          | Carp     | +1.2% thorns |
+| Honey Bear     | plating 25 dishes         | Minnows  | +1.2% yield, all skills |
+| Clot           | 150 boss kills            | Trout    | -0.6% damage taken |
+| The Doorman    | claiming 30 contracts     | Sturgeon | +4% on the first hit |
+| Hedge Wizard   | charting 4 Cosmos bodies  | Carp     | +1% work speed, all skills |
+| Minotaur Calf  | the deepest dungeon tier  | Trout    | +0.5s on the boss timer |
+| Auntie Imp     | 100 pet feedings          | Minnows  | pets eat 2% less |
+| Grudge         | wearing a Tier III enchant| Salmon   | +0.03 crit damage |
+| Moon Pup       | 5 Bloodmoon clears        | Salmon   | 3% faster to get up |
+| Grave Tutor    | rolling 10 Legendaries    | Sturgeon | +0.4% dust chance |
+| Greedling      | waking 3 ancestors        | Sturgeon | +0.8% double-gold kills |
 
-Levels are bought with **raw fish of the pet's own tier**. Meals always cook
+**Two rules hold the roster together**, and they are worth keeping if it
+grows again. No two pets carry the same bonus key, so a pet is never a
+smaller copy of another one; and the sprite must be a mob or boss the loader
+already fetches (`allActorIds`), or the pet is invisible in both the parade
+and its own row. Both are asserted in the tests.
+
+Everything after the first five sits at about two thirds of their `per`
+values. Twenty-two pets should be a wider collection than five, not four
+times the power — and Pack Leader, on the soul web, multiplies all of them.
+The third dozen's objectives point at everything built since the first ten
+(enchants, contracts, the Cosmos, the kitchen, the Bloodmoon, the Hall of
+Ancestors), and they sit a real distance out on purpose: the collection was
+filling up faster than the game could grow.
+
+
+Levels are bought with **raw fish of the pet's own tier**, and the
+refinery's reserve guarantees the larder: meals only ever cook from the
+surplus, so the feed is always there when the button is. Meals always cook
 from the best fish first, so the lower tiers pile up as dead stock the moment
 a better pool opens; pets are what that surplus is for, and the geometric
 cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
@@ -275,7 +540,11 @@ awakening both**.
 
 The footer's **options** opens the game's one modal: sound effects, music,
 damage numbers, language, and the save export/import. The list scrolls, so
-it stays usable on a short phone.
+it stays usable on a short phone. The save travels as a **file** (plus the
+clipboard when the browser allows it) and comes back through a real
+textarea with a file picker; the first version used `window.prompt`, which
+Android webviews swallow whole and phone clipboards truncate, and it died
+in alpha as "import does not work".
 
 **Portuguese and English.** The English string IS the key: display sites
 call `t('...')`, English falls through untouched, and a missing entry shows
@@ -299,19 +568,39 @@ live DOM.
 - **Champions**: one mob in ~40 arrives tinted and named. GILDED pays 5x
   gold, SOULBOUND always drops dust (only spawns once the forge exists),
   FLEET is frail, fast and worth three kills of experience.
-- **The road**: some stages carry a chest (a pile of gold, sometimes dust)
-  or a shrine (90 free seconds of a random brew). Rolled on genuine stage
-  entry only, never on reload.
+- **The road**: some stages carry something on it, rolled on genuine stage
+  entry only, never on reload. A **chest** (a pile of gold, sometimes dust);
+  a **shrine** (90 free seconds of a random brew); a **merchant** under a
+  striped awning, who reforges your weakest slot on the house — same rules
+  as the forge, so a bad roll pays a pinch of dust instead of a downgrade,
+  and before the forge exists he pays gold; or an **ambushed caravan**,
+  whose rescue makes the next five kills pay double gold and double XP.
+  All four are hand-pixelled in the renderer, like the gathering nodes.
 - **Export/Import save** (gear, top right): the whole save as one line of text,
   for backups and moving between browsers. Garbage and future versions are
   rejected on import.
+- **Game speed** (the x1 button, top right): x2 opens with the first
+  rebirth, x3 with the first awakening — the resets sell time, and this is
+  time. It multiplies the *clock*, not any rate: a wall second simulates 2
+  or 3 game seconds in the foreground and in hidden tabs alike, so every
+  curve keeps its shape and nothing measured per game second changes. The
+  offline payout stays real-time — the toggle speeds up playing, not being
+  gone.
 
 ### The cauldron, feats and Bloodmoons
 
-- **Cauldron** (Smithing workshop): three potions, each drinking one line's
+- **Cauldron** (Skills tab, the Alchemy switch): three potions, each drinking one line's
   surplus. Time Draught (planks, +20s on every boss clock), Fury Tonic
   (bars, +25% damage), Lucky Brew (dust, +50% gold). Ten minutes each,
   bankable to thirty; prices scale with the deepest material band seen.
+  The bench levels **Alchemy**, the fifth skill: every brew pays XP scaled
+  to the band it cost, shrines on the road teach a little (the idle trickle
+  a brew-only skill would otherwise lack), and its 12-node web reshapes
+  every number on this list — potion strength (Potency, up to +120% on the
+  effect), duration (Stillroom, up to ~2.6x), price (Reagents, ~45% off),
+  the bottle bank (Deep Cellar), a double-pour chance, and longer shrine
+  pours (Shrinewise). Same rails as every other skill: level, points, web,
+  respec.
 - **Feats** (Ascend tab): fourteen lifetime marks, each paying a small
   permanent bonus. The counters never reset, not even on an awakening.
 - **Bloodmoon runs**: a dungeon tier you have already cleared can be
@@ -321,29 +610,60 @@ live DOM.
 - **Forge set bonus**: wearing all seven slots at one rarity or better pays
   a bonus keyed to the LOWEST slot, up to +50% damage and health plus
   +25% gold for a full Mythic board.
-- **Soul tree**: five branches now; Menagerie amplifies pets and cheapens
-  their feed, Harvest reaches every gathering line at once.
+- **Soul web**: Pack Leader and Keeper's Table amplify pets and cheapen
+  their feed, Green Thumb and Quick Hands reach every gathering line at once.
+  All four are crossings, so they cost a lane change to reach.
 
-### Skills: Mining, Chopping, Fishing and Smithing
+### Skills: seven of them, on one set of rails
 
 Nodes spawn on the same line the hero already walks. It stops, works them,
-and moves on, with no input from you. The three gathering skills run on
-identical rails, each with its own level, its own 84 point tree and its own
-five resources gated by depth (stages 1, 8, 20, 36 and 55). **Smithing** is
-the fourth, and it has no line at all: see below.
+and moves on, with no input from you. The four gathering skills run on
+identical rails, each with its own level, its own ~84 point web and its own
+five resources gated by depth (stages 1, 8, 20, 36 and 55). The other three
+are benchbound — no line, no tool — and each brings its own furniture to
+the pane: Smithing the workshop, Alchemy the cauldron, Cooking the kitchen.
 
 | skill | raw | refined | pays in |
 |---|---|---|---|
-| Mining   | ore  | bars   | tool heads, and later dungeon keys |
-| Chopping | logs | planks | tool handles |
-| Fishing  | fish | meals  | **Well Fed**: regen and armour |
-| Smithing | none | none   | the forge: odds, cost and refining |
+| Mining   | ore   | bars   | tool heads, and later dungeon keys |
+| Chopping | logs  | planks | tool handles |
+| Fishing  | fish  | meals  | **Well Fed**: regen and armour |
+| Farming  | crops | crates | the kitchen's pantry |
+| Smithing | none  | none   | the forge: odds, cost and refining |
+| Alchemy  | none  | none   | the cauldron: potion strength, span, price |
+| Cooking  | none  | none   | **dishes**: timed yield/gold/XP/stride buffs |
+
+**The refinery runs itself.** Raw becomes refined on its own, a sweep
+every few seconds, and the stock list is a ledger, not a bench: nothing
+on it takes a tap. It used to be a click per pile, and it died in alpha
+as the third complaint about the same fish — a button that quietly turns
+pet food into meal stock is a trap, not a decision. Fish are the one
+line the refinery treats differently: every pond keeps a raw **reserve**
+(a dozen feeds' worth for whoever eats that tier, never less than 30),
+so feeding a pet never loses to the kitchen, and only the surplus above
+the reserve becomes meals.
+
+**Farming** is the fourth line: plots of tilled earth with the crop poking
+out in its own colour, worked in one stop (a crop you had to walk *back*
+to would never be harvested by a hero who only walks forward). Crops crate
+up the way ore smelts down, and crates are what the kitchen cooks.
+
+**Cooking** is Alchemy's twin at the other bench. A dish is a potion that
+grew in the ground — Harvest Stew (+25% yield), Golden Pie (+25% gold),
+Trail Rations (+20% stride), Scholar's Jam (+25% XP), ten minutes each,
+priced in crates of the deepest band seen. Every effect obeys the
+gathering balance rule: economy and pace, never damage. It levels from
+cooking, every meal Well Fed eats teaches it a little (the idle trickle
+every bench skill needs), and its Hearthfire node reaches across into Well
+Fed's regen the way Smithing's Hot Fire reaches every refinery. Icons for
+the farm and the kitchen were generated in PixelLab and appended to the
+game's icon strip.
 
 **The tool slot is the tradeoff.** You carry one tool, and only the equipped
 skill's nodes spawn. Slice 1 measured that stopping to swing costs zero stage
 progress, because enemies walk toward you and travel is never the bottleneck,
 so gathering needed a real cost and this is it: time on ore is time not on
-wood. Equipping is one tap on the Skills tab, and browsing a skill's tree
+wood. Equipping is one tap on the Skills tab, and browsing a skill's web
 does not change what you are carrying.
 
 **Tools lock the skills together.** Every tool is a head and a handle, so
@@ -426,16 +746,22 @@ dungeon clears and go back in as gold, as time, or as gear. The purse and the
 shop behind it are hidden until a run pays the first one, so the shop
 introduces itself by handing you something.
 
-The faucet is full clears only, never partial runs, and the **first time a
-clear takes you deeper than the save ever has** pays a one-off bounty on top.
-Five tiers, 150 bounty gems: enough to meet the shop properly without ever
-opening a wallet.
+The faucet has two taps. **Dungeons**: full clears only, never partial runs,
+and the first time a clear takes you deeper than the save ever has pays a
+one-off bounty on top — five tiers, 150 bounty gems. **Contracts**: three
+dailies and one weekly, pinned above the shop list, worth roughly 10–15 gems
+a day. Progress is a *stats delta* against a snapshot taken when the board
+rolled, so the lifetime counters do all the bookkeeping and no kill site
+changed; the UTC day index deals the board deterministically, so there is
+nothing to re-roll by clearing data, and skipping a day by clock forfeits
+that day's gems — the exploit priced at exactly what it pays.
 
 | ware | costs | gives |
 |---|---:|---|
 | Coin Cache   | 20 | an hour of your best gold rate, paid now |
 | Hourglass    | 30 | two hours of fight, really simulated, in about half a second |
 | Mythic Chest | 60 | your weakest slot reforged **Mythic**, guaranteed |
+| Gilded Idol  | 150 | **once, forever**: offline gold at the full rate instead of half |
 
 The game is **free**, and the shop is the only thing that ever asks for
 money. Three rules hold it together, and `data/gems.js` exists to keep them:
@@ -454,6 +780,12 @@ money. Three rules hold it together, and `data/gems.js` exists to keep them:
 The chest also caps its own takings. It targets the **weakest** slot, so it
 walks a board up one slot at a time and then refuses: seven purchases is
 everything it will ever sell you.
+
+The Idol is the one **permanent** ware, and it stays inside rule 2 on
+purpose: it buys pace — the offline discount, lifted for good — never power,
+it survives both reset layers, and it sells exactly once. It is the honest
+version of the genre's "permanent offer", priced like the long-term purchase
+it is.
 
 Awakening wipes gear, Mythic included — the same bargain the Ascend tab has
 always offered. Since a Mythic slot may have been paid for, the awaken
@@ -497,10 +829,11 @@ solve before selling anything.
 
 The forge used to be pure RNG on fixed odds with nothing to improve. Smithing
 is what it was missing. It has no nodes and no tool; it levels from the two
-things it does: **refining** (which works from stage 1) and **forging**
-(which only opens after the first rebirth), so it never sits idle.
+things it does: **refining** (which works from stage 1, done by the
+automatic refinery as the piles come in) and **forging** (which only opens
+after the first rebirth), so it never sits idle.
 
-Its tree does three things:
+Its web does three things:
 
 - **Mastery** moves the rarity odds. Each tier's weight is multiplied by
   `(1 + quality)` once per step up the ladder, then normalised. Quality 0
@@ -519,7 +852,7 @@ Its tree does three things:
 - **Furnace** cuts raw-per-unit in **every** skill, not just its own. That is
   the one bonus in the game that reaches sideways, and it is why the
   multiplier is applied on top of each skill's own rather than living in
-  their trees.
+  their webs.
 
 The odds table on the Forge tab is live: it shows what your Smithing is
 actually giving you, not the base numbers.
@@ -557,13 +890,49 @@ The **Automation** branch buys upgrades for you (*Herald*) and forges for you
 (*Anvil*); the **Skills** branch adds double strikes, lifesteal, extra damage
 against wounded targets and a bonus on the first hit.
 
+**Enchants.** A Rare-or-better roll also carries one small affix — Keen
+(crit), Gilded (gold), Wise (XP), Hungry (lifesteal), Dusty (dust) or Swift
+(attack speed), at tier I/II/III (55/30/15) — and a bench on the Forge tab
+rerolls it for about 60% of that slot's forge price. Rarity is a ladder you
+climb once; an enchant is a slot you argue with, which is the decision the
+forge was missing and a dust sink that outlives a full board. The affix
+belongs to the *item*: a new piece brings its own or none, the Mythic Chest
+rolls one too, and the values are a fraction of a rarity step so a lucky
+affix never beats an unlucky rarity — orange still always beats purple.
+
 ### Levels and experience
 
 Every kill grants XP (mini boss x5, boss x12) and every level grants one skill
-point. Levelling does not touch a stat on its own; the tree is where the power
-comes from, otherwise it would be one more hidden curve. The whole tree costs
-80 points and fills up around stage 120. *Veteran*, on the relic tree, adds
-extra points that survive rebirth.
+point. Levelling does not touch a stat on its own; the web is where the power
+comes from, otherwise it would be one more hidden curve. Filling the whole web
+costs 204 points, which a single run does not reach — you spend a run choosing
+a shape, not completing a checklist. *Veteran*, on the relic tree, adds extra
+points that survive rebirth.
+
+## Leaderboards
+
+Three leagues, split by how the save was funded, so nobody competes against
+a wallet: **Patron** (real money was ever spent), **Gilded** (no money, but
+gems bought *power* — a Mythic Chest or the Gilded Idol) and **Pure** (at
+most pace was bought; the Coin Cache and Hourglass do not count). The
+league only hardens — pure → gilded → patron, never back — and survives
+every reset; `spendTier` in `state.js` is the classifier, fed by lifetime
+counters that seed from what an old save can prove.
+
+Each league ranks two boards: the **weekly sprint** (deepest stage inside a
+run's first 30 minutes, keyed to the UTC week) and the all-time **best
+stage**. The trophy button in the HUD only exists when a backend is
+configured in `src/net/config.js` (a Supabase project URL and anon key —
+both public by design); unconfigured builds make **zero network calls**.
+`supabase/schema.sql` is the whole server: one table readable by anyone,
+writable only through one function that clamps, keeps maxima, hardens
+leagues and refuses more than one write per row per 20 s.
+
+The trust model, honestly: this is a fully client-side idle game, so a
+score is a **claim, not a proof** — the server's manners make vandalism
+inconvenient, not impossible. Names pass a courtesy filter on both ends;
+submissions queue offline and flush on the next boot; boards read from a
+local cache when the network is away.
 
 ## Layout
 
@@ -586,11 +955,21 @@ portrait numbers the game was balanced against (117x88 at scale 3, against
 portrait's 130x84 at 3), and the space left under it is where the action
 buttons live: off the game world, and low enough to reach one-handed.
 
+**Under 480px of height — every landscape phone — the panel goes on a
+diet.** Every 9-sliced control drops its frame scale from 2x to 1x (same
+art, half the border), and the tree panes invert their scrolling: instead
+of the web peering through an 88px porthole under a stack of pinned bars,
+the **pane scrolls as one column** and the web gets a 300px window — the
+whole tree, readable, with the parchment detail strip pinned sticky so a
+tapped node still explains itself. The stock and workshop stop being
+scrollers of their own, so it is one finger, one direction. The tab row
+scrolls sideways when eight tabs outgrow a narrow panel, rather than
+clipping the last two off the screen.
+
 **With height to spare, the arena becomes a band instead.** From a 640px-tall
-viewport up — tablets, desktop — the two columns give way to the shape the
-game is drawn for: a full-width strip of world across the top, big sky and a
-blood moon, the enemy walking in from a long way off, with the panel spread
-underneath in three columns.
+viewport up — tablets, small desktop windows — the two columns give way to the
+shape the game is drawn for: a strip of world across the top, big sky and a
+blood moon, with the panel spread underneath.
 
 That threshold is not a taste call. The band is `38vh` tall and the zoom is
 `round(height / 92)`, so the zoom holds at 3 only while `38vh >= 230px` —
@@ -602,26 +981,74 @@ sprite size does not.
 A phone in landscape is 375-430px tall, so it always gets the columns — a
 band there would be a 140px strip with one row of shop under it.
 
-**The band cost something that was not obvious, and it had to be paid for.**
-An enemy spawns just off the right edge, so the hero walks the gap in front
-of him — and with `heroAnchor` a flat 0.3, that gap was a fixed *share* of
-the view. Invisible while every screen showed ~130 units of road. The moment
-a tablet showed 393, the walk tripled: **19 kills in two minutes against a
-phone's 38.** A camera setting had become a balance setting.
+**And past 1280px wide the columns come back**, for the opposite reason. A
+band is the right answer while width is the thing in short supply; once there
+is 1920px of it, splitting gives the fight a 996px column and the panel a
+922px one, and both are bigger than either gets stacked. So there are three
+shapes, and each threshold is the point where the previous one stops paying:
 
-So the gap is pinned in world units (`WALK_IN = 91`, measured off the
-portrait camera the game was balanced on) and the anchor is derived from it.
-A wide view now shows more of the road *behind* you — corpses, the pets, the
-scenery you came through — rather than more empty ground to cross. Measured
-after: 36-40 kills at every viewport.
+| | shape | why |
+|---|---|---|
+| under 640px tall | columns | no room for a band without dropping the zoom |
+| 640 tall, under 1280 wide | band, arena a 2.2:1 window in it | height to spare, width in short supply |
+| 1280 wide and up | columns | enough width that both halves get a real one |
+
+**A wide band needed a window, not a wider camera.** The zoom comes from
+canvas *height*, so a band stretched edge to edge on a 1920px screen showed
+**480 units of road** — four times a phone's — and since `heroAnchor` is
+`1 - WALK_IN / worldWidth`, 91 units of 480 put the hero at 0.81, clamped to
+0.78: near the right edge with a thousand pixels of ground nobody walks on
+behind him.
+
+Zooming in fixes the framing and bills the other two things on the screen for
+it: band height is what buys the zoom, so a centred hero meant **doubled
+sprites and a panel squeezed to a strip**. It was built, measured and
+reverted. What works is narrowing the **box** — `.arena` is
+`aspect-ratio: 2.2 / 1`, centred, with the cabinet's wood either side and a
+bevel around it. The ratio is arithmetic: worldWidth is worldHeight times the
+canvas ratio and the zoom holds worldHeight near 92, so 2.2 is ~200 units of
+road and stands the hero at 0.55, with the zoom untouched and the panel whole.
+
+It also closed a leak that predated it. The 0.78 clamp is what kept the hero
+on screen, and past ~420 units of road it quietly stopped the gap being
+`WALK_IN` as well: 106 units at 1920 wide, **141 at 2560**, against 91
+wherever the anchor is free. A 2560px screen was earning **54 kills in four
+simulated minutes against a phone's 66**. Freeing the anchor put every screen
+back on 91, and that one back to 65.
+
+**The parallax fills the sky it is given.** Its heights were literals — 46
+units of far hill over a 72-unit ground line — which is two thirds of a
+phone's sky and a fifth of a 1440p column's, so a tall arena was mostly empty
+gradient. They are fractions of `groundY` now, floored at the phone's values
+so nothing ever gets *less* scenery than the art was drawn with. Height
+scales; horizontal spacing does not — scaling the tree span too thinned the
+treeline out, because the same one-in-three filter over a longer stride is
+half the trees across the same stretch of road.
+
+**The HUD grows, and that part stayed.** Every size in it was picked for a
+390px phone, where 48px of wood carrying two rows is a tenth of the screen;
+on a 1080p monitor the same 48px are a twentieth and the row that runs the
+game reads as trim. From `900x700` up the type and the experience bar scale
+(68px of HUD, 20px gold) while the wood, the frames and the pixel art stay
+exactly what they were. Icons step 16 -> 24 and not 16 -> 20, because the
+sheet is 16px a cell and 1.5x is the step the rest of the game already uses.
+
+**And the world moves a screen pixel at a time.** Positions used to round to
+whole *world* units, so the scenery only moved on the frames where it had
+accumulated a whole one: **50 distinct screen positions over 120 frames**, on
+every screen, including the phone. It reads as a stutter and it is not one —
+the fight is running at 60. `Renderer.q()` rounds to DEVICE pixels
+(`dpr x scale`) instead, which is 87 positions over the same 120 frames, and
+it costs no sharpness: a snapped origin still lands on a whole device pixel
+and each source pixel still covers exactly `dpr x scale` of them.
 
 The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 `orientation: landscape`, which fires on a 600x500 desktop window that has no
 room for two columns. Pane internals switch on a **container query** against
 the panel itself, because once the arena takes 42% the viewport width stops
 meaning anything to them: the shop, forge, pets and feats go to two columns
-at 520px of panel and three at 820px, and the relic tree's six branches go
-from two rows of three to one row of six.
+at 470px of panel and three at 820px. The webs do not switch at all: they
+are three lanes at every width, and only the cell size changes.
 
 **Portrait still works** and is still the whole original stylesheet. A phone
 held upright gets a "turn your phone sideways" prompt; a narrow *desktop*
@@ -647,6 +1074,7 @@ src/
     talents.js      all three trees (nodes, effects, costs)
     gear.js         forge: slots, rarities, odds and costs
     prestige.js     what a run is worth in relics, and a cycle in souls
+    ancestors.js    the hall: spirits, wake thresholds, rise costs
     sprites.js      GENERATED, frame counts and body box per sprite
   engine/
     loader.js       image loading
@@ -772,6 +1200,13 @@ The game uses crops from four third-party packs:
 - **Mini Medieval User Interface v1.1** by [VEXED](https://v3x3d.itch.io/),
   buttons and frames
 - **Premium - Raven Fantasy Icons**, upgrade and item icons
+
+The eight farm-and-kitchen icons (seedling, hoe, crate, cookpot, stew, pie,
+rations, jam — cells 39–46 of the icon strip), the nine night-sky icons
+(the eight bodies plus the telescope — cells 47–55) and the eight
+constellation charts (cells 56–63) were generated with
+[PixelLab](https://pixellab.ai) on this project's own account and carry no
+third-party redistribution question.
 
 None of the four ships a licence file. The icon pack in particular is sold as
 a paid product, and licences like that usually allow use in a game but

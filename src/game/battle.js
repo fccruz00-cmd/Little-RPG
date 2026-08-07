@@ -6,9 +6,14 @@ import {
 } from '../data/enemies.js';
 import { LEVELS, killXp } from '../data/levels.js';
 import { ENEMY, BOSS_TIME, enemyHp, enemyDamage, enemyGold } from '../data/balance.js';
-import { SKILLS, GATHER_IDS, GATHER, rollResource, nodeYield, workTime } from '../data/gathering.js';
+import {
+  SKILLS, GATHER_IDS, GATHER, ALCH, rollResource, nodeYield, workTime, bestForStage,
+} from '../data/gathering.js';
+import { DISHES } from '../data/dishes.js';
+import { PLANET_BY_ID, CONSTELLATION_BY_ID, COSMOS } from '../data/cosmos.js';
 import { DUNGEON, dungeonReward } from '../data/dungeon.js';
-import { PETS } from '../data/pets.js';
+import { RARITIES } from '../data/gear.js';
+import { PET_BY_ID } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
 import { FEATS, featDone } from '../data/feats.js';
 
@@ -22,6 +27,20 @@ const RESPAWN_DELAY = 2.2; // seconds down after dying
 const CORPSE_TIME = 1.1;   // how long a corpse stays on screen
 const LOOT_PAUSE = 0.35;   // breather between one enemy and the next
 const NODE_REACH = 5;      // world px either side of a node the hero can work
+
+// Seconds a held boss waits before walking back in on its own. The hold
+// exists so a wall is not an unwatchable death loop -- but for the player
+// who closed the game on a held boss it became a different wall: the run
+// farmed the same stage forever, because nobody was there to press the
+// button. Retrying is free (the hero heals to full either way), so the only
+// thing the timer costs an idle run is the retry cadence.
+const BOSS_RETRY = 60;
+
+// The sprint window: the first 30 minutes of game time after any reset.
+const SPRINT_WINDOW = 1800;
+
+// Freed caravan: how many kills pay double gold and double XP.
+const RUSH_KILLS = 5;
 
 let nextId = 1;
 
@@ -81,6 +100,9 @@ export class Battle {
     this.spawnTimer = 0;
     this.bossTimer = 0;
     this.burnTimer = 0;   // Scorch: seconds of regen still snuffed out
+    this.retryTimer = 0;  // seconds a held boss has been waiting
+    this.overflow = 0;    // Overkill: excess damage owed to the next enemy
+    this.rush = 0;        // freed-caravan kills still paying double
 
     // Gathering nodes live on the same line as everything else. `nextNodeX`
     // walks forward with the hero so a node is placed once and never twice.
@@ -183,15 +205,21 @@ export class Battle {
     this.nextNodeX = this.hero.x + GATHER.spacing * 0.5;
     this.spawnTimer = 0.4;
     this.bossTimer = 0;
+    this.overflow = 0;
     this.props.length = 0;
     // The road sometimes has something on it. keepKills marks a reload, and
     // a reload must not re-roll the dice: that is a slot machine with F5.
     if (!keepKills && !this.run) {
       const roll = Math.random();
+      const at = this.hero.x + 60 + Math.random() * 140;
       if (roll < 0.12) {
-        this.props.push({ kind: 'chest', x: this.hero.x + 60 + Math.random() * 140 });
+        this.props.push({ kind: 'chest', x: at });
       } else if (roll < 0.20) {
-        this.props.push({ kind: 'shrine', x: this.hero.x + 60 + Math.random() * 140 });
+        this.props.push({ kind: 'shrine', x: at });
+      } else if (roll < 0.25) {
+        this.props.push({ kind: 'merchant', x: at });
+      } else if (roll < 0.30) {
+        this.props.push({ kind: 'caravan', x: at });
       }
     }
     this.emit('stage', this.state.stage);
@@ -206,6 +234,12 @@ export class Battle {
     const next = this.state.stage + 1;
     this.state.maxStage = Math.max(this.state.maxStage, next);
     this.state.bestStage = Math.max(this.state.bestStage, next);
+    // The sprint: deepest stage inside the first half hour of a run. A
+    // record with no server behind it, kept because "how fast does my build
+    // open" is the one question each rebirth actually answers.
+    if (this.state.runClock <= SPRINT_WINDOW && next > this.state.sprintBest) {
+      this.state.sprintBest = next;
+    }
     this.enterStage(next);
   }
 
@@ -227,30 +261,69 @@ export class Battle {
           this.emit('dust', dust);
         }
         this.emit('chest', prop);
+      } else if (prop.kind === 'merchant') {
+        // A wanderer with a hand cart. After the forge exists he reforges
+        // your weakest slot on the house -- same rules as the forge, so a
+        // bad roll pays a pinch of dust instead of a downgrade. Before the
+        // forge, he pays gold: a merchant with nothing to fit you still buys.
+        const slotId = state.weakestSlot();
+        if (slotId) {
+          const out = state.freeForge(slotId);
+          if (out.equipped) {
+            this.emit('toast', { text: `MERCHANT: ${RARITIES[out.rolled].name.toUpperCase()} ${slotId.toUpperCase()}` });
+          } else {
+            const dust = Math.max(3, Math.round(6 * state.bonus.dustMul));
+            state.dust += dust;
+            this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, dust, 'dust');
+            this.emit('toast', { text: `MERCHANT: +${dust} DUST` });
+            this.emit('dust', dust);
+          }
+        } else {
+          const gold = state.earn(enemyGold(this.level, 1) * 5);
+          this.pushFloater({ x: prop.x, sprite: null, scale: 1 }, gold, 'gold');
+          this.emit('toast', { text: 'MERCHANT: A FAIR PRICE' });
+        }
+        this.emit('chest', prop);   // same jingle: something good on the road
+      } else if (prop.kind === 'caravan') {
+        // An ambushed caravan, freed in passing: the grateful next few
+        // fights pay double gold and double experience.
+        this.rush = RUSH_KILLS;
+        this.emit('toast', { text: `CARAVAN FREED: ${RUSH_KILLS} KILLS PAY DOUBLE` });
+        this.emit('chest', prop);
       } else {
         // A shrine pours a free minute and a half of one of the cauldron's
         // brews: a taste of the bench for whoever has not found it yet.
+        // Shrinewise stretches the pour, and every shrine teaches the
+        // cauldron a little -- the idle trickle a brew-only skill lacks.
         const potion = POTIONS[(Math.random() * POTIONS.length) | 0];
-        state.potions[potion.id] = Math.max(state.potions[potion.id] ?? 0, 90);
-        this.emit('toast', { text: `SHRINE: ${potion.name.toUpperCase()}, 90S` });
+        const pour = Math.round(90 * (1 + state.gatherBonus('alchemy').shrinePower));
+        state.potions[potion.id] = Math.max(state.potions[potion.id] ?? 0, pour);
+        state.gainGatherXp('alchemy', ALCH.shrineXp);
+        this.emit('toast', { text: `SHRINE: ${potion.name.toUpperCase()}, ${pour}S` });
         this.emit('shrine', prop);
       }
     }
   }
 
-  /** Rebuilds the parade when the tamed set changes. */
+  /** Rebuilds the walker when the companion (or its tame) changes. */
   syncPets() {
-    const tamed = PETS.filter((p) => this.state.pets[p.id]);
+    // ONE pet walks: twenty-two of them was a traffic jam that buried the
+    // fight, and the last of the queue lived permanently off screen. The
+    // buffs never left -- every tamed pet still folds in -- the road just
+    // shows the one the player chose on the Pets tab.
+    const pick = PET_BY_ID[this.state.companion];
+    const tamed = pick && this.state.pets[pick.id] ? [pick] : [];
     const key = tamed.map((p) => p.id).join(',');
     if (key === this._petKey) return;
     this._petKey = key;
+    this.petStep = 9;
     this.petActors = tamed.map((pet, i) => {
       // The sprite is a roster mob; hover comes from its own def so the bat
       // pet flies exactly as high as the bat it used to be.
       const mob = MOBS.find((m) => m.id === pet.sprite);
       const def = { id: pet.sprite, petId: pet.id, hover: mob?.hover ?? 0, reach: 0, speed: 0, hit: 0 };
       const actor = new Actor(def, this.sheets[pet.sprite], {
-        x: this.hero.x - 14 - i * 9, facing: 1,
+        x: this.hero.x - 13 - i * this.petStep, facing: 1,
       });
       actor.scale = 0.5;
       return actor;
@@ -264,22 +337,28 @@ export class Battle {
    * in the tick rather than on any single event.
    */
   updatePets(dt) {
-    for (const pet of this.state.tamePets()) {
-      this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+    // Tames and feats complete off slow counters; polling them sixty times
+    // a second was a tenth of the whole simulation (each pass rebuilds the
+    // parade key and runs ten unlock closures). Once a second of game time
+    // catches every crossing the same frame a human could notice it.
+    this._tameTimer = (this._tameTimer ?? 1) + dt;
+    if (this._tameTimer >= 1) {
+      this._tameTimer = 0;
+      for (const pet of this.state.tamePets()) {
+        this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
+      }
+      for (const feat of FEATS) {
+        if (this._featsDone.has(feat.id) || !featDone(feat, this.state.stats)) continue;
+        this._featsDone.add(feat.id);
+        this.state.invalidateBonus();
+        this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}` });
+      }
+      this.syncPets();
     }
-    // Feats ride the same tick: counters move on many sites, and the ones
-    // that climb in the background should still pay when they cross.
-    for (const feat of FEATS) {
-      if (this._featsDone.has(feat.id) || !featDone(feat, this.state.stats)) continue;
-      this._featsDone.add(feat.id);
-      this.state.invalidateBonus();
-      this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}` });
-    }
-    this.syncPets();
     const walking = this.hero.anim.name === 'walk';
     for (let i = 0; i < this.petActors.length; i++) {
       const actor = this.petActors[i];
-      actor.x = this.hero.x - 14 - i * 9;
+      actor.x = this.hero.x - 13 - i * this.petStep;
       actor.anim.play(walking ? 'walk' : 'idle', { fps: walking ? 10 : 8 });
       actor.anim.update(dt);
     }
@@ -305,14 +384,16 @@ export class Battle {
     this.state.hp = this.hero.hp = this.hero.maxHp;
     this.spawnTimer = 1.2;
     this.state.bossHeld = true;
+    this.retryTimer = 0;
     this.emit('toast', { text: reason, bad: true });
     this.emit('bossHeld', true);
   }
 
-  /** The button. Sends the boss back in. */
+  /** The button. Sends the boss back in; a held minute presses it unasked. */
   tryBoss() {
     if (!this.state.bossHeld) return false;
     this.state.bossHeld = false;
+    this.retryTimer = 0;
     this.enemy = null;
     this.spawnTimer = 0.3;
     this.state.hp = this.hero.hp = this.hero.maxHp;
@@ -471,6 +552,16 @@ export class Battle {
     actor.period = stats.period;
     actor.attackTimer = actor.period * 0.6;
 
+    // Overkill: the excess of the last killing blow lands on whoever walks
+    // in next, floored so a carry can never kill on its own -- the shop
+    // shelf buys pace on the trash line, not a cascade.
+    if (this.overflow > 0) {
+      const hit = Math.min(this.overflow, actor.maxHp - 1);
+      actor.hp -= hit;
+      this.overflow = 0;
+      this.pushFloater(actor, hit, 'hit');
+    }
+
     // One mob in ~40 walks in as a champion: louder colour, its own prize.
     if (kind === 'mob' && Math.random() < CHAMPION_CHANCE) {
       const pool = CHAMPIONS.filter((c) => !c.needsForge || this.state.forgeUnlocked);
@@ -580,9 +671,17 @@ export class Battle {
     const skillId = node.skill;
     const bonus = state.gatherBonus(skillId);
     const double = Math.random() < bonus.yieldDouble ? 2 : 1;
-    const amount = nodeYield(node.resource, state.tools[skillId], bonus) * double;
+    // The Harvest Stew multiplies at the harvest site because the per-skill
+    // bonus fold is cached and a ten-minute dish must not invalidate it.
+    const amount = Math.max(1, Math.round(
+      nodeYield(node.resource, state.tools[skillId], bonus) * double * state.dishMul('stew')));
     state.addRaw(node.resource.id, amount);
     this.pushFloater({ x: node.x, sprite: null, scale: 1 }, amount, 'ore');
+    // The Ancestral Bounty: the same haul again in the line's other types,
+    // reaching up while the tool allows and falling back down after.
+    for (const extraType of state.bountyExtras(skillId, node.resource)) {
+      state.addRaw(extraType.id, amount);
+    }
 
     // The two nodes that pay a gathering skill back into the combat economy.
     // Both are flat per node, so they scale with the kill rate and nothing
@@ -613,6 +712,86 @@ export class Battle {
     }
   }
 
+  /**
+   * The Cosmos. Observation runs on game time (the speed toggle turns the
+   * sky faster), and every discovered planet does one thing a finger was
+   * doing. Gathering planets pay one full node per tick on their line --
+   * roughly a third of working it by hand -- and skip the line your tool is
+   * on, which is already gathering for real. Bench planets only re-run a
+   * brew, dish or claim that the player set going themselves.
+   */
+  updateCosmos(dt) {
+    const { state } = this;
+    if (!state.cosmosOpen) return;
+    const found = state.tickCosmos(dt);
+    if (found) {
+      this.emit('toast', { text: CONSTELLATION_BY_ID[found.id]
+        ? `${found.name.toUpperCase()} CHARTED!`
+        : `${found.name.toUpperCase()} DISCOVERED!` });
+    }
+    if (!state.cosmos.found.length) return;
+
+    this.cosmosTimer = (this.cosmosTimer ?? 0) + dt;
+    if (this.cosmosTimer < COSMOS.every) return;
+    this.cosmosTimer = 0;
+
+    for (const pid of state.cosmos.found) {
+      const planet = PLANET_BY_ID[pid];
+      // Constellations sit in the same found list; their work is passive
+      // (they fold into the bonuses), so the automation loop skips them.
+      if (!planet) continue;
+      if (planet.auto === 'skill') {
+        const skill = planet.skill;
+        if (state.tool === skill) continue;
+        // Best resource both the stage and the tool can reach; no tease
+        // roll here -- a planet never taunts you with what it cannot work.
+        const list = SKILLS[skill].resources;
+        const best = bestForStage(skill, this.level);
+        const resource = best.tier <= state.tools[skill] ? best
+          : (list.filter((r) => this.level >= r.minStage && r.tier <= state.tools[skill]).at(-1) ?? list[0]);
+        const amount = nodeYield(resource, state.tools[skill], state.gatherBonus(skill));
+        state.addRaw(resource.id, amount);
+        // The planets work with blessed hands too: the bounty is a rule of
+        // gathering itself, not of who happens to hold the tool.
+        for (const extraType of state.bountyExtras(skill, resource)) {
+          state.addRaw(extraType.id, amount);
+        }
+        const levels = state.gainGatherXp(skill, resource.xp * COSMOS.xpShare);
+        if (levels) {
+          this.emit('toast', { text: `${SKILLS[skill].name.toUpperCase()} ${state.skills[skill].level}!` });
+        }
+      } else if (planet.auto === 'brews') {
+        for (const potion of POTIONS) {
+          const left = state.potions[potion.id] ?? 0;
+          if (left > 0 && left < COSMOS.topUpBelow && state.canBrew(potion.id)) {
+            state.brew(potion.id);
+          }
+        }
+      } else if (planet.auto === 'dishes') {
+        for (const dish of DISHES) {
+          const left = state.dishes[dish.id] ?? 0;
+          if (left > 0 && left < COSMOS.topUpBelow && state.canCook(dish.id)) {
+            state.cook(dish.id);
+          }
+        }
+      } else if (planet.auto === 'contracts') {
+        const { dailies, weekly } = state.questBoard();
+        let paid = 0;
+        for (const quest of dailies) {
+          if (state.canClaimQuest(quest)) paid += state.claimQuest(quest);
+        }
+        if (state.canClaimQuest(weekly, true)) paid += state.claimQuest(weekly, true);
+        if (paid) this.emit('toast', { text: `MERCURY: +${paid} GEM(S)` });
+      } else if (planet.auto === 'feed') {
+        // The refinery runs itself now, so Neptune took the one chore left
+        // at the pond: it feeds the walking companion out of the reserve,
+        // one meal per visit, and stops where a finger would, when the
+        // pile cannot pay.
+        if (state.canFeedPet(state.companion)) state.feedPet(state.companion);
+      }
+    }
+  }
+
   /** Forager, from the relic tree: rotates the tool so no line stalls. */
   updateAutoSwitch(dt) {
     const { state } = this;
@@ -631,6 +810,7 @@ export class Battle {
   update(dt) {
     const { state, hero } = this;
 
+    state.runClock += dt;   // the sprint clock counts game time, like clock
     hero.maxHp = state.maxHp;
     hero.hp = Math.min(hero.hp, hero.maxHp);
     if (hero.flash > 0) hero.flash -= dt;
@@ -641,13 +821,24 @@ export class Battle {
     this.updateNodes(dt);
     this.updateAutoSwitch(dt);
     state.tickMeals(dt);
+    state.tickRefine(dt);
     state.tickPotions(dt);
+    state.tickDishes(dt);
 
     this.updateEnemy(dt);
     this.updateProps();
     this.updatePets(dt);
+    this.updateCosmos(dt);
     this.updateCorpses(dt);
     this.updateFloaters(dt);
+
+    // A held boss retries itself once a minute. The manual button still
+    // works and still says AGAIN; this is only the finger of whoever is not
+    // in the room, so an idle night stops parking on one failed fight.
+    if (state.bossHeld && !this.run && !hero.dead) {
+      this.retryTimer += dt;
+      if (this.retryTimer >= BOSS_RETRY) this.tryBoss();
+    }
 
     if (this.enemy?.isBoss && !hero.dead) {
       this.bossTimer -= dt;
@@ -749,6 +940,7 @@ export class Battle {
         dealt *= 1 + state.bonus.ambush;
       }
       if (target.hp / target.maxHp <= 0.3) dealt *= 1 + state.bonus.executeMul;
+      if (target.isBoss || target.isElite) dealt *= 1 + state.bossDamage;
 
       if (target.trait) {
         target.hitsTaken += 1;
@@ -758,6 +950,7 @@ export class Battle {
         }
       }
 
+      const before = target.hp;
       const killed = target.hurt(dealt);
       this.pushFloater(target, dealt, crit ? 'crit' : 'hit');
 
@@ -767,6 +960,19 @@ export class Battle {
 
       this.emit('hit', { target, damage: dealt, crit });
       if (killed) {
+        if (state.overkill > 0 && dealt > before) {
+          this.overflow += (dealt - before) * state.overkill;
+        }
+        this.killEnemy(target);
+        return;
+      }
+
+      // Reap: whatever survives the swing below the threshold dies anyway.
+      // Bosses are exempt -- their timer is the fight, and a shelf upgrade
+      // must not shave it -- but dungeon rooms and mini bosses are fair game.
+      if (state.reap > 0 && !target.isBoss && target.hp <= target.maxHp * state.reap) {
+        this.pushFloater(target, target.hp, 'hit');
+        target.hurt(target.hp);
         this.killEnemy(target);
         return;
       }
@@ -800,7 +1006,13 @@ export class Battle {
     // any other coin, so the offline payout and every gold multiplier see it
     // exactly as they see a good stage.
     const lucky = state.bonus.treasure > 0 && Math.random() < state.bonus.treasure;
-    const gold = state.earn(target.gold * (lucky ? 2 : 1));
+    // War Chest tops up the two encounter kinds that pay flat multiples, so
+    // it scales the stage's PUNCTUATION rather than the whole income line.
+    const spoils = target.isBoss || target.isElite ? 1 + state.warChest : 1;
+    // The freed caravan's thanks: a burst, not a buff, so it cannot stack.
+    const rush = this.rush > 0 ? 2 : 1;
+    if (this.rush > 0) this.rush -= 1;
+    const gold = state.earn(target.gold * (lucky ? 2 : 1) * spoils * rush);
     this.pushFloater(target, gold, 'gold');
 
     let dust = state.rollDust(target.kind);
@@ -816,7 +1028,7 @@ export class Battle {
     const xpMul = target.isBoss ? LEVELS.bossXp
       : target.isElite ? LEVELS.eliteXp
       : (target.champion?.xp ?? 1);
-    const levelsUp = state.gainXp(killXp(this.level, xpMul));
+    const levelsUp = state.gainXp(killXp(this.level, xpMul) * rush);
     if (levelsUp) this.emit('toast', { text: `LEVEL ${state.level}!` });
     this.emit('kill', { target, gold, levelsUp });
 
@@ -893,7 +1105,16 @@ export class Battle {
       if (trait.kind === 'burn') this.burnTimer = trait.power;
     }
     const taken = enemy.damage * power * this.state.damageTaken;
-    const killed = hero.hurt(taken);
+    let killed = hero.hurt(taken);
+    // Phoenix Heart: the blow that would have landed you on the floor
+    // sometimes leaves you at a third instead. Checked before anything
+    // reads `killed`, so the streak, the death counter and the boss hold
+    // all see a hit that simply hurt.
+    if (killed && Math.random() < this.state.phoenix) {
+      killed = false;
+      hero.hp = hero.maxHp * 0.3;
+      this.emit('toast', { text: 'PHOENIX HEART' });
+    }
     this.emit('heroHurt', { killed });
     this.pushFloater(hero, taken, 'player');
     if (trait?.kind === 'leech' && !enemy.dead) {
@@ -902,7 +1123,7 @@ export class Battle {
     // Thorns. Off the damage that actually landed, so armour and Carapace
     // cut what comes back as well as what goes in -- the alternative pays
     // the tankiest build the most for being hit hardest, which is backwards.
-    const thorns = this.state.bonus.thorns;
+    const thorns = this.state.thorns;
     if (thorns > 0 && !enemy.dead && taken > 0) {
       const back = taken * thorns;
       if (enemy.hurt(back)) { this.pushFloater(enemy, back, 'hit'); this.killEnemy(enemy); }

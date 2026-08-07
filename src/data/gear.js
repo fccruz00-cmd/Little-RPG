@@ -72,6 +72,48 @@ export function setRarity(gear) {
   return lowest;
 }
 
+// --- enchants -------------------------------------------------------
+// A Rare-or-better roll also carries an enchant: one small affix, rolled
+// with the item and rerollable for dust. This is the decision the forge was
+// missing -- rarity is a ladder you climb once, an enchant is a slot you
+// argue with -- and it gives dust something to want after the board is full.
+// Values are deliberately a fraction of a rarity step, so a lucky affix
+// never beats an unlucky rarity: orange still always beats purple.
+export const ENCHANTS = [
+  { id: 'keen',   name: 'Keen',   key: 'critAdd',     mode: 'add', per: 0.008 },
+  { id: 'gilded', name: 'Gilded', key: 'goldMul',     mode: 'mul', per: 0.03 },
+  { id: 'wise',   name: 'Wise',   key: 'xpMul',       mode: 'mul', per: 0.03 },
+  { id: 'hungry', name: 'Hungry', key: 'lifesteal',   mode: 'add', per: 0.004 },
+  { id: 'dusty',  name: 'Dusty',  key: 'dustMul',     mode: 'mul', per: 0.04 },
+  { id: 'swift',  name: 'Swift',  key: 'atkSpeedMul', mode: 'mul', per: 0.01 },
+];
+export const ENCHANT_BY_ID = Object.fromEntries(ENCHANTS.map((e) => [e.id, e]));
+
+/** Rarity index an enchant starts riding along from (Rare). */
+export const ENCHANT_FROM = 2;
+
+/** Rolls `{id, tier}`: any affix, tiers I/II/III at 55/30/15. */
+export function rollEnchant(random = Math.random) {
+  const def = ENCHANTS[(random() * ENCHANTS.length) | 0];
+  const r = random();
+  return { id: def.id, tier: r < 0.15 ? 3 : r < 0.45 ? 2 : 1 };
+}
+
+const ENCHANT_LABEL = {
+  goldMul: 'gold', xpMul: 'XP', dustMul: 'dust', atkSpeedMul: 'attack speed',
+};
+
+export function describeEnchant(mod) {
+  const def = ENCHANT_BY_ID[mod.id];
+  if (!def) return '';
+  const amount = def.per * mod.tier;
+  const roman = ['I', 'II', 'III'][mod.tier - 1] ?? mod.tier;
+  const what = def.key === 'critAdd' ? t('+{0} crit chance', pct(amount))
+    : def.key === 'lifesteal' ? t('heals {0} of damage dealt', pct(amount))
+    : `${mult(1 + amount)} ${t(ENCHANT_LABEL[def.key])}`;
+  return `${def.name} ${roman} · ${what}`;
+}
+
 // Soul dust
 export const DUST = {
   mobChance: 0.20,   // per regular mob

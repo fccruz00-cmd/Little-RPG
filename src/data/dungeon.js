@@ -43,20 +43,23 @@ export const DUNGEON = {
 //
 // Gold is deliberately the small part of the payout, and priced off YOUR
 // stage rather than the key's: gold is the one thing here you can already
-// farm, so the reason to run a deeper key is relics and dust.
+// farm, so the reason to run a deeper key is relics and dust. The relic
+// payouts sit HIGH on purpose, five-ish times their first sizing: a run
+// costs minutes that combat would otherwise spend pushing stages, and the
+// bot audit proved the old numbers never paid that time back.
 // `gems` and `firstGems` come from data/gems.js, which owns the whole gem
 // economy; they are folded in below so a key stays one readable row.
 export const KEYS = [
   { tier: 0, name: 'Copper Key',  level: 26, cost: { bars: 40,  planks: 30 },
-    relics: 1,  dust: 120,  goldMul: 30 },
+    relics: 5,  dust: 120,  goldMul: 30 },
   { tier: 1, name: 'Iron Key',    level: 44, cost: { bars: 95,  planks: 70 },
-    relics: 2,  dust: 320,  goldMul: 40 },
+    relics: 10, dust: 320,  goldMul: 40 },
   { tier: 2, name: 'Silver Key',  level: 64, cost: { bars: 230, planks: 170 },
-    relics: 4,  dust: 850,  goldMul: 50 },
+    relics: 20, dust: 850,  goldMul: 50 },
   { tier: 3, name: 'Gold Key',    level: 86, cost: { bars: 550, planks: 410 },
-    relics: 7,  dust: 2200, goldMul: 65 },
+    relics: 36, dust: 2200, goldMul: 65 },
   { tier: 4, name: 'Mithril Key', level: 112, cost: { bars: 1300, planks: 980 },
-    relics: 12, dust: 5600, goldMul: 85 },
+    relics: 60, dust: 5600, goldMul: 85 },
 ].map((key) => ({ ...key, gems: GEM_DROP[key.tier], firstGems: GEM_FIRST[key.tier] }));
 
 export const KEY_BY_TIER = Object.fromEntries(KEYS.map((k) => [k.tier, k]));
