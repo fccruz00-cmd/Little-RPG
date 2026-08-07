@@ -117,10 +117,14 @@
       <button class="tab" data-tab="hall" type="button" role="tab" id="tab-hall" hidden>
         Ancestors<i class="pip" id="pip-hall" hidden></i>
       </button>
+      <!-- the awakening's own rewards: the bestiary and the jewels -->
+      <button class="tab" data-tab="awaken" type="button" role="tab" id="tab-awaken" hidden>
+        Awaken
+      </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
         Ascend<i class="pip" id="pip-prestige" hidden></i>
       </button>
-      <!-- past the last reset: the layer an awakening opens -->
+      <!-- past every reset: the sky the Singularity ceremony opens -->
       <button class="tab" data-tab="cosmos" type="button" role="tab" id="tab-cosmos" hidden>
         Singularity<i class="pip" id="pip-cosmos" hidden></i>
       </button>
@@ -241,17 +245,33 @@
       <div class="tree-scroll" id="tree-cooking" hidden></div>
     </div>
 
-    <!-- tab: the Singularity (shows up after the first awakening). The
-         whole awakened layer behind one switch: the old cosmos catalogs,
-         the bestiary's kill ledger, and the soul-cut jewels. -->
+    <!-- tab: the Awaken layer's own rewards, open from the first awakening:
+         the bestiary's kill ledger and the soul-cut jewels. -->
+    <div class="pane" id="pane-awaken">
+      <div class="pane__head">
+        <div class="segmented" id="awaken-switch">
+          <button class="is-on" data-lore="hunt" type="button">Bestiary</button>
+          <button data-lore="jewels" type="button">Jewels</button>
+        </div>
+        <span class="pane__points">
+          <i class="ico ico--sm ico--orb"></i> <b id="awaken-souls">0</b>
+        </span>
+      </div>
+      <p class="pane__detail" id="awaken-detail"></p>
+      <!-- The bestiary: every kill counted by name, notches paying grudge -->
+      <div class="keys omni" id="hunt-list"></div>
+      <!-- The jewels: four stones, three facets each, priced in souls -->
+      <div class="keys" id="jewel-list" hidden></div>
+    </div>
+
+    <!-- tab: the Singularity (the ceremony past every reset opens it).
+         The sky and nothing else: planets, stars, the Omniscience ledger. -->
     <div class="pane" id="pane-cosmos">
       <div class="pane__head">
         <div class="segmented" id="cosmos-switch">
           <button class="is-on" data-sky="planetarium" type="button">Planetarium</button>
           <button data-sky="constellations" type="button" id="sky-stars">Constellations</button>
           <button data-sky="omni" type="button">Omniscience</button>
-          <button data-sky="hunt" type="button">Bestiary</button>
-          <button data-sky="jewels" type="button">Jewels</button>
         </div>
         <span class="pane__points">
           <i class="ico ico--sm ico--telescope"></i> <b id="planets-found">0/8</b>
@@ -262,10 +282,6 @@
       <div class="skyline" id="constellations" hidden></div>
       <!-- Omniscience: the ledger of every pile ever gained, one buff each -->
       <div class="keys omni" id="omni-list" hidden></div>
-      <!-- The bestiary: every kill counted by name, notches paying grudge -->
-      <div class="keys omni" id="hunt-list" hidden></div>
-      <!-- The jewels: four stones, three facets each, priced in souls -->
-      <div class="keys" id="jewel-list" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->
@@ -342,6 +358,7 @@
         <div class="segmented" id="asc-switch">
           <button class="is-on" data-asc="rebirth" type="button">Rebirth</button>
           <button data-asc="awaken" type="button">Awaken<i class="pip" id="pip-awaken" hidden></i></button>
+          <button data-asc="singularity" type="button" id="asc-sing-tab" hidden>Singularity</button>
           <button data-asc="feats" type="button">Feats</button>
         </div>
         <span class="pane__points" id="asc-souls" hidden>
@@ -431,6 +448,19 @@
         <button class="big-btn" id="awk-go" type="button" disabled>Awaken</button>
 
         <button class="link link--danger" id="btn-reset" type="button">Erase everything and start over</button>
+      </div>
+
+      <!-- The Singularity: a door, not a wipe. Crossed once, forever. -->
+      <div class="prestige" id="asc-singularity" hidden>
+        <div class="prestige__gain prestige__gain--soul">
+          <i class="ico ico--lg ico--telescope"></i>
+          <div>
+            <strong id="sing-state">The sky is sealed</strong>
+            <small id="sing-need"></small>
+          </div>
+        </div>
+        <p class="prestige__note" id="sing-note"></p>
+        <button class="big-btn" id="sing-go" type="button" disabled>Singularity</button>
       </div>
     </div>
 

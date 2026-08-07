@@ -11,9 +11,9 @@ playing offline.
 
 The **UI** keeps the top; under it the **Fight** takes a column of its own
 and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
-**Skills**, **Pets**, **Ancestors**, **Ascend** and **Singularity**: the
-journey reads left to right, work, friends, the dead, the leap, and what
-waits past the last reset.
+**Skills**, **Pets**, **Ancestors**, **Awaken**, **Ascend** and
+**Singularity**: the journey reads left to right, work, friends, the
+dead, the awakened trophies, the leap, and the door past every reset.
 
 ```
 +--------------------------------------------------+
@@ -191,7 +191,7 @@ fighting in a few milliseconds, and against `performance.now()` that reads as
 sixty times the real income, which then inflates every offline payout after
 it.
 
-### The eight tabs
+### The nine tabs
 
 1. **Shop**: stats bought with **gold**, wiped on rebirth.
 2. **Talents**: three webs behind one switch at the top. All three are the
@@ -244,7 +244,27 @@ it.
    *up* while the tool allows and falls back down after, because the dead
    widen your hands but cannot sharpen your axe. The blessing is a rule of
    gathering itself, so the Cosmos' planets work with blessed hands too.
-7. **Ascend**: the two reset layers behind one switch.
+7. **Awaken**: only appears after the first awakening, and carries the
+   awakening's own trophies behind one switch.
+
+   The first catalog is the **Bestiary**: every kill counted under the
+   name of what died, lifetime, through every reset, thirty-five species
+   across mobs and bosses. Each **notch**, one per power of ten past the
+   species' base (100 kills for a mob, 10 for a boss), pays **+6% damage
+   against that species**, up to ten notches. Kills tally from minute
+   one; the grudge only folds once awakened, like the Omniscience marks.
+
+   The second is the **Jewels**: four stones cut with **souls**, three
+   facets each, and every facet reaches all four gathering lines at once.
+   Haste shortens the swing (the third cut makes it instant, to the
+   minimum-swing floor), Plenty adds up to +60% yield, Springs sets
+   nodes up to 45% closer, Study adds up to +90% skill XP. Pure quality
+   of life by design: gathering never pays damage, so its jewels never
+   touch the fight. Awakening also unlocks the **pet armor** bench on
+   the Forge tab: fitting a wild thing for a piece is singularity
+   knowledge.
+
+8. **Ascend**: the two reset layers behind one switch.
    - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
      the depth of the run into relics. The first one lands at stage 25; since
      the formula is cumulative minus what you already collected, repeating
@@ -266,9 +286,10 @@ it.
      the two uncapped rails at the ends of the soul lanes (Transcendence
      and Undying, +12% damage or health a rank at ever-steeper cost) make
      sure a soul never arrives with nowhere to go.
-8. **Singularity**: only appears after the first awakening, and closes the
-   strip: everything the deepest reset unlocks, behind one switch. The
-   first two catalogs share the telescope — the **Planetarium** and the **Constellations** — drawn as
+9. **Singularity**: the strip's last tab, opened by the **ceremony** of
+   the same name on the Ascend tab: a door, not a wipe. It asks for three
+   lifetime awakenings, opens once, forever, and what it opens is the sky
+   and nothing else. The first two catalogs share the telescope — the **Planetarium** and the **Constellations** — drawn as
    sideways-scrolling rows of card portraits joined O → O → O, sharing
    **one telescope**: an hour spent charting The Sword is an hour Jupiter
    is not being found, and that is the whole decision. Observation runs on
@@ -325,23 +346,6 @@ it.
    | The River   | 7   | 16% faster work, every gathering skill |
    | The Twins   | 9   | enchants +60% stronger |
    | The Crown   | 12  | the set bonus +60% stronger |
-
-   The fourth catalog is the **Bestiary**: every kill counted under the
-   name of what died, lifetime, through every reset, thirty-five species
-   across mobs and bosses. Each **notch**, one per power of ten past the
-   species' base (100 kills for a mob, 10 for a boss), pays **+6% damage
-   against that species**, up to ten notches. Kills tally from minute
-   one; the grudge only folds once awakened, like the Omniscience marks.
-
-   The fifth is the **Jewels**: four stones cut with **souls**, three
-   facets each, and every facet reaches all four gathering lines at once.
-   Haste shortens the swing (the third cut makes it instant, to the
-   minimum-swing floor), Plenty adds up to +60% yield, Springs sets
-   nodes up to 45% closer, Study adds up to +90% skill XP. Pure quality
-   of life by design: gathering never pays damage, so its jewels never
-   touch the fight. Awakening also unlocks the **pet armor** bench on
-   the Forge tab: fitting a wild thing for a piece is singularity
-   knowledge.
 
 ### The talent web
 
@@ -995,7 +999,7 @@ the **pane scrolls as one column** and the web gets a 300px window — the
 whole tree, readable, with the parchment detail strip pinned sticky so a
 tapped node still explains itself. The stock and workshop stop being
 scrollers of their own, so it is one finger, one direction. The tab row
-scrolls sideways when eight tabs outgrow a narrow panel, rather than
+scrolls sideways when nine tabs outgrow a narrow panel, rather than
 clipping the last two off the screen.
 
 **With height to spare, the arena becomes a band instead.** From a 640px-tall

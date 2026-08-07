@@ -570,8 +570,15 @@ const PT = {
     'A Onisciência conta tudo que você já <b>ganhou</b>, na vida inteira. Gastar nunca desconta: o número cresce sozinho com o seu farm, cada marca de dez paga seu próprio buff permanente, e o livro sobrevive a todo reset.',
   'total': 'total',
 
-  // --- the Singularity: tab, bestiary and jewels ---
+  // --- the Singularity: the door, then the bestiary and jewels ---
   'Singularity': 'Singularidade',
+  'The sky is sealed': 'O céu está selado',
+  'The sky is open': 'O céu está aberto',
+  '{0}/{1} awakening(s)': '{0}/{1} despertar(es)',
+  'crossed': 'atravessada',
+  'THE SINGULARITY: THE SKY IS OPEN': 'A SINGULARIDADE: O CÉU ESTÁ ABERTO',
+  'The Singularity is not another wipe: it is a door. Cross it once, at {0} lifetime awakenings, and the sky opens forever: the Planetarium, the Constellations and the Omniscience marks, past every reset.':
+    'A Singularidade não é mais um reset: é uma porta. Atravesse uma vez, com {0} despertares na vida, e o céu abre para sempre: o Planetário, as Constelações e as marcas da Onisciência, além de todo reset.',
   'Bestiary': 'Bestiário',
   'Jewels': 'Joias',
   'kill(s)': 'morte(s)',

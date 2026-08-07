@@ -7,7 +7,7 @@ import {
 } from '../data/skilltree.js';
 import {
   nextRelicStage, relicsEarnedAt, PRESTIGE,
-  nextSoulRelics, soulsEarnedAt, AWAKEN,
+  nextSoulRelics, soulsEarnedAt, AWAKEN, SINGULARITY,
 } from '../data/prestige.js';
 import { AUTO_BUY_BASE } from '../data/talents.js';
 import {
@@ -144,6 +144,11 @@ export class UI {
       presGainBox: document.querySelector('#asc-rebirth .prestige__gain'),
       ascSwitch: $('asc-switch'), ascSouls: $('asc-souls'), soulsHave: $('souls-have'),
       ascRebirth: $('asc-rebirth'), ascAwaken: $('asc-awaken'), pipAwaken: $('pip-awaken'),
+      ascSingularity: $('asc-singularity'), ascSingTab: $('asc-sing-tab'),
+      singState: $('sing-state'), singNeed: $('sing-need'),
+      singNote: $('sing-note'), singGo: $('sing-go'),
+      tabAwaken: $('tab-awaken'), awakenSwitch: $('awaken-switch'),
+      awakenDetail: $('awaken-detail'), awakenSouls: $('awaken-souls'),
       ascFeats: $('asc-feats'), featsList: $('feats-list'),
       awkGain: $('awk-gain'), awkHave: $('awk-have'), awkCount: $('awk-count'),
       awkSpent: $('awk-spent'), awkNext: $('awk-next'), awkGo: $('awk-go'),
@@ -298,12 +303,14 @@ export class UI {
       ['[data-skill="alchemy"]', 'Alchemy'],
       ['[data-skill="farming"]', 'Farming'], ['[data-skill="cooking"]', 'Cooking'],
       ['[data-asc="rebirth"]', 'Rebirth'], ['[data-asc="awaken"]', 'Awaken'],
-      ['[data-asc="feats"]', 'Feats'],
+      ['[data-asc="singularity"]', 'Singularity'], ['[data-asc="feats"]', 'Feats'],
       ['[data-sky="planetarium"]', 'Planetarium'],
       ['[data-sky="constellations"]', 'Constellations'],
       ['[data-sky="omni"]', 'Omniscience'],
-      ['[data-sky="hunt"]', 'Bestiary'],
-      ['[data-sky="jewels"]', 'Jewels'],
+      ['[data-tab="awaken"]', 'Awaken'],
+      ['[data-lore="hunt"]', 'Bestiary'],
+      ['[data-lore="jewels"]', 'Jewels'],
+      ['#sing-go', 'Singularity'],
       ['[data-league="pure"]', 'Pure'], ['[data-league="gilded"]', 'Gilded'],
       ['[data-league="patron"]', 'Patron'],
       ['[data-board="sprint"]', 'Weekly sprint'], ['[data-board="best"]', 'Best stage'],
@@ -1166,6 +1173,21 @@ export class UI {
       if (button) this.showAsc(button.dataset.asc);
     });
 
+    el.awakenSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button) this.showLore(button.dataset.lore);
+    });
+
+    el.singGo.addEventListener('click', () => {
+      if (!state.doSingularity()) return;
+      this.sfx.play('jingle');
+      this.toast({ text: t('THE SINGULARITY: THE SKY IS OPEN') });
+      // The door swings on the spot, not on the next tick.
+      el.tabCosmos.hidden = false;
+      this.refreshPrestige();
+      this.showTab('cosmos');
+    });
+
     el.presGo.addEventListener('click', () => {
       const gain = state.pendingRelics;
       if (gain <= 0) return;
@@ -1402,6 +1424,7 @@ export class UI {
     if (name === 'talents') this.refreshTrees(true);
     if (name === 'skills') this.refreshSkills();
     if (name === 'cosmos') this.refreshCosmos();
+    if (name === 'awaken') this.refreshLore();
     if (name === 'forge') this.refreshForge();
     if (name === 'hall') this.refreshHall(true);
     if (name === 'pets') this.refreshPets();
@@ -1430,6 +1453,7 @@ export class UI {
     }
     this.el.ascRebirth.hidden = name !== 'rebirth';
     this.el.ascAwaken.hidden = name !== 'awaken';
+    this.el.ascSingularity.hidden = name !== 'singularity';
     this.el.ascFeats.hidden = name !== 'feats';
     this.refreshPrestige();
   }
@@ -1655,6 +1679,7 @@ export class UI {
     el.pipPrestige.hidden = state.pendingRelics <= 0 && state.pendingSouls <= 0;
     el.pipPrestige.classList.add('pip--gold');
     el.tabForge.hidden = !state.forgeUnlocked;
+    el.tabAwaken.hidden = state.awakens < 1;
     el.tabCosmos.hidden = !state.cosmosOpen;
     // The sky nags only while the telescope sits idle with bodies left.
     const skyLeft = PLANETS.some((p) => !state.planetFound(p.id))
@@ -1683,6 +1708,7 @@ export class UI {
     else if (this.tab === 'talents') this.refreshTrees();
     else if (this.tab === 'skills') this.refreshSkills();
     else if (this.tab === 'cosmos') this.refreshCosmos();
+    else if (this.tab === 'awaken') this.refreshLore();
     else if (this.tab === 'forge') this.refreshForge();
     else if (this.tab === 'hall') this.refreshHall();
     else if (this.tab === 'pets') this.refreshPets();
@@ -2211,7 +2237,6 @@ export class UI {
       r.el.classList.toggle('is-done', notches >= BESTIARY.cap);
       r.el.classList.toggle('can-smelt', notches > 0);
     }
-    setText(this.el.planetsFound, String(total));
   }
 
   /** The jewels: four stones, keys-style, priced in souls. */
@@ -2242,10 +2267,8 @@ export class UI {
 
   refreshJewels() {
     const { state } = this;
-    let cut = 0;
     for (const { jewel, row, what, cost, have, action } of this.jewelRows.values()) {
       const rank = state.jewels[jewel.id] ?? 0;
-      cut += rank;
       const price = state.jewelCost(jewel.id);
       const now = rank ? jewel.describe(rank, jewel.facets[rank - 1]) : t(jewel.blurb);
       setHtml(what, rank && price != null
@@ -2259,7 +2282,6 @@ export class UI {
       row.classList.toggle('can-smelt', state.canBuyJewel(jewel.id));
       row.classList.toggle('is-done', price == null);
     }
-    setText(this.el.planetsFound, `${cut}/${JEWELS.length * JEWEL_MAX}`);
   }
 
   showSky(view) {
@@ -2270,9 +2292,30 @@ export class UI {
     this.el.planetarium.hidden = view !== 'planetarium';
     this.el.constellations.hidden = view !== 'constellations';
     this.el.omniList.hidden = view !== 'omni';
+    this.refreshCosmos();
+  }
+
+  /** Flips the Awaken tab between the bestiary and the jewels. */
+  showLore(view) {
+    this.loreView = view;
+    for (const button of this.el.awakenSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.lore === view);
+    }
     this.el.huntList.hidden = view !== 'hunt';
     this.el.jewelList.hidden = view !== 'jewels';
-    this.refreshCosmos();
+    this.refreshLore();
+  }
+
+  refreshLore() {
+    const { state, el } = this;
+    setText(el.awakenSouls, fmt(state.souls));
+    if ((this.loreView ?? 'hunt') === 'hunt') {
+      setHtml(el.awakenDetail, t('The Bestiary counts every kill by the name of what died, lifetime, through every reset. Each notch of ten kills past a species\' first mark pays <b>more damage against that species</b>, forever.'));
+      this.refreshHunt();
+    } else {
+      setHtml(el.awakenDetail, t('Jewels are cut with <b>souls</b> and never break: each facet betters every gathering line at once, and the third cut of the first stone makes the swing instant.'));
+      this.refreshJewels();
+    }
   }
 
   refreshCosmos() {
@@ -2280,16 +2323,6 @@ export class UI {
     if (this.skyView === 'omni') {
       setHtml(el.cosmosDetail, t('Omniscience counts everything you have ever <b>gained</b>, lifetime. Spending never subtracts: the tally grows with your farm on its own, every mark of ten pays its own permanent buff, and the ledger survives every reset.'));
       this.refreshOmni();
-      return;
-    }
-    if (this.skyView === 'hunt') {
-      setHtml(el.cosmosDetail, t('The Bestiary counts every kill by the name of what died, lifetime, through every reset. Each notch of ten kills past a species\' first mark pays <b>more damage against that species</b>, forever.'));
-      this.refreshHunt();
-      return;
-    }
-    if (this.skyView === 'jewels') {
-      setHtml(el.cosmosDetail, t('Jewels are cut with <b>souls</b> and never break: each facet betters every gathering line at once, and the third cut of the first stone makes the swing instant.'));
-      this.refreshJewels();
       return;
     }
     const stars = this.skyView === 'constellations';
@@ -2872,6 +2905,7 @@ export class UI {
     el.ascSouls.hidden = state.souls <= 0 && state.awakens <= 0;
     setText(el.soulsHave, fmt(state.souls));
     this.refreshAwaken();
+    this.refreshSingularity();
     this.refreshFeats();
   }
 
@@ -2898,6 +2932,22 @@ export class UI {
     setText(el.awkGo, gain > 0
       ? t('Awaken for {0} soul(s)', gain)
       : t('Earn {0} relics first', isFinite(next) ? next : AWAKEN.minRelics));
+  }
+
+  /** The ceremony's board: sealed, ready, or crossed. */
+  refreshSingularity() {
+    const { state, el } = this;
+    // The switch button shows once the first awakening makes the door
+    // conceivable; the ceremony itself waits for the third.
+    el.ascSingTab.hidden = state.awakens < 1 && !state.singularity;
+    const done = state.singularity > 0;
+    setText(el.singState, done ? t('The sky is open') : t('The sky is sealed'));
+    setText(el.singNeed, done ? ''
+      : t('{0}/{1} awakening(s)', state.awakens, SINGULARITY.needsAwakens));
+    setHtml(el.singNote, t('The Singularity is not another wipe: it is a door. Cross it once, at {0} lifetime awakenings, and the sky opens forever: the Planetarium, the Constellations and the Omniscience marks, past every reset.', SINGULARITY.needsAwakens));
+    el.singGo.disabled = !state.canSingularity;
+    setText(el.singGo, done ? t('crossed') : t('Singularity'));
+    el.singGo.classList.toggle('is-done', done);
   }
 
   /** Lists what the relic tree already grants; hides itself when empty. */

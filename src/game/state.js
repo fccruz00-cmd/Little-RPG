@@ -9,7 +9,7 @@ import {
 import {
   TALENT_WEB, RELIC_WEB, SOUL_WEB, SKILL_WEBS, webUnlocked,
 } from '../data/skilltree.js';
-import { relicsEarnedAt, soulsEarnedAt } from '../data/prestige.js';
+import { relicsEarnedAt, soulsEarnedAt, SINGULARITY } from '../data/prestige.js';
 import { KILLS_PER_STAGE } from '../data/enemies.js';
 import {
   SLOTS, RARITIES, LEGENDARY, DUST, SET_BONUS, setRarity, craftCost, rollRarity, gearValue,
@@ -330,6 +330,12 @@ export class GameState {
       target: data.cosmos?.target ?? null,
       progress: { ...(data.cosmos?.progress ?? {}) },
     };
+    // The ceremony, 0 or 1. Saves from before the door existed prove they
+    // crossed it by having charted the sky at all: a discovery could only
+    // have happened on the open side.
+    this.singularity = data.singularity != null
+      ? (data.singularity ? 1 : 0)
+      : (this.cosmos.found.length > 0 ? 1 : 0);
     this.ancestors = {
       assign: { ...(data.ancestors?.assign ?? {}) },
       levels: { ...(data.ancestors?.levels ?? {}) },
@@ -460,9 +466,9 @@ export class GameState {
     }
 
     // Omniscience: each record's marks are ranks of that row's own buff.
-    // Records accrue from the first minute, but the eye only OPENS with
-    // the first awakening: the ledger is knowledge the road cannot read.
-    if (this.awakens > 0) {
+    // Records accrue from the first minute, but the ledger lives on the
+    // open side of the Singularity: the eye opens with the ceremony.
+    if (this.singularity > 0) {
       for (const omniRow of OMNI_ROWS) {
         const marks = omniTier(this.omni[omniRow.id] ?? 0, omniRow.base);
         if (marks) apply(omniRow, marks);
@@ -1511,7 +1517,20 @@ export class GameState {
 
   // --- the cosmos -----------------------------------------------------
   get cosmosOpen() {
-    return this.awakens > 0;
+    return this.singularity > 0;
+  }
+
+  // --- the Singularity ceremony ---------------------------------------
+  get canSingularity() {
+    return this.singularity === 0 && this.awakens >= SINGULARITY.needsAwakens;
+  }
+
+  /** The door opens once and wipes nothing. Returns true when it took. */
+  doSingularity() {
+    if (!this.canSingularity) return false;
+    this.singularity = 1;
+    this.save();
+    return true;
   }
 
   planetFound(id) {
@@ -2010,7 +2029,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, singularity,
       potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
@@ -2023,7 +2042,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, singularity,
       potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
