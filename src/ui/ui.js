@@ -23,7 +23,7 @@ import {
 import { OMNI, OMNI_ROWS, omniTier, omniNext } from '../data/omni.js';
 import { BESTIARY, BESTIARY_ROWS, huntTier, huntNext } from '../data/bestiary.js';
 import { JEWELS, JEWEL_BY_ID, JEWEL_MAX } from '../data/jewels.js';
-import { FEATS, featDone } from '../data/feats.js';
+import { FEATS, featRanks, featNext } from '../data/feats.js';
 import { ANCESTORS, HALL } from '../data/ancestors.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
 import { PATHS, describePath } from '../data/paths.js';
@@ -372,7 +372,7 @@ export class UI {
       ['#forge-detail', 'Mobs derrubam <b>pó de alma</b>. Cada forja rola uma raridade: melhor que a sua, ela se equipa sozinha; pior, vira pó de novo.'],
       ['#asc-rebirth .prestige__note', 'Renascer apaga <b>fase, ouro, upgrades, nível e pontos de talento</b>.<br>Você mantém suas <b>relíquias</b> e a <b>árvore de relíquias</b>, gastas na aba Talentos, e tudo da aba <b>Ofícios</b>: níveis de coleta, minério, barras e ferramentas.'],
       ['#asc-awaken .prestige__note', 'Despertar apaga tudo que o Renascer apaga <b>e mais: relíquias, a árvore de relíquias, renascimentos, pó e equipamento</b>. Você mantém suas <b>almas</b>, a <b>árvore de almas</b> na aba Talentos, e tudo da aba <b>Ofícios</b>. Almas vêm de cada relíquia que esta ascensão ganhou (<b id="awk-progress">0</b> até agora).'],
-      ['#asc-feats .prestige__note', 'Feitos são marcas da vida inteira: os contadores nunca zeram, nem no despertar, e cada feito completo paga um <b>bônus permanente pequeno</b> para sempre.'],
+      ['#asc-feats .prestige__note', 'Feitos são escadas da vida inteira: os contadores nunca zeram, nem no despertar, e cada meta alcançada paga um <b>bônus permanente pequeno</b> e então <b>dobra</b> para a próxima. Nenhuma escada tem teto.'],
       ['#gem-note', 'Gemas vêm de <b>masmorras limpas</b>, e ir mais fundo do que você já foi paga um prêmio. Tudo aqui é <b>consumível</b>: gemas compram ritmo, nunca um teto.'],
       ['#store-note', 'Gemas compram ritmo, nunca um teto, e <b>toda gema daqui também pode ser ganha</b> limpando masmorras. As compras são feitas pela loja do aparelho; o jogo nunca vê seus dados de pagamento.'],
       ['#gem-more', 'Sem gemas? Limpe uma masmorra, ou toque na bolsa lá em cima.'],
@@ -1510,9 +1510,13 @@ export class UI {
   refreshFeats() {
     const { state } = this;
     for (const { feat, li, mark } of this.featRows.values()) {
-      const done = featDone(feat, state.stats);
-      li.classList.toggle('is-done', done);
-      setText(mark, done ? '\u2713' : `${fmt(Math.min(state.stats[feat.stat] ?? 0, feat.need))}/${fmt(feat.need)}`);
+      const rungs = featRanks(feat, state.stats);
+      li.classList.toggle('is-done', rungs > 0);
+      // The rung climbed, then the road to the next: the ladder never ends.
+      const count = state.stats[feat.stat] ?? 0;
+      setText(mark, rungs > 0
+        ? `x${rungs} \u00b7 ${fmt(count)}/${fmt(featNext(feat, state.stats))}`
+        : `${fmt(count)}/${fmt(feat.need)}`);
     }
   }
 

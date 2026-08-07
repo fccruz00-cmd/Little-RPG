@@ -29,7 +29,7 @@ import { POTIONS, POTION_BY_ID, POTION_COSTS } from '../data/potions.js';
 import {
   WARE_BY_ID, GEM_FIRST, CACHE_SECONDS, SKIP_SECONDS, CHEST_FLOOR,
 } from '../data/gems.js';
-import { FEATS, featDone, emptyStats } from '../data/feats.js';
+import { FEATS, featRanks, emptyStats } from '../data/feats.js';
 import {
   dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
 } from '../data/quests.js';
@@ -462,7 +462,8 @@ export class GameState {
     // Completed feats are nodes with a single permanent rank. Completion is
     // monotone (the counters only climb), so it derives instead of storing.
     for (const feat of FEATS) {
-      if (featDone(feat, this.stats)) apply(feat, 1);
+      const rungs = featRanks(feat, this.stats);
+      if (rungs) apply(feat, rungs);
     }
 
     // Omniscience: each record's marks are ranks of that row's own buff.

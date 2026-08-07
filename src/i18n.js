@@ -309,6 +309,18 @@ const PT = {
   'brew 20 potions': 'prepare 20 poções',
   'clear 10 dungeons': 'limpe 10 masmorras',
   'clear 5 Bloodmoons': 'limpe 5 Luas de Sangue',
+  'plate 200 dishes': 'sirva 200 pratos',
+  'claim 15 contracts': 'resgate 15 contratos',
+  'claim 100 contracts': 'resgate 100 contratos',
+  'take 5 resets': 'faça 5 resets',
+  'take 25 resets': 'faça 25 resets',
+  'feed your pets 500 times': 'alimente seus pets 500 vezes',
+  'brew 200 potions': 'prepare 200 poções',
+  'clear 50 dungeons': 'limpe 50 masmorras',
+  'roll 15 Legendaries': 'role 15 Lendários',
+  'forge 500 times': 'forje 500 vezes',
+  'clear 25 Bloodmoons': 'limpe 25 Luas de Sangue',
+  'refine 20,000 units': 'refine 20.000 unidades',
 
   // --- potions and alchemy ---
   '+20s on every boss timer while it lasts': '+20s em todo relógio de chefe enquanto durar',

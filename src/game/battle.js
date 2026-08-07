@@ -15,7 +15,7 @@ import { DUNGEON, dungeonReward } from '../data/dungeon.js';
 import { RARITIES } from '../data/gear.js';
 import { PET_BY_ID } from '../data/pets.js';
 import { POTIONS } from '../data/potions.js';
-import { FEATS, featDone } from '../data/feats.js';
+import { FEATS, featRanks } from '../data/feats.js';
 
 // World units between the hero and where the next enemy appears. Measured
 // off the portrait camera this game was balanced on: 130 units of view with
@@ -129,7 +129,7 @@ export class Battle {
     this.syncPets();
 
     // Feats finished before this session loaded are old news, not toasts.
-    this._featsDone = new Set(FEATS.filter((f) => featDone(f, state.stats)).map((f) => f.id));
+    this._featRanks = new Map(FEATS.map((f) => [f.id, featRanks(f, state.stats)]));
 
     // Loading a save keeps the kills already made: closing the game mid
     // stage does not send you back to its start.
@@ -348,10 +348,13 @@ export class Battle {
         this.emit('toast', { text: `${pet.name.toUpperCase()} TAMED!` });
       }
       for (const feat of FEATS) {
-        if (this._featsDone.has(feat.id) || !featDone(feat, this.state.stats)) continue;
-        this._featsDone.add(feat.id);
+        // The ladder has no top: a rung climbed mid-run announces itself
+        // with its number, and every rung folds another helping.
+        const rungs = featRanks(feat, this.state.stats);
+        if (rungs <= (this._featRanks.get(feat.id) ?? 0)) continue;
+        this._featRanks.set(feat.id, rungs);
         this.state.invalidateBonus();
-        this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}` });
+        this.emit('toast', { text: `FEAT: ${feat.name.toUpperCase()}${rungs > 1 ? ` ${rungs}` : ''}` });
       }
       this.syncPets();
     }

@@ -637,8 +637,10 @@ live DOM.
   the bottle bank (Deep Cellar), a double-pour chance, and longer shrine
   pours (Shrinewise). Same rails as every other skill: level, points, web,
   respec.
-- **Feats** (Ascend tab): fourteen lifetime marks, each paying a small
-  permanent bonus. The counters never reset, not even on an awakening.
+- **Feats** (Ascend tab): twenty-seven lifetime **ladders**. Each goal
+  reached pays a small permanent bonus and then **doubles** into the next
+  one; there is no top, and every rung stacks the feat's bonus again. The
+  counters never reset, not even on an awakening.
 - **Bloodmoon runs**: a dungeon tier you have already cleared can be
   reopened with no regen and double loot. Same key, higher stakes.
 - **Boss traits**: from stage 30 every boss fights with one named trick,
