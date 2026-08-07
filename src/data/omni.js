@@ -53,38 +53,38 @@ const CURRENCY_ROWS = [
 // wood moves faster, fish keeps you standing, crops pay the mind.
 const RAW_POOLS = {
   mining: [
-    ['dmgMul', 'mul', 0.012], ['critAdd', 'add', 0.002], ['bossTime', 'add', 0.25],
-    ['dmgMul', 'mul', 0.015], ['critPowerAdd', 'add', 0.02],
+    ['dmgMul', 'mul', 0.024], ['critAdd', 'add', 0.004], ['bossTime', 'add', 0.5],
+    ['dmgMul', 'mul', 0.03], ['critPowerAdd', 'add', 0.04],
   ],
   chopping: [
-    ['moveMul', 'mul', 0.008], ['atkSpeedMul', 'mul', 0.005], ['doubleHit', 'add', 0.002],
-    ['moveMul', 'mul', 0.010], ['atkSpeedMul', 'mul', 0.006],
+    ['moveMul', 'mul', 0.016], ['atkSpeedMul', 'mul', 0.01], ['doubleHit', 'add', 0.004],
+    ['moveMul', 'mul', 0.02], ['atkSpeedMul', 'mul', 0.012],
   ],
   fishing: [
-    ['regenMul', 'mul', 0.015], ['lifesteal', 'add', 0.001], ['feedLess', 'less', 0.004],
-    ['regenMul', 'mul', 0.018], ['lifesteal', 'add', 0.0012],
+    ['regenMul', 'mul', 0.03], ['lifesteal', 'add', 0.002], ['feedLess', 'less', 0.008],
+    ['regenMul', 'mul', 0.036], ['lifesteal', 'add', 0.0024],
   ],
   farming: [
-    ['xpMul', 'mul', 0.012], ['goldMul', 'mul', 0.010], ['yieldAll', 'add', 0.004],
-    ['xpMul', 'mul', 0.015], ['goldMul', 'mul', 0.012],
+    ['xpMul', 'mul', 0.024], ['goldMul', 'mul', 0.02], ['yieldAll', 'add', 0.008],
+    ['xpMul', 'mul', 0.03], ['goldMul', 'mul', 0.024],
   ],
 };
 const REFINED_POOLS = {
   mining: [
-    ['hpMul', 'mul', 0.012], ['damageTaken', 'less', 0.002], ['thorns', 'add', 0.002],
-    ['hpMul', 'mul', 0.015], ['damageTaken', 'less', 0.0025],
+    ['hpMul', 'mul', 0.024], ['damageTaken', 'less', 0.004], ['thorns', 'add', 0.004],
+    ['hpMul', 'mul', 0.03], ['damageTaken', 'less', 0.005],
   ],
   chopping: [
-    ['dustChance', 'add', 0.0012], ['dustMul', 'mul', 0.012], ['ambush', 'add', 0.003],
-    ['dustChance', 'add', 0.0015], ['dustMul', 'mul', 0.015],
+    ['dustChance', 'add', 0.0024], ['dustMul', 'mul', 0.024], ['ambush', 'add', 0.006],
+    ['dustChance', 'add', 0.003], ['dustMul', 'mul', 0.03],
   ],
   fishing: [
-    ['hpMul', 'mul', 0.010], ['regenMul', 'mul', 0.012], ['respawnMul', 'less', 0.003],
-    ['hpMul', 'mul', 0.012], ['regenMul', 'mul', 0.015],
+    ['hpMul', 'mul', 0.02], ['regenMul', 'mul', 0.024], ['respawnMul', 'less', 0.006],
+    ['hpMul', 'mul', 0.024], ['regenMul', 'mul', 0.03],
   ],
   farming: [
-    ['workAll', 'mul', 0.004], ['yieldAll', 'add', 0.003], ['treasure', 'add', 0.002],
-    ['workAll', 'mul', 0.005], ['yieldAll', 'add', 0.004],
+    ['workAll', 'mul', 0.008], ['yieldAll', 'add', 0.006], ['treasure', 'add', 0.004],
+    ['workAll', 'mul', 0.01], ['yieldAll', 'add', 0.008],
   ],
 };
 

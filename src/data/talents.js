@@ -54,6 +54,11 @@ export const RELIC_TREE = [
     id: 'power', name: 'Power', accent: '#e67146',
     nodes: [
       { id: 'legacy',       name: 'Legacy',        icon: 'torch',        max: 15, cost: 1, key: 'dmgMul',       mode: 'mul', per: 0.15 },
+      // The uncapped rail, twin to the soul tree's Transcendence: the one
+      // place a relic FLOOD (dungeons pay in dozens now) turns into depth
+      // after every capped node fills. Costs climb linearly, so the sink
+      // is quadratic against income and the pace holds itself.
+      { id: 'warpath', name: 'Warpath', icon: 'dagger', max: 99, cost: 6, key: 'dmgMul', mode: 'mul', per: 0.10 },
       { id: 'ancientFury',  name: 'Ancient Fury',  icon: 'attack_speed', max: 8,  cost: 3, key: 'atkSpeedMul',  mode: 'mul', per: 0.05 },
       { id: 'deadlyStrike', name: 'Deadly Strike', icon: 'dagger',       max: 6,  cost: 4, key: 'critAdd',      mode: 'add', per: 0.05 },
       { id: 'wrath',        name: 'Wrath',         icon: 'crit_power',   max: 8,  cost: 5, key: 'critPowerAdd', mode: 'add', per: 0.4 },
@@ -72,6 +77,8 @@ export const RELIC_TREE = [
     id: 'essence', name: 'Essence', accent: '#6dba79',
     nodes: [
       { id: 'vigor',    name: 'Vigor',    icon: 'shield', max: 15, cost: 1, key: 'hpMul',       mode: 'mul',  per: 0.20 },
+      // Warpath's shieldmate, same reasoning as Undying beside Transcendence.
+      { id: 'bulwark', name: 'Bulwark', icon: 'health', max: 99, cost: 6, key: 'hpMul', mode: 'mul', per: 0.10 },
       { id: 'soul',     name: 'Soul',     icon: 'orb',    max: 12, cost: 2, key: 'regenMul',    mode: 'mul',  per: 0.25 },
       { id: 'immortal', name: 'Immortal', icon: 'health', max: 8,  cost: 4, key: 'damageTaken', mode: 'less', per: 0.04 },
       { id: 'veteran',  name: 'Veteran',  icon: 'stage',  max: 8,  cost: 4, key: 'extraPoints', mode: 'add',  per: 1 },

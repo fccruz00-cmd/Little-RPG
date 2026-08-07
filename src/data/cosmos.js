@@ -80,42 +80,42 @@ export const PLANET_BY_ID = Object.fromEntries(PLANETS.map((p) => [p.id, p]));
 export const CONSTELLATIONS = [
   {
     id: 'sword', name: 'The Sword', icon: 'sword', accent: '#e6dccb',
-    hours: 0.5, key: 'gearPower', per: 0.10,
+    hours: 0.5, key: 'gearPower', per: 0.25,
     blurb: 'every equipped item +10% stronger',
   },
   {
     id: 'plough', name: 'The Plough', icon: 'plough', accent: '#8fbf4a',
-    hours: 1, key: 'yieldAll', per: 0.10,
+    hours: 1, key: 'yieldAll', per: 0.20,
     blurb: '+10% yield, every gathering skill',
   },
   {
     id: 'owl', name: 'The Owl', icon: 'owl', accent: '#c9a15a',
-    hours: 2, key: 'skillXp', per: 0.15,
+    hours: 2, key: 'skillXp', per: 0.30,
     blurb: '+15% skill XP, every skill',
   },
   {
     id: 'anvilstars', name: 'The Anvil', icon: 'anvilstars', accent: '#e67146',
-    hours: 3, key: 'forgeLuck', per: 0.25,
+    hours: 3, key: 'forgeLuck', per: 0.50,
     blurb: 'forge odds move up the ladder',
   },
   {
     id: 'chalice', name: 'The Chalice', icon: 'chalice', accent: '#b072c9',
-    hours: 5, key: 'benchPower', per: 0.10,
+    hours: 5, key: 'benchPower', per: 0.25,
     blurb: 'potions and dishes +10% stronger',
   },
   {
     id: 'river', name: 'The River', icon: 'river', accent: '#5aa9c9',
-    hours: 7, key: 'workAll', per: 0.08,
+    hours: 7, key: 'workAll', per: 0.16,
     blurb: '8% faster work, every gathering skill',
   },
   {
     id: 'twins', name: 'The Twins', icon: 'twins', accent: '#9fd4d4',
-    hours: 9, key: 'enchantPower', per: 0.30,
+    hours: 9, key: 'enchantPower', per: 0.60,
     blurb: 'enchants +30% stronger',
   },
   {
     id: 'crownstars', name: 'The Crown', icon: 'crownstars', accent: '#ebb85b',
-    hours: 12, key: 'setPower', per: 0.30,
+    hours: 12, key: 'setPower', per: 0.60,
     blurb: 'the set bonus +30% stronger',
   },
 ];
@@ -129,7 +129,7 @@ export const COSMOS = {
   // Seconds of game time between automation ticks. Gathering planets grant
   // one full node's yield per tick; a hand on the tool works a node every
   // ~5s of walk, so a planet is roughly a third of doing it yourself.
-  every: 15,
+  every: 10,
   // Share of the node's skill XP the background harvest pays.
   xpShare: 0.5,
   // A bench planet re-runs a brew/dish when its timer dips below this.

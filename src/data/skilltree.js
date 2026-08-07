@@ -115,14 +115,14 @@ export const RELIC_LANES = [
 ];
 
 const RELIC_NODES = byId(RELIC_TREE);
-const R_POWER   = ['legacy', 'ancientFury', 'deadlyStrike', 'wrath', 'doubleStrike', 'execute', 'ambush'];
-const R_ESSENCE = ['vigor', 'soul', 'immortal', 'bloodthirst', 'revive', 'march'];
+const R_POWER   = ['legacy', 'ancientFury', 'deadlyStrike', 'wrath', 'doubleStrike', 'execute', 'ambush', 'warpath'];
+const R_ESSENCE = ['vigor', 'soul', 'immortal', 'bloodthirst', 'revive', 'march', 'bulwark'];
 const R_WEALTH  = ['vault', 'wisdom', 'heirloom', 'shortcut', 'collector', 'grinder', 'herald'];
 
 export const RELIC_WEB = makeWeb({
   id: 'relic',
   lanes: RELIC_LANES,
-  colW: cols(7),
+  colW: cols(8),
   nodes: [
     ...lane('power',   0, R_POWER,   RELIC_NODES),
     ...lane('essence', 2, R_ESSENCE, RELIC_NODES),

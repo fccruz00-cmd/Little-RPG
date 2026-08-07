@@ -245,14 +245,14 @@ it.
 
    | constellation | hours | grants |
    |---|---:|---|
-   | The Sword   | 0.5 | every equipped item +10% stronger |
-   | The Plough  | 1   | +10% yield, every gathering skill |
-   | The Owl     | 2   | +15% skill XP, every skill |
-   | The Anvil   | 3   | +0.25 forge quality (odds up the ladder) |
-   | The Chalice | 5   | potions *and* dishes +10% stronger |
-   | The River   | 7   | 8% faster work, every gathering skill |
-   | The Twins   | 9   | enchants +30% stronger |
-   | The Crown   | 12  | the set bonus +30% stronger |
+   | The Sword   | 0.5 | every equipped item +25% stronger |
+   | The Plough  | 1   | +20% yield, every gathering skill |
+   | The Owl     | 2   | +30% skill XP, every skill |
+   | The Anvil   | 3   | +0.5 forge quality (odds up the ladder) |
+   | The Chalice | 5   | potions *and* dishes +25% stronger |
+   | The River   | 7   | 16% faster work, every gathering skill |
+   | The Twins   | 9   | enchants +60% stronger |
+   | The Crown   | 12  | the set bonus +60% stronger |
 5. **Forge**: only appears after the first rebirth.
 6. **Ancestors**: the Hall of Ancestors, open from the first reset ever
    taken and never closed again. Every rebirth — and every awakening —
