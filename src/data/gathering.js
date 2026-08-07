@@ -1,0 +1,474 @@
+/**
+ * Gathering skills: Mining, Chopping and Fishing.
+ *
+ * All three run on the same rails. Nodes spawn on the line the hero already
+ * walks, it stops and works them without input, and each skill keeps its own
+ * level, its own tree and its own resource chain. Only the shape differs, so
+ * this file is one system described three times rather than three systems.
+ *
+ * THE TRADEOFF LIVES HERE. Slice 1 measured that stopping to swing costs zero
+ * stage progress, because enemies walk toward you and travel is never the
+ * bottleneck. So gathering needed a real cost, and it is the tool slot: one
+ * tool at a time, and only the equipped skill's nodes spawn. Time spent on
+ * ore is time not spent on wood.
+ *
+ * BALANCE RULE, unchanged and load bearing: gathering never pays into damage.
+ * Kills produce nodes, so nodes producing damage would rebuild the
+ * compounding loop the stat caps in balance.js exist to prevent. It pays in
+ * access (tools now, dungeon keys later), in conversion, in sustain
+ * (Fishing's Well Fed is regen and armour, never attack), and in two flat
+ * per-node trickles bounded by the kill rate.
+ *
+ * Second rule: yield per node is FLAT within a tier. Scaling it with stage
+ * the way gold scales would multiply income sixfold every ten stages and
+ * leave every sink downstream stale.
+ */
+
+import { t } from '../i18n.js';
+
+// Depth gates are shared across the three skills on purpose: switching tools
+// should change what you collect, never how deep you have to be.
+const GATES = [1, 8, 20, 36, 55];
+
+// --- resources ------------------------------------------------------
+// `tier` is both the order and the tool tier needed to work it.
+function tiers(rows) {
+  return rows.map((row, i) => ({ ...row, tier: i, minStage: GATES[i] }));
+}
+
+export const ORES = tiers([
+  { id: 'copper',  name: 'Copper',  color: '#c87f4a', per: 3, xp: 5,   refine: 4 },
+  { id: 'iron',    name: 'Iron',    color: '#b3b1b8', per: 3, xp: 13,  refine: 5 },
+  { id: 'silver',  name: 'Silver',  color: '#dfe3ea', per: 3, xp: 34,  refine: 6 },
+  { id: 'gold',    name: 'Gold',    color: '#ebb85b', per: 3, xp: 88,  refine: 7 },
+  { id: 'mithril', name: 'Mithril', color: '#6dd3c4', per: 3, xp: 230, refine: 8 },
+]);
+
+export const LOGS = tiers([
+  { id: 'pine',      name: 'Pine',      color: '#a3763f', per: 3, xp: 5,   refine: 4 },
+  { id: 'oak',       name: 'Oak',       color: '#8a6033', per: 3, xp: 13,  refine: 5 },
+  { id: 'ash',       name: 'Ash',       color: '#c2b28a', per: 3, xp: 34,  refine: 6 },
+  { id: 'yew',       name: 'Yew',       color: '#7fa05a', per: 3, xp: 88,  refine: 7 },
+  { id: 'heartwood', name: 'Heartwood', color: '#b0729e', per: 3, xp: 230, refine: 8 },
+]);
+
+export const FISH = tiers([
+  { id: 'minnow',   name: 'Minnow',   color: '#9fb6c4', per: 3, xp: 5,   refine: 4 },
+  { id: 'carp',     name: 'Carp',     color: '#c9a15a', per: 3, xp: 13,  refine: 5 },
+  { id: 'trout',    name: 'Trout',    color: '#8fc4a8', per: 3, xp: 34,  refine: 6 },
+  { id: 'salmon',   name: 'Salmon',   color: '#e6836a', per: 3, xp: 88,  refine: 7 },
+  { id: 'sturgeon', name: 'Sturgeon', color: '#7d8fd6', per: 3, xp: 230, refine: 8 },
+]);
+
+export const CROPS = tiers([
+  { id: 'wheat',    name: 'Wheat',    color: '#e0c46a', per: 3, xp: 5,   refine: 4 },
+  { id: 'carrot',   name: 'Carrot',   color: '#e08a3c', per: 3, xp: 13,  refine: 5 },
+  { id: 'pumpkin',  name: 'Pumpkin',  color: '#d96a2b', per: 3, xp: 34,  refine: 6 },
+  { id: 'grape',    name: 'Grape',    color: '#9a6bc9', per: 3, xp: 88,  refine: 7 },
+  { id: 'sunfruit', name: 'Sunfruit', color: '#f2d048', per: 3, xp: 230, refine: 8 },
+]);
+
+// --- tools ----------------------------------------------------------
+// A tool is a head and a handle: metal from Mining, wood from Chopping. That
+// is the lock between the skills. Every tool needs both, so no line can be
+// pushed alone, and the tier below is what pays for the tier above.
+//
+// All three tool lines cost the same, and you have to upgrade three of them
+// while only ever gathering with one, which is what gives the tool slot its
+// weight.
+export const TOOL_TIERS = [
+  { tier: 0, speed: 1,    yield: 1,   cost: null },
+  { tier: 1, speed: 0.88, yield: 1.3, cost: { bars: 30,  planks: 20 } },
+  { tier: 2, speed: 0.78, yield: 1.7, cost: { bars: 50,  planks: 34 } },
+  { tier: 3, speed: 0.70, yield: 2.2, cost: { bars: 75,  planks: 50 } },
+  { tier: 4, speed: 0.63, yield: 2.9, cost: { bars: 110, planks: 74 } },
+  { tier: 5, speed: 0.56, yield: 3.8, cost: { bars: 160, planks: 110 } },
+];
+
+// Named for the head, because that is the part that decides what it bites
+// through. The handle is wood of the matching tier.
+const TOOL_GRADE = ['Worn', 'Copper', 'Iron', 'Silver', 'Gold', 'Mithril'];
+
+export function toolName(skill, tier) {
+  return `${TOOL_GRADE[tier] ?? '?'} ${SKILLS[skill].toolName}`;
+}
+
+/** What tier N of any tool costs: ore bars and wood planks of tier N-1. */
+export function toolCost(tier) {
+  const spec = TOOL_TIERS[tier];
+  if (!spec?.cost) return null;
+  return {
+    ore: ORES[tier - 1].id,
+    bars: spec.cost.bars,
+    log: LOGS[tier - 1].id,
+    planks: spec.cost.planks,
+  };
+}
+
+// --- the refinery ---------------------------------------------------
+// Nobody clicks a carp. Refining used to be a tap on the stock row, and it
+// died in alpha as the third complaint about the same fish: a button that
+// quietly turns pet food into meal stock is a trap, not a decision. The
+// refinery now sweeps on its own, and fish keep a raw reserve first,
+// because the parade eats before the kitchen does.
+export const REFINERY = {
+  period: 5,        // seconds between sweeps
+  feedReserve: 12,  // feeds' worth of raw fish held back per hungry mouth
+  fishFloor: 30,    // raw fish always left in a pond line, pets or none
+};
+
+// --- skills ---------------------------------------------------------
+export const GATHER = {
+  spacing: 130,      // world px between nodes, before Deep Survey
+  jitter: 45,        // random slack on that spacing
+  workTime: 1.6,     // seconds to work a node with a Worn tool
+  minWork: 0.35,     // however many ranks you buy, a swing costs this much
+  teaseChance: 0.28, // how often a node you cannot work yet shows up anyway
+  xpBase: 30,
+  xpGrowth: 1.17,
+  pointsPerLevel: 1,
+  switchEvery: 60,   // seconds between tools when Forager is doing it
+};
+
+// Well Fed: Fishing's payout. A meal is eaten automatically, lasts a while,
+// and gives regen and a damage reduction. Never attack, by the balance rule
+// above; this is the track that keeps you standing at depth.
+export const MEAL = {
+  time: 90,          // seconds one meal lasts
+  regenPerTier: 0.4, // +40% regen per tier of the fish eaten
+  armorPerTier: 0.03,
+};
+
+export const SKILLS = {
+  mining: {
+    id: 'mining', name: 'Mining', accent: '#ebb85b',
+    toolName: 'Pick', toolIcon: 'pick', nodeKind: 'vein',
+    raw: 'ore', rawIcon: 'ore', refined: 'bar', refinedIcon: 'bar',
+    refinedName: 'bar', verb: 'Smelt', resources: ORES,
+  },
+  chopping: {
+    id: 'chopping', name: 'Chopping', accent: '#6dba79',
+    toolName: 'Axe', toolIcon: 'axe', nodeKind: 'tree',
+    raw: 'log', rawIcon: 'log', refined: 'plank', refinedIcon: 'plank',
+    refinedName: 'plank', verb: 'Saw', resources: LOGS,
+  },
+  fishing: {
+    id: 'fishing', name: 'Fishing', accent: '#5aa9c9',
+    toolName: 'Rod', toolIcon: 'rod', nodeKind: 'pool',
+    raw: 'fish', rawIcon: 'fish', refined: 'meal', refinedIcon: 'regen',
+    refinedName: 'meal', verb: 'Cook', resources: FISH,
+  },
+  // The fourth line. Plots are worked like any node -- the hero tills,
+  // plants and pulls in one stop, because a crop you must walk BACK to
+  // would never be harvested by a hero who only walks forward. Crops crate
+  // up like ore smelts down, and the crates are what the kitchen cooks.
+  farming: {
+    id: 'farming', name: 'Farming', accent: '#8fbf4a',
+    toolName: 'Hoe', toolIcon: 'hoe', nodeKind: 'plot',
+    raw: 'crop', rawIcon: 'seedling', refined: 'crate', refinedIcon: 'crate',
+    refinedName: 'crate', verb: 'Crate', resources: CROPS,
+  },
+};
+
+// Smithing is a skill without a line. It has no nodes and no tool: it levels
+// from refining and from forging, which means it starts paying from stage 1
+// even though the forge itself only opens after the first rebirth. It is what
+// gives the forge the progression it never had, and it is the one skill whose
+// tree reaches across the other three.
+SKILLS.smithing = {
+  id: 'smithing', name: 'Smithing', accent: '#e67146',
+  gathers: false, toolIcon: 'bar',
+};
+
+// Alchemy is the other skill without a line, and the only one with its own
+// TAB: the cauldron moved out of Smithing's workshop the day it grew a tree.
+// It levels from brewing and from shrines on the road, and everything it
+// buys points at the potions -- strength, duration, price, the bank -- so
+// the bench that used to be three static rows finally progresses.
+SKILLS.alchemy = {
+  id: 'alchemy', name: 'Alchemy', accent: '#b072c9',
+  gathers: false, toolIcon: 'orb',
+};
+
+// Cooking is Alchemy's twin at the other bench: crates from Farming become
+// dishes -- timed food buffs with their own slot, next to potions and Well
+// Fed. It levels from cooking, and every meal Well Fed eats teaches it a
+// little, which is the idle trickle every bench skill needs.
+SKILLS.cooking = {
+  id: 'cooking', name: 'Cooking', accent: '#e6a13c',
+  gathers: false, toolIcon: 'cookpot',
+};
+for (const id of ['mining', 'chopping', 'fishing', 'farming']) SKILLS[id].gathers = true;
+
+/** Every skill, including the one that does not gather. */
+export const SKILL_IDS = Object.keys(SKILLS);
+
+/** Only the three that put nodes on the line and take a tool slot. */
+export const GATHER_IDS = SKILL_IDS.filter((id) => SKILLS[id].gathers);
+
+// XP Smithing earns from the two things it does.
+export const SMITH = {
+  refineXp: 0.4,   // times the resource's own XP, per unit refined
+  forgeXp: 0.8,    // times the dust a forge cost
+};
+
+// XP Alchemy earns. Brews are occasional by design, so each one pays big
+// and scales with the material band it cost; shrines add the idle trickle,
+// because a skill you can only push by hand stalls the moment you look away.
+export const ALCH = {
+  brewXp: [10, 22, 48, 105, 230],  // per brew, by material band
+  shrineXp: 12,                    // per shrine walked over
+};
+
+/** XP needed to leave `level` of any gathering skill. */
+export function gatherXpToNext(level) {
+  return Math.ceil(GATHER.xpBase * Math.pow(GATHER.xpGrowth, level - 1));
+}
+
+/** Best resource the stage has unlocked, ignoring what the tool can work. */
+export function bestForStage(skillId, stage) {
+  const list = SKILLS[skillId].resources;
+  let found = list[0];
+  for (const r of list) if (stage >= r.minStage) found = r;
+  return found;
+}
+
+/**
+ * What the next node holds. Normally the best your tool can handle, but
+ * sometimes the one just out of reach: a node you walk past teaches "upgrade
+ * your tool" far better than one that never spawns.
+ */
+export function rollResource(skillId, stage, toolTier, roll = Math.random()) {
+  const list = SKILLS[skillId].resources;
+  const best = bestForStage(skillId, stage);
+  if (best.tier <= toolTier) return best;
+  const reachable = list.filter((r) => stage >= r.minStage && r.tier <= toolTier);
+  return roll < GATHER.teaseChance ? best : (reachable.at(-1) ?? list[0]);
+}
+
+/** Raw units a node yields, before the double roll. */
+export function nodeYield(resource, toolTier, bonus) {
+  const tool = TOOL_TIERS[toolTier] ?? TOOL_TIERS[0];
+  return Math.max(1, Math.round(resource.per * tool.yield * bonus.yieldMul));
+}
+
+/** Seconds to work a node. */
+export function workTime(toolTier, bonus) {
+  const tool = TOOL_TIERS[toolTier] ?? TOOL_TIERS[0];
+  return Math.max(GATHER.minWork, GATHER.workTime * tool.speed * bonus.gatherSpeed);
+}
+
+/** Raw units needed for one refined unit. */
+export function refineCost(resource, bonus) {
+  return Math.max(2, Math.round(resource.refine * bonus.refineLess));
+}
+
+// --- trees ----------------------------------------------------------
+// One tree per skill, 84 points each, fed only by that skill's own levels.
+// The keys repeat across the three because they mean the same thing; each
+// tree is scored into its OWN bonus object, so Swift Pick speeds up mining
+// and nothing else.
+function branch(id, name, accent, nodes) {
+  return { id: `${id}`, name, accent, nodes };
+}
+
+const OUTPUT = (ids, icons) => [
+  { id: ids[0], name: icons.rich,  icon: icons.raw,   max: 10, key: 'yieldMul',    mode: 'mul', per: 0.08 },
+  { id: ids[1], name: icons.lucky, icon: 'crit',      max: 5,  key: 'yieldDouble', mode: 'add', per: 0.05 },
+  { id: ids[2], name: 'Survey',    icon: 'scout',     max: 8,  key: 'nodeMul',     mode: 'mul', per: 0.06 },
+  { id: ids[3], name: icons.big,   icon: icons.raw,   max: 5,  key: 'yieldMul',    mode: 'mul', per: 0.15 },
+];
+
+const SPEED = (ids, toolIcon) => [
+  { id: ids[0], name: 'Swift Hands', icon: toolIcon,       max: 10, key: 'gatherSpeed', mode: 'less', per: 0.04 },
+  { id: ids[1], name: 'Practice',    icon: 'book',         max: 8,  key: 'gatherXpMul', mode: 'mul',  per: 0.08 },
+  { id: ids[2], name: 'Sure Grip',   icon: 'attack_speed', max: 5,  key: 'gatherSpeed', mode: 'less', per: 0.05 },
+  { id: ids[3], name: 'Tireless',    icon: 'stride',       max: 5,  key: 'nodeMul',     mode: 'mul',  per: 0.10 },
+];
+
+export const SKILL_TREES = {
+  mining: [
+    branch('prospect', 'Prospect', '#ebb85b', OUTPUT(
+      ['richVeins', 'luckyStrike', 'deepSurvey', 'motherlode'],
+      { rich: 'Rich Veins', lucky: 'Lucky Strike', big: 'Motherlode', raw: 'ore' })),
+    branch('delve', 'Delve', '#5aa9c9', SPEED(
+      ['swiftPick', 'minerGrit', 'sureFooting', 'tireless'], 'pick')),
+    branch('refine', 'Refine', '#6dba79', [
+      { id: 'smelter',  name: 'Smelter',   icon: 'bar',    max: 10, key: 'refineLess', mode: 'less', per: 0.03 },
+      { id: 'coinSeam', name: 'Coin Seam', icon: 'gold',   max: 8,  key: 'nodeGold',   mode: 'add',  per: 0.25 },
+      { id: 'soulSeam', name: 'Soul Seam', icon: 'dust',   max: 5,  key: 'nodeDust',   mode: 'add',  per: 0.06 },
+      { id: 'purity',   name: 'Purity',    icon: 'shield', max: 5,  key: 'refineLess', mode: 'less', per: 0.04 },
+    ]),
+  ],
+  chopping: [
+    branch('timber', 'Timber', '#6dba79', OUTPUT(
+      ['thickBoles', 'cleanFell', 'woodSurvey', 'oldGrowth'],
+      { rich: 'Thick Boles', lucky: 'Clean Fell', big: 'Old Growth', raw: 'log' })),
+    branch('felling', 'Felling', '#ebb85b', SPEED(
+      ['swiftAxe', 'lumberLore', 'sureStance', 'stamina'], 'axe')),
+    branch('millwork', 'Millwork', '#c9a15a', [
+      { id: 'sawmill',  name: 'Sawmill',   icon: 'plank',  max: 10, key: 'refineLess', mode: 'less', per: 0.03 },
+      { id: 'sapSeam',  name: 'Sap Trade', icon: 'gold',   max: 8,  key: 'nodeGold',   mode: 'add',  per: 0.25 },
+      { id: 'heartSap', name: 'Heart Sap', icon: 'dust',   max: 5,  key: 'nodeDust',   mode: 'add',  per: 0.06 },
+      { id: 'seasoned', name: 'Seasoned',  icon: 'shield', max: 5,  key: 'refineLess', mode: 'less', per: 0.04 },
+    ]),
+  ],
+  fishing: [
+    branch('angling', 'Angling', '#5aa9c9', OUTPUT(
+      ['deepWater', 'doubleBite', 'shoalSense', 'bigCatch'],
+      { rich: 'Deep Water', lucky: 'Double Bite', big: 'Big Catch', raw: 'fish' })),
+    branch('patience', 'Patience', '#9fb6c4', SPEED(
+      ['swiftCast', 'anglerLore', 'steadyHand', 'endurance'], 'rod')),
+    // Fishing's third branch is the one that differs: it feeds Well Fed,
+    // the sustain track, instead of a second conversion curve.
+    branch('galley', 'Galley', '#e6836a', [
+      { id: 'cook',     name: 'Cook',      icon: 'regen',   max: 10, key: 'refineLess', mode: 'less', per: 0.03 },
+      { id: 'hearty',   name: 'Hearty',    icon: 'regen',  max: 8,  key: 'fedRegen',   mode: 'mul',  per: 0.15 },
+      { id: 'preserve', name: 'Preserve',  icon: 'orb',    max: 5,  key: 'mealTime',   mode: 'mul',  per: 0.20 },
+      { id: 'stout',    name: 'Stout',     icon: 'shield', max: 5,  key: 'fedArmor',   mode: 'add',  per: 0.01 },
+    ]),
+  ],
+  farming: [
+    branch('greenfield', 'Greenfield', '#8fbf4a', OUTPUT(
+      ['richSoil', 'bumperCrop', 'fieldSurvey', 'greatHarvest'],
+      { rich: 'Rich Soil', lucky: 'Bumper Crop', big: 'Great Harvest', raw: 'seedling' })),
+    branch('fieldwork', 'Fieldwork', '#e0c46a', SPEED(
+      ['swiftHoe', 'almanac', 'steadyRows', 'earlyRiser'], 'hoe')),
+    branch('market', 'Market', '#e6a13c', [
+      { id: 'mill',      name: 'Mill',       icon: 'crate',  max: 10, key: 'refineLess', mode: 'less', per: 0.03 },
+      { id: 'farmStand', name: 'Farm Stand', icon: 'gold',   max: 8,  key: 'nodeGold',   mode: 'add',  per: 0.25 },
+      { id: 'compost',   name: 'Compost',    icon: 'seedling', max: 5, key: 'yieldMul',  mode: 'mul',  per: 0.08 },
+      { id: 'seedVault', name: 'Seed Vault', icon: 'shield', max: 5,  key: 'refineLess', mode: 'less', per: 0.04 },
+    ]),
+  ],
+};
+
+SKILL_TREES.smithing = [
+  branch('furnace', 'Furnace', '#e67146', [
+    { id: 'efficientFire', name: 'Hot Fire',   icon: 'torch',  max: 10, key: 'refineAll',  mode: 'less', per: 0.02 },
+    { id: 'apprentice',    name: 'Apprentice', icon: 'book',   max: 8,  key: 'gatherXpMul', mode: 'mul', per: 0.08 },
+    { id: 'bellows',       name: 'Bellows',    icon: 'gear',   max: 5,  key: 'refineAll',  mode: 'less', per: 0.03 },
+    { id: 'crucible',      name: 'Crucible',   icon: 'dust',   max: 5,  key: 'scrapBack',  mode: 'add',  per: 0.06 },
+  ]),
+  branch('anvilwork', 'Anvil', '#dacea4', [
+    { id: 'thrift',    name: 'Thrift',      icon: 'bag',    max: 10, key: 'forgeCostLess', mode: 'less', per: 0.03 },
+    { id: 'steady',    name: 'Steady Hand', icon: 'shield', max: 5,  key: 'forgeCostLess', mode: 'less', per: 0.04 },
+    { id: 'salvage',   name: 'Salvage',     icon: 'dust',   max: 8,  key: 'scrapBack',     mode: 'add',  per: 0.04 },
+    { id: 'hardening', name: 'Hardening',   icon: 'bar',    max: 5,  key: 'forgeLuck',     mode: 'add',  per: 0.06 },
+  ]),
+  branch('mastery', 'Mastery', '#b072c9', [
+    { id: 'keenEye',   name: 'Keen Eye',  icon: 'crit',   max: 10, key: 'forgeLuck',  mode: 'add', per: 0.05 },
+    { id: 'temper',    name: 'Temper',    icon: 'damage', max: 8,  key: 'forgeLuck',  mode: 'add', per: 0.08 },
+    { id: 'alloy',     name: 'Alloy',     icon: 'orb',    max: 5,  key: 'gatherXpMul', mode: 'mul', per: 0.10 },
+    { id: 'standards', name: 'Standards', icon: 'crown',  max: 3,  key: 'forgeFloor', mode: 'add', per: 1 },
+  ]),
+];
+
+SKILL_TREES.alchemy = [
+  branch('potency', 'Potency', '#e67146', [
+    { id: 'strongStuff', name: 'Strong Stuff',       icon: 'damage', max: 10, key: 'potionPower', mode: 'add', per: 0.04 },
+    { id: 'concentrate', name: 'Concentrate',        icon: 'orb',    max: 8,  key: 'potionPower', mode: 'add', per: 0.05 },
+    { id: 'catalyst',    name: 'Catalyst',           icon: 'bolt',   max: 5,  key: 'doubleBrew',  mode: 'add', per: 0.05 },
+    { id: 'philosopher', name: "Philosopher's Drop", icon: 'crown',  max: 5,  key: 'potionPower', mode: 'add', per: 0.08 },
+  ]),
+  branch('stillroom', 'Stillroom', '#5aa9c9', [
+    { id: 'slowSimmer',   name: 'Slow Simmer',  icon: 'boss',   max: 10, key: 'potionTime',  mode: 'mul', per: 0.06 },
+    { id: 'preservative', name: 'Preservative', icon: 'shield', max: 8,  key: 'potionTime',  mode: 'mul', per: 0.08 },
+    { id: 'deepCellar',   name: 'Deep Cellar',  icon: 'bag',    max: 2,  key: 'brewCap',     mode: 'add', per: 1 },
+    { id: 'shrinewise',   name: 'Shrinewise',   icon: 'torch',  max: 5,  key: 'shrinePower', mode: 'add', per: 0.30 },
+  ]),
+  branch('reagents', 'Reagents', '#6dba79', [
+    { id: 'frugal',     name: 'Frugal Measures', icon: 'bar',   max: 10, key: 'brewLess',    mode: 'less', per: 0.03 },
+    { id: 'studious',   name: 'Studious',        icon: 'book',  max: 8,  key: 'gatherXpMul', mode: 'mul',  per: 0.08 },
+    { id: 'secondPour', name: 'Second Pour',     icon: 'regen', max: 5,  key: 'doubleBrew',  mode: 'add',  per: 0.04 },
+    { id: 'cleanGlass', name: 'Clean Glass',     icon: 'gold',  max: 5,  key: 'brewLess',    mode: 'less', per: 0.04 },
+  ]),
+];
+
+SKILL_TREES.cooking = [
+  branch('flavor', 'Flavor', '#e67146', [
+    { id: 'seasoning',     name: 'Seasoning',      icon: 'stew',    max: 10, key: 'dishPower',  mode: 'add', per: 0.04 },
+    { id: 'richStock',     name: 'Rich Stock',     icon: 'cookpot', max: 8,  key: 'dishPower',  mode: 'add', per: 0.05 },
+    { id: 'secondHelping', name: 'Second Helping', icon: 'pie',     max: 5,  key: 'doubleCook', mode: 'add', per: 0.05 },
+    { id: 'masterChef',    name: 'Master Chef',    icon: 'crown',   max: 5,  key: 'dishPower',  mode: 'add', per: 0.08 },
+  ]),
+  branch('pantry', 'Pantry', '#5aa9c9', [
+    { id: 'slowRoast',  name: 'Slow Roast', icon: 'cookpot',  max: 10, key: 'dishTime', mode: 'mul', per: 0.06 },
+    { id: 'preserves',  name: 'Preserves',  icon: 'jam',      max: 8,  key: 'dishTime', mode: 'mul', per: 0.08 },
+    // The cross-reach node, like Smithing's Hot Fire: it feeds Well Fed,
+    // fishing's own track, because a kitchen that ignored the fish would
+    // be half a kitchen.
+    { id: 'hearthfire', name: 'Hearthfire', icon: 'torch',    max: 5,  key: 'fedBoost', mode: 'add', per: 0.10 },
+    { id: 'mealPrep',   name: 'Meal Prep',  icon: 'rations',  max: 5,  key: 'dishTime', mode: 'mul', per: 0.10 },
+  ]),
+  branch('kitchen', 'Kitchen', '#6dba79', [
+    { id: 'thriftyCook', name: 'Thrifty Cook', icon: 'crate',   max: 10, key: 'cookLess',    mode: 'less', per: 0.03 },
+    { id: 'cookbook',    name: 'Cookbook',     icon: 'book',    max: 8,  key: 'gatherXpMul', mode: 'mul',  per: 0.08 },
+    { id: 'leftovers',   name: 'Leftovers',    icon: 'rations', max: 5,  key: 'doubleCook',  mode: 'add',  per: 0.04 },
+    { id: 'sousChef',    name: 'Sous-Chef',    icon: 'gear',    max: 5,  key: 'cookLess',    mode: 'less', per: 0.04 },
+  ]),
+];
+
+// XP Cooking earns: per dish by material band, plus a taste every time
+// Well Fed eats a meal -- the idle trickle every bench skill needs.
+export const COOK = {
+  cookXp: [10, 22, 48, 105, 230],
+  mealXp: 4,
+};
+
+/** Keys a per-skill bonus object carries. Shared names, separate namespaces. */
+export const GATHER_KEYS = [
+  'yieldMul', 'yieldDouble', 'nodeMul', 'gatherSpeed', 'gatherXpMul',
+  'refineLess', 'nodeGold', 'nodeDust', 'fedRegen', 'mealTime', 'fedArmor',
+  // smithing
+  'forgeLuck', 'forgeFloor', 'forgeCostLess', 'refineAll', 'scrapBack',
+  // alchemy
+  'potionPower', 'potionTime', 'brewLess', 'brewCap', 'doubleBrew', 'shrinePower',
+  // cooking
+  'dishPower', 'dishTime', 'cookLess', 'doubleCook', 'fedBoost',
+];
+
+/** Of those, the ones that multiply rather than add. */
+export const GATHER_MULS = [
+  'yieldMul', 'nodeMul', 'gatherSpeed', 'gatherXpMul', 'refineLess',
+  'fedRegen', 'mealTime', 'forgeCostLess', 'refineAll',
+  'potionTime', 'brewLess',
+  'dishTime', 'cookLess',
+];
+
+/** What a gathering node does at a given number of points. */
+export function describeGatherNode(node, ranks) {
+  const n = Math.max(1, ranks);
+  const total = node.per * n;
+  const pct = (v) => `${(v * 100).toFixed(v * 100 % 1 ? 1 : 0)}%`;
+  switch (node.key) {
+    case 'yieldDouble': return t('+{0} chance a node pays twice', pct(total));
+    case 'gatherSpeed': return t('{0} faster to work a node', pct(total));
+    case 'refineLess':  return t('{0} less raw per unit', pct(total));
+    case 'nodeGold':    return t("nodes also pay {0}x a mob's gold", total.toFixed(2));
+    case 'nodeDust':    return t('+{0} chance a node drops dust', pct(total));
+    case 'fedArmor':    return t('Well Fed also cuts {0} more damage', pct(total));
+    case 'mealTime':    return t('meals last {0} longer', pct(total));
+    case 'fedRegen':    return t('Well Fed regen +{0}', pct(total));
+    case 'yieldMul':    return t('x{0} per node', (1 + total).toFixed(2));
+    case 'nodeMul':     return t('x{0} nodes on the road', (1 + total).toFixed(2));
+    case 'gatherXpMul': return t('x{0} skill XP', (1 + total).toFixed(2));
+    case 'forgeLuck':   return t('+{0} forge quality, odds move up the ladder', total.toFixed(2));
+    case 'forgeFloor':  return `the forge never rolls below ${['Uncommon', 'Rare', 'Epic'][Math.min(n, 3) - 1]}`;
+    case 'forgeCostLess': return `${pct(total)} cheaper to forge`;
+    case 'refineAll':   return `${pct(total)} less raw per unit, in EVERY skill`;
+    case 'scrapBack':   return `+${pct(total)} dust back on a worse roll`;
+    case 'potionPower': return t('potions {0} stronger', pct(total));
+    case 'potionTime':  return t('brews last {0} longer', pct(total));
+    case 'brewLess':    return t('brews cost {0} less', pct(total));
+    case 'brewCap':     return t('bank +{0} bottle(s)', total);
+    case 'doubleBrew':  return t('+{0} chance a brew pours twice', pct(total));
+    case 'shrinePower': return t('shrines pour {0} longer', pct(total));
+    case 'dishPower':   return t('dishes {0} stronger', pct(total));
+    case 'dishTime':    return t('dishes last {0} longer', pct(total));
+    case 'cookLess':    return t('dishes cost {0} less', pct(total));
+    case 'doubleCook':  return t('+{0} chance a dish plates twice', pct(total));
+    case 'fedBoost':    return t('Well Fed regen +{0}', pct(total));
+    default:            return `x${(1 + total).toFixed(2)}`;
+  }
+}

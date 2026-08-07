@@ -1,0 +1,2365 @@
+/* ============================================================
+   Little RPG, an idle auto-battler
+   Three bands: UI (top) / Fight (arena) / tabbed panel
+
+   The chrome is Mini Medieval art, not CSS pretending to be it:
+   every card, strip, bar and node is a 9-sliced sprite from
+   assets/ui/. The palette below is sampled straight out of those
+   sprites, so borders and fills agree instead of clashing.
+   ============================================================ */
+
+:root {
+  /* Mini Medieval palette, sampled from the sprites */
+  --wood:      #a15c34;
+  --wood-dk:   #764032;
+  --wood-dkr:  #402e2b;
+  --stone:     #6f6e72;
+  --stud:      #aea47e;
+  --cream:     #dacea4;
+  --gold:      #ebb85b;
+  --gold-dp:   #c78539;
+  --red:       #e67146;
+  --red-dp:    #b74132;
+  --crimson:   #7a2849;
+  --green:     #6dba79;
+  --teal:      #2a7d75;
+  --pink:      #e67a84;
+  --lime:      #c9c03d;
+
+  /* surfaces: dark end of the same warm ramp */
+  --bg:        #221a16;
+  --bg-deep:   #120e0c;
+  --slate:     #1c1512;
+  --slate-2:   #241b16;
+
+  --ink:       #f2e6c8;
+  --ink-dim:   #a89272;
+  --ink-mute:  #6f5f4c;
+  --ink-dark:  #3a2410;   /* text sitting on gold */
+
+  /* pixel scale for the UI art (8px Mini Medieval sprites) */
+  --px: 2;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+  color: var(--ink);
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 14px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body { display: flex; justify-content: center; }
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 460px;
+  height: 100%;
+  height: 100dvh;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px #000, 0 0 60px #0008;
+  overflow: hidden;
+}
+
+/* ============================================================
+   How the Mini Medieval art is applied
+
+   board.png   frame around every card, sliced 6/6/7/6 WITHOUT `fill`, so the
+               element keeps its own background and only the frame and its
+               corner studs come from the sprite. `round` tiles the plank
+               seam down the rails instead of smearing it.
+   button.png  buttons, sliced 3/3/4/3 WITH `fill`: the gold face is part of
+               the sprite. button_disabled swaps in for the off state and
+               button_pressed for :active.
+   wood.png    seamless plank tile, 32px across and repeating every 3px down.
+               Always laid under a dark scrim: the raw plank is a light tan
+               and small cream text on it reads as mud.
+   bar_track   hollow in the middle, so a bar scales to any height and the
+               coloured fill sprite inside shows through.
+   frame_gem   tree nodes; frame_lit is the same frame with the gems lit, for
+               a node that is maxed.
+   scroll.png  parchment, sliced 3/5/4/5 WITH `fill`, for explanatory text.
+
+   Every rule below sets these inline rather than sharing a utility class,
+   because --px (the pixel scale) differs per element and the border widths
+   are derived from it.
+   ============================================================ */
+
+/* --- icons (Raven Fantasy strip, 32px each) --- */
+.ico {
+  --i: 0;
+  --n: 96;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  background-image: url(assets/icons/icons.png);
+  background-size: calc(var(--n) * 16px) 16px;
+  background-position: calc(var(--i) * -16px) 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  vertical-align: -3px;
+}
+.ico--damage        { --i: 0; }
+.ico--attack_speed  { --i: 1; }
+.ico--crit          { --i: 2; }
+.ico--crit_power    { --i: 3; }
+.ico--gold          { --i: 4; }
+.ico--health        { --i: 5; }
+.ico--regen         { --i: 6; }
+.ico--stride        { --i: 7; }
+.ico--boss          { --i: 8; }
+.ico--stage         { --i: 9; }
+.ico--book          { --i: 10; }
+.ico--shield        { --i: 11; }
+.ico--orb           { --i: 12; }
+.ico--crown         { --i: 13; }
+.ico--torch         { --i: 14; }
+.ico--dagger        { --i: 15; }
+.ico--bag           { --i: 16; }
+.ico--scout         { --i: 17; }
+.ico--relic         { --i: 18; }
+.ico--it_sword      { --i: 19; }
+.ico--it_chest      { --i: 20; }
+.ico--it_helm       { --i: 21; }
+.ico--it_pants      { --i: 22; }
+.ico--it_boot       { --i: 23; }
+.ico--it_amulet     { --i: 24; }
+.ico--it_ring       { --i: 25; }
+.ico--dust          { --i: 26; }
+.ico--gear          { --i: 27; }
+.ico--bolt          { --i: 28; }
+.ico--ore           { --i: 29; }
+.ico--bar           { --i: 30; }
+.ico--pick          { --i: 31; }
+.ico--axe           { --i: 32; }
+.ico--rod           { --i: 33; }
+.ico--log           { --i: 34; }
+.ico--plank         { --i: 35; }
+.ico--fish          { --i: 36; }
+.ico--gem           { --i: 37; }
+.ico--shop          { --i: 38; }
+/* the farm and the kitchen, generated in PixelLab and appended to the strip */
+.ico--seedling      { --i: 39; }
+.ico--hoe           { --i: 40; }
+.ico--crate         { --i: 41; }
+.ico--cookpot       { --i: 42; }
+.ico--stew          { --i: 43; }
+.ico--pie           { --i: 44; }
+.ico--rations       { --i: 45; }
+.ico--jam           { --i: 46; }
+/* the night sky, same origin */
+.ico--luna          { --i: 47; }
+.ico--mercury       { --i: 48; }
+.ico--venus         { --i: 49; }
+.ico--mars          { --i: 50; }
+.ico--jupiter       { --i: 51; }
+.ico--saturn        { --i: 52; }
+.ico--uranus        { --i: 53; }
+.ico--neptune       { --i: 54; }
+.ico--telescope     { --i: 55; }
+/* the charted constellations */
+.ico--sword         { --i: 56; }
+.ico--plough        { --i: 57; }
+.ico--owl           { --i: 58; }
+.ico--anvilstars    { --i: 59; }
+.ico--chalice       { --i: 60; }
+.ico--river         { --i: 61; }
+.ico--twins         { --i: 62; }
+.ico--crownstars    { --i: 63; }
+/* the jewels and the parade's fitted pieces, one face each */
+.ico--jewel_haste   { --i: 64; }
+.ico--jewel_plenty  { --i: 65; }
+.ico--jewel_springs { --i: 66; }
+.ico--jewel_study   { --i: 67; }
+.ico--jewel_midas   { --i: 68; }
+.ico--jewel_cinders { --i: 69; }
+.ico--jewel_tithes  { --i: 70; }
+.ico--jewel_echoes  { --i: 71; }
+.ico--jewel_crucible{ --i: 72; }
+.ico--jewel_feast   { --i: 73; }
+.ico--arm_gelhelm   { --i: 74; }
+.ico--arm_wingbands { --i: 75; }
+.ico--arm_monocle   { --i: 76; }
+.ico--arm_collar    { --i: 77; }
+.ico--arm_ashcrown  { --i: 78; }
+.ico--arm_ribcuirass{ --i: 79; }
+.ico--arm_lanterncage{ --i: 80; }
+.ico--arm_muzzle    { --i: 81; }
+.ico--arm_furnacedoor{ --i: 82; }
+.ico--arm_horncaps  { --i: 83; }
+.ico--arm_goggles   { --i: 84; }
+.ico--arm_pauldrons { --i: 85; }
+.ico--arm_honeypot  { --i: 86; }
+.ico--arm_buckler   { --i: 87; }
+.ico--arm_gauntlets { --i: 88; }
+.ico--arm_ironhat   { --i: 89; }
+.ico--arm_hornguard { --i: 90; }
+.ico--arm_ovenmitts { --i: 91; }
+.ico--arm_visor     { --i: 92; }
+.ico--arm_harness   { --i: 93; }
+.ico--arm_cowl      { --i: 94; }
+.ico--arm_coinvest  { --i: 95; }
+
+.ico--lg { width: 24px; height: 24px; background-size: calc(var(--n) * 24px) 24px; background-position: calc(var(--i) * -24px) 0; }
+.ico--sm { width: 12px; height: 12px; background-size: calc(var(--n) * 12px) 12px; background-position: calc(var(--i) * -12px) 0; vertical-align: -2px; }
+
+/* ============================================================
+   UI: top band, a wooden shelf
+   ============================================================ */
+.hud {
+  flex: none;
+  position: relative;
+  padding: 3px 8px 4px;
+  padding-top: calc(3px + env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
+  background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+  image-rendering: pixelated;
+  box-shadow: inset 0 2px 0 var(--cream), inset 0 -2px 0 var(--wood-dkr);
+  border-bottom: 2px solid #000;
+}
+/* everything written on wood gets a hard shadow so it stays legible */
+.hud, .hud * { text-shadow: 0 1px 0 #000, 0 0 3px #0009; }
+
+.hud__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hud__stage {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* One line, not a stack: "Stage 27 · 3/10". The stack was a whole HUD row. */
+.hud__stage-label {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  line-height: 1.1;
+}
+.hud__stage-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cream);
+  white-space: nowrap;
+}
+.hud__stage-name.is-boss { color: #ffc7b0; }
+.hud__stage-sub { font-size: 9px; color: #e2c9a5; opacity: .85; white-space: nowrap; }
+.hud__stage-sub::before { content: '· '; opacity: .6; }
+
+/* The steppers are real pack buttons, not glyphs floating on the wood. The
+   arrow is drawn with borders rather than typed: U+25B6 renders as a tofu
+   box in some monospace stacks, and a shape that small cannot survive a
+   font fallback. */
+.stepper {
+  --px: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 21px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.stepper::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+.stepper--prev::before { border-right: 5px solid var(--ink-dark); }
+.stepper--next::before { border-left: 5px solid var(--ink-dark); }
+.stepper:disabled { border-image-source: url(assets/ui/button_disabled.png); cursor: default; }
+.stepper:disabled::before { opacity: .45; }
+.stepper:not(:disabled):active {
+  transform: translateY(1px);
+  border-image-source: url(assets/ui/button_pressed.png);
+}
+
+/* Gold is the number that runs the game: it keeps the size, and the rate
+   sits beside it instead of under it. The stack was the other HUD row. */
+.purse {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  line-height: 1.05;
+  min-width: 0;
+}
+.purse .ico { align-self: center; }
+.purse__now {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffe9ae;
+}
+.purse__rate { font-size: 9px; color: #e2c9a5; white-space: nowrap; }
+.purse__rate b { color: #b8f0bd; font-weight: 700; }
+
+/* The gem purse doubles as the door to its shop, so it is a button rather
+   than a readout. It wears .fed as well, which is the HUD's chip shape, and
+   only adds what a button needs: a hit area and a press. Flat on the wood on
+   purpose, because a framed button up here would compete with the steppers. */
+.gems {
+  flex: none;
+  padding: 1px 4px 2px;
+  font: inherit;
+  font-size: 9px;
+  color: #ff9ed2;
+  cursor: pointer;
+  background: #0003;
+  border: 1px solid #0006;
+  border-radius: 2px;
+}
+.gems:active { transform: translateY(1px); }
+
+/* A keystone: the node at the end of a branch that wanted the whole branch.
+   Gold rail and a lit frame, so it reads as a destination rather than one
+   more rung. */
+.node--key {
+  border-image-source: url(assets/ui/frame_lit.png);
+  box-shadow: 0 0 0 1px #ebb85b55, 0 0 10px #ebb85b22;
+}
+.node--key.is-locked { box-shadow: none; opacity: .55; }
+
+/* --- gem shop --- */
+.wares { display: grid; gap: 6px; }
+.ware {
+  --px: 1;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px 6px;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.ware__name { font-size: 11px; font-weight: 700; color: var(--cream); }
+/* What it hands over, filled in live: an hour of gold is a number, not a
+   promise, and the number is the only honest way to price it. */
+.ware__what { font-size: 9px; line-height: 1.3; color: var(--ink-dim); }
+.ware__cost {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+.ware.can-buy .ware__cost { color: #ff9ed2; }
+.ware:disabled { cursor: default; opacity: .65; }
+.ware:not(:disabled):active { transform: translateY(1px); }
+
+/* Two icon buttons top right: the store, and the gear. Flat on the wood like
+   the gem purse -- a framed button up here would compete with the stage
+   steppers, and there are only so many things allowed to shout. */
+.hud__tools { display: flex; align-items: center; gap: 4px; flex: none; }
+.hud__btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #0006;
+  border-radius: 2px;
+  background: #0003;
+  cursor: pointer;
+}
+.hud__btn[hidden] { display: none; }
+.hud__btn:active { transform: translateY(1px); }
+.hud__btn .ico { opacity: .92; }
+
+/* experience bar */
+.hud__row--xp { gap: 6px; }
+.hud__lvl {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 9px;
+  color: #e2c9a5;
+  white-space: nowrap;
+}
+.hud__lvl b { color: #ffe9ae; font-size: 13px; font-weight: 700; }
+
+.xpbar {
+  --px: 2;
+  position: relative;
+  flex: 1 1 auto;
+  height: 11px;
+  border-style: solid;
+  border-width: calc(var(--px) * 1px) calc(var(--px) * 1px) calc(var(--px) * 2px);
+  border-image-source: url(assets/ui/bar_track.png);
+  border-image-slice: 1 1 2 1;
+  border-image-repeat: stretch;
+  background: #150f0d;
+  image-rendering: pixelated;
+}
+.xpbar__fill {
+  height: 100%;
+  width: 0;
+  background-image: url(assets/ui/bar_violet.png);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  transition: width .2s linear;
+}
+.xpbar__text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  color: #ffeede;
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
+}
+
+/* ============================================================
+   FIGHT: arena
+   ============================================================ */
+.arena {
+  position: relative;
+  flex: none;
+  height: 28%;
+  min-height: 136px;
+  background: #0b0a11;
+  border-bottom: 2px solid #000;
+  overflow: hidden;
+}
+
+#stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* stage progress runs edge to edge along the floor of the arena */
+.arena__progress {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 7px;
+  background: #150f0d;
+  box-shadow: inset 0 1px 0 #000, 0 -1px 0 #0006;
+}
+.arena__progress-fill {
+  height: 100%;
+  width: 0;
+  background-image: url(assets/ui/bar_gold.png);
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+  transition: width .18s linear;
+}
+.arena__progress-fill.is-boss { background-image: url(assets/ui/bar_red.png); }
+
+.arena__boss {
+  --px: 1;
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 3px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffdccd;
+  text-shadow: 0 1px 0 #000;
+  background: #2a1210ee;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.arena__boss[hidden] { display: none; }
+
+.arena__toast {
+  --px: 1;
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 3px 10px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--cream);
+  text-shadow: 0 1px 0 #000;
+  background: #1a120eee;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+  pointer-events: none;
+  animation: toast .9s ease-out;
+  white-space: nowrap;
+}
+.arena__toast[hidden] { display: none; }
+.arena__toast.is-bad { color: #ffbba6; }
+@keyframes toast {
+  0%   { opacity: 0; transform: translate(-50%, -30%) scale(.9); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ============================================================
+   Tabbed panel
+   ============================================================ */
+.panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--slate);
+}
+
+/* The tab row is a wooden shelf holding four pack buttons. */
+.tabs {
+  flex: none;
+  display: grid;
+  grid-auto-flow: column;
+  /* minmax(max-content, 1fr), NOT 1fr: a 1fr implicit column keeps its
+     min-content floor, so eight tabs in a 340px panel OVERFLOWED the row
+     and clipped "Ascend" off the screen. With the floor spelled out the
+     wide panel still shares space evenly, and the narrow one scrolls
+     sideways instead of amputating its last two tabs. */
+  grid-auto-columns: minmax(max-content, 1fr);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  gap: 3px;
+  padding: 2px 3px 3px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
+  background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+  image-rendering: pixelated;
+  box-shadow: inset 0 2px 0 var(--cream), inset 0 -2px 0 var(--wood-dkr);
+  border-bottom: 2px solid #000;
+}
+.tab {
+  --px: 2;
+  position: relative;
+  padding: 2px 1px 3px;
+  border: 0;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0;
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button_disabled.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.tab[hidden] { display: none; }
+.tab.is-on {
+  color: var(--ink-dark);
+  font-weight: 700;
+  text-shadow: 0 1px 0 #fff3;
+  border-image-source: url(assets/ui/button.png);
+}
+.tab.is-on:active { transform: translateY(1px); border-image-source: url(assets/ui/button_pressed.png); }
+.tab:not(.is-on):active { transform: translateY(1px); }
+
+.pip {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 4px;
+  background: var(--red);
+  box-shadow: 0 0 0 1px #000, 0 0 5px var(--red);
+  vertical-align: 2px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.pip[hidden] { display: none; }
+.pip--gold { background: var(--gold); box-shadow: 0 0 0 1px #000, 0 0 5px var(--gold); }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* On a tab or a segment the pip rides the corner instead of the text. Inline
+   it costs 9px of label, which is the difference between a five-button row
+   holding one line and growing to two on a 360px phone. */
+.tab .pip, .segmented button .pip {
+  position: absolute;
+  /* Up on the frame itself, clear of the text zone: six tabs squeeze the
+     label right up to the corner, and a pip inside the face would sit on
+     the last letter of "Talents" at 360px. Negative top only: sideways it
+     stays inside the box, or it would count as horizontal overflow. */
+  top: -4px;
+  right: 1px;
+  width: 4px;
+  height: 4px;
+  margin: 0;
+  vertical-align: 0;
+}
+
+.pane {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+.pane.is-on { display: flex; }
+
+/* section headers ride on a thin plank */
+.pane__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 8px 4px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank_tall.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
+  border-bottom: 2px solid #000;
+}
+.pane__head, .pane__head * { text-shadow: 0 1px 0 #000; }
+.pane__hint { font-size: 10px; color: #e2c9a5; }
+.pane__points { font-size: 11px; color: var(--cream); white-space: nowrap; margin-left: auto; }
+.pane__head .link[hidden] { display: none; }
+.pane__points b { color: #ffe9ae; }
+.pane__points.is-relic b { color: #ffe9ae; }
+
+/* explanatory text sits on the parchment scroll from the pack */
+.pane__detail {
+  --px: 2;
+  flex: none;
+  margin: 4px 5px 0;
+  padding: 3px 9px 4px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: #4a3316;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 5px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/scroll.png);
+  border-image-slice: 3 5 4 5 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.pane__detail b { color: #2e1d07; }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--cream);
+  cursor: pointer;
+  user-select: none;
+}
+/* real pack checkbox instead of the browser's */
+.toggle input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+  background-image: url(assets/ui/check_off.png);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+.toggle input:checked { background-image: url(assets/ui/check_on.png); }
+
+.segmented { display: flex; gap: 3px; min-width: 0; }
+/* seven skills: the switch wraps to a second row where one will not hold */
+#skill-switch { flex-wrap: wrap; }
+/* The switches that carry three or four segments share the header with a
+   points readout and a link, so they share the tighter button too. */
+#skill-switch, #tree-switch { flex: 1 1 auto; }
+#skill-switch button, #tree-switch button { flex: 1 1 0; min-width: 0; padding: 2px 2px 3px; font-size: 9px; }
+.segmented button {
+  --px: 2;
+  position: relative;
+  padding: 2px 9px 3px;
+  border: 0;
+  font: inherit;
+  font-size: 10px;
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button_disabled.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.segmented button.is-on {
+  color: var(--ink-dark);
+  font-weight: 700;
+  text-shadow: 0 1px 0 #fff3;
+  border-image-source: url(assets/ui/button.png);
+}
+
+/* Stat strip: four studded plaques. Deliberately NOT on wood, because the
+   tab row right above it already is, and three plank bands stacked read as
+   noise. Dark here lets the plaques read as plaques. */
+/* Portrait keeps the old three-band stack exactly: `display: contents` means
+   the wrapper is not a box at all and the arena and statbar are still direct
+   children of #app. Landscape turns it into the left column. */
+.stage-col { display: contents; }
+
+.statbar {
+  --px: 1;
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  padding: 3px 4px 4px;
+  background: var(--slate-2);
+  border-bottom: 2px solid #000;
+}
+.statbar > div {
+  padding: 2px 1px 3px;
+  text-align: center;
+  min-width: 0;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.statbar dt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 8px;
+  letter-spacing: .5px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.statbar dd {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--cream);
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- tab 1: upgrade shop --- */
+.shop {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  list-style: none;
+  padding: 4px 5px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+/* --- the cosmos: a sky you scroll sideways --------------------------- */
+/* Each catalog is one row of card portraits joined by little arrows;
+   overflow-x is the point -- the sky is wider than any panel. */
+.skyline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 10px 6px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wood-dk) transparent;
+}
+.skyline::-webkit-scrollbar { height: 6px; }
+.skyline::-webkit-scrollbar-thumb { background: var(--wood-dk); }
+/* display:flex beats the UA's [hidden] rule; say it explicitly */
+.skyline[hidden] { display: none; }
+
+.pcard {
+  flex: 0 0 auto;
+  width: 126px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 9px 6px 7px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  background: #171322;   /* night sky behind the portrait */
+  border-style: solid;
+  border-width: 6px 6px 7px;
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.pcard:not(:disabled):active { transform: translateY(1px); }
+.pcard.is-watching { background: #221c31; }
+.pcard.is-done { cursor: default; }
+.pcard.is-locked { cursor: default; filter: grayscale(.8); opacity: .55; }
+
+/* The portrait: the same icon strip, blown up to 64px and kept pixelated.
+   Rides the .ico var(--i)/var(--n) machinery at a bigger cell. */
+.pbody {
+  width: 64px;
+  height: 64px;
+  background-size: calc(var(--n) * 64px) 64px;
+  background-position: calc(var(--i) * -64px) 0;
+}
+.pcard__name { font-size: 11px; font-weight: 700; color: var(--accent, var(--cream)); }
+.pcard__what {
+  font-size: 9px;
+  color: var(--ink-dim);
+  text-align: center;
+  min-height: 22px;
+}
+.pcard__meter { width: 100%; height: 3px; background: #150f0d; }
+.pcard__meter i { display: block; height: 100%; width: 0%; background: var(--accent, var(--gold)); }
+.pcard__state { font-size: 10px; font-weight: 700; color: var(--ink-mute); white-space: nowrap; }
+.pcard.is-watching .pcard__state { color: var(--gold); }
+.pcard.is-done .pcard__state { color: #6dba79; }
+
+.pcard__link { flex: 0 0 auto; padding: 0 3px; font-weight: 700; color: #b9a17a; }
+
+/* The speed toggle wears its state as its label: x1 quiet, x2/x3 gold. */
+.hud__btn--speed {
+  width: auto;
+  min-width: 26px;
+  padding-inline: 4px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--cream);
+}
+.hud__btn--speed.is-on { color: var(--gold); }
+
+/* The contract board rides at the top of the shop list and scrolls with it.
+   The shop turns multi-column on wide panels, so anything that is not an
+   upgrade row must span the whole track list -- as a plain cell it becomes
+   the widest thing in column one and squeezes every other column. */
+.quests { display: grid; gap: 4px; grid-column: 1 / -1; }
+.sect--quests { display: flex; align-items: center; gap: 4px; margin: 2px 2px 0; }
+.quests__next { margin-left: auto; font-style: normal; font-size: 9px; color: #b9a17a; }
+.quest.is-done { opacity: .55; }
+
+/* A path card carries four trade-off clauses; two abreast clips them, so
+   the list stays one column even where .keys goes to two. */
+#path-list { grid-template-columns: 1fr; }
+.pathrow { grid-template-columns: auto minmax(0, 1fr) 46px; }
+.pathrow .key__what { white-space: normal; }
+
+/* Contract and enchant rows carry sentences where the keys carry counts:
+   the text cell takes the slack and ellipsizes, because `auto` would size
+   the column to the sentence and stretch the whole shop past the panel. */
+.quest, .ench { grid-template-columns: auto minmax(0, 1fr) auto 46px; }
+.quest .key__what, .ench .key__what { overflow: hidden; text-overflow: ellipsis; }
+
+/* Shelf headers: the six upgrades a rebirth unlocks (and the three an
+   awakening does) announce where they came from. Hidden with their shelf. */
+.shop__shelf {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #b9a17a;
+  border-bottom: 1px solid #00000055;
+  padding: 2px 2px 3px;
+}
+.shop__shelf[hidden] { display: none; }
+
+/* Upgrade button: 9-sliced from the pack, on the thin frame (--px:2) so more
+   rows fit without losing the pack's look. */
+.up {
+  --px: 2;
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 2px 8px 3px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink-dark);
+  cursor: pointer;
+  overflow: hidden;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.up:active:not(:disabled) {
+  transform: translateY(1px);
+  border-image-source: url(assets/ui/button_pressed.png);
+}
+.up:disabled {
+  cursor: default;
+  color: #eae7ee;
+  text-shadow: 0 1px 0 #00000088;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+.up:disabled .up__effect { opacity: .75; }
+.up:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* How far off the next level is. Without it a grey row only says "no", and
+   you cannot tell whether that means one second or two minutes. */
+.up__meter {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: linear-gradient(90deg, #ebb85b26, #ebb85b4d);
+  border-right: 2px solid #ebb85b99;
+  transition: width .25s ease-out;
+  pointer-events: none;
+}
+.up:not(:disabled) .up__meter { display: none; }
+
+.up__icon, .up__body, .up__buy { position: relative; }
+
+.up__icon { width: 24px; height: 24px; display: grid; place-items: center; }
+.up:disabled .up__icon { filter: grayscale(.85) opacity(.7); }
+
+.up__body { min-width: 0; }
+.up__name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.up__effect {
+  display: block;
+  font-size: 10px;
+  line-height: 1.15;
+  opacity: .8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.up__buy { text-align: right; line-height: 1.25; flex: none; }
+.up__lvl { display: block; font-size: 9px; opacity: .72; }
+.up__cost { display: block; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.up--max .up__cost { color: #4b3a12; }
+
+/* Best power per coin among what is affordable. The star sits next to the
+   name so it does not fight the level, which lives in the opposite corner. */
+.up--best .up__name::before {
+  content: '★ ';
+  color: #7a4f05;
+  text-shadow: 0 0 6px #fff6;
+}
+.up--best { box-shadow: 0 0 0 1px #fff5, 0 0 10px -2px var(--gold); }
+
+/* little pop on purchase */
+.up.is-bought { animation: bought .32s ease-out; }
+@keyframes bought {
+  0%   { filter: brightness(1.6) saturate(1.3); transform: scale(1.015); }
+  100% { filter: none; transform: none; }
+}
+
+/* --- tab 2: trees --- */
+.tree-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 5px 10px;
+  /* NOT min-height: 0. A tree shares its pane with panels that pin their own
+     height, and as the only flexible child it swallows every shortfall. This
+     floor is what guarantees the branch headers plus a whole first node stay
+     reachable; whatever sits above it has to yield instead. */
+  min-height: 132px;
+}
+.tree-scroll[hidden] { display: none; }
+
+/* Nodes are the pack's gem frames: empty is the plain gold frame, invested
+   lights the gems, full swaps to the bright frame. */
+.node {
+  --px: 1;
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 1px;
+  background: #241b16;
+  font: inherit;
+  color: var(--ink-dim);
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/frame_gem.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+  filter: saturate(.35) brightness(.8);
+}
+.node__rank {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink-mute);
+}
+
+/* invested */
+.node.is-ranked {
+  background: #33251a;
+  color: var(--ink);
+  filter: none;
+}
+.node.is-ranked .node__rank { color: var(--gold); }
+.node.is-full {
+  background: #3d2c1c;
+  border-image-source: url(assets/ui/frame_lit.png);
+}
+.node.is-full .node__rank::after { content: ' ✓'; }
+
+/* affordable right now, pulses gently to draw the eye */
+.node.can-buy { filter: none; animation: nodeGlow 1.8s ease-in-out infinite; }
+@keyframes nodeGlow {
+  50% { box-shadow: 0 0 12px -3px var(--accent); }
+}
+
+/* locked */
+.node:disabled { cursor: default; }
+.node.is-locked { opacity: .4; filter: grayscale(1) brightness(.7); }
+.node.is-locked .ico { filter: grayscale(1); }
+
+.node__cost {
+  display: block;
+  font-size: 9px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.node:disabled .node__cost { color: var(--ink-mute); }
+
+/* --- the talent web ---
+   A lattice, not a list. The nodes are a CSS grid and the wires are one SVG
+   stretched over the same box; the track sizes and the wire coordinates both
+   come from the weights in skilltree.js, which is the only reason a wire
+   lands on a node centre at every size. Do not size a track here. */
+.web {
+  position: relative;
+  display: grid;
+  /* grid-template-columns/rows are set from the data, in buildWeb() */
+  /* Both bounds scale with how wide the web actually is (`--w`, in track
+     units): a cell has to stay wider than the 24px icon plus its frame, and
+     a four-wide web should not be stretched to the width of a seven-wide
+     one. Under the floor it scrolls sideways rather than shrinking into
+     confetti. Height is taken from the pane when the pane has it, and
+     scrolls when it does not. */
+  --w: 7.8;
+  width: 100%;
+  min-width: calc(var(--w) * 40px);
+  max-width: calc(var(--w) * 78px);
+  height: 100%;
+  /* 176, and it is arithmetic rather than taste: five rows weighted
+     1/.72/1/.72/1 put a lane row at 39.6px, a node is capped to its cell, and
+     the .8 frame leaves 29px inside for a 24px icon. Under this the icon
+     starts eating its own frame. */
+  min-height: 176px;
+  max-height: 470px;
+  /* `margin: auto` and not `align-items: center` on the scroller: centring a
+     flex item that overflows makes its top unreachable, and a web that does
+     not fit is exactly when you need to scroll to the top of it. */
+  margin: auto;
+}
+.tree-scroll { display: flex; overflow-x: auto; }
+
+.web__wires {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* Unlit, but not invisible: the shape of the web is the information, and a
+   road you have not walked still has to read as a road. */
+.web__wire {
+  stroke: #55402c;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+/* one end bought: a door you can walk through next */
+.web__wire.is-open { stroke: #8d6f45; }
+/* both ends bought: a road you have already travelled */
+.web__wire.is-on {
+  stroke: var(--gold);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 3px #ebb85b);
+}
+
+.web__lane {
+  --accent: var(--gold);
+  align-self: center;
+  justify-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--accent);
+  text-shadow: 0 1px 0 #000, 0 0 4px #000;
+}
+
+.node--web {
+  /* A thinner frame: at web sizes the 6px one ate the icon. */
+  --px: .8;
+  position: relative;
+  z-index: 1;
+  place-self: center;
+  width: min(100%, 62px);
+  height: min(100%, 62px);
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+/* The count rides ON the frame instead of under the icon: stacking them cost
+   a row of height the third lane needed. */
+.node--web .node__rank,
+.node--web .node__cost {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 2px;
+  font-size: 8px;
+  line-height: 1.35;
+  white-space: nowrap;
+  background: #14100dd9;
+  box-shadow: 0 0 0 1px #00000080;
+}
+.node--web .node__rank { bottom: -1px; }
+/* Relics and souls have a price as well as a count. One rides each rail. */
+.node--web .node__cost { top: -1px; }
+/* A crossing is the price of changing lanes, so it should not read as one
+   more rung of the lane it happens to sit beside: smaller, and its own
+   colour. */
+.node--cross {
+  --accent: #9d8fb8;
+  width: min(100%, 46px);
+  height: min(100%, 46px);
+}
+.node--cross .ico--lg {
+  width: 16px; height: 16px;
+  background-size: calc(var(--n) * 16px) 16px;
+  background-position: calc(var(--i) * -16px) 0;
+}
+.node--cross.is-ranked .node__rank { color: #c9b8e0; }
+
+/* --- tab 3: gathering skills --- */
+.skillbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--slate-2);
+  border-bottom: 2px solid #000;
+}
+.skillbar .xpbar { flex: 1 1 auto; height: 15px; }
+.skillbar .pane__points { margin: 0; font-size: 10px; }
+.equip[hidden] { display: none; }
+.stock[hidden], .mine-tools[hidden] { display: none; }
+
+/* Smithing has no line and no tool, so the panel shows what it does to the
+   forge instead of a sack of resources. */
+/* The Skills pane stacks a panel and a tree in one flex column, and the tree
+   used to be the only flexible child, so it absorbed every shortfall: on
+   Smithing the workshop pinned 209px of keys and odds and squeezed the tree
+   to 44px, three branch headers with no reachable node and points sitting
+   unspent. The rule now is the other way round. Panels above the tree yield
+   first and scroll themselves; the tree keeps a floor nothing can squeeze it
+   under. */
+.workshop {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 5px;
+  padding: 5px;
+  align-content: start;
+}
+.workshop[hidden] { display: none; }
+.workshop .odds { border-top: 0; border-radius: 0; }
+.workshop .facts { --px: 1; }
+.foot-note {
+  flex: none;
+  padding: 4px 10px 6px;
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--ink-dim);
+  background: var(--slate-2);
+}
+.foot-note b { color: var(--gold); }
+/* Section label. The keys list is the one thing in this panel you act on,
+   and unlabelled under a stats table nobody found it. */
+.sect {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 1px 0 #000;
+  margin: 2px 2px -2px;
+}
+.keys { display: grid; gap: 3px; }
+.keys[hidden] { display: none; }
+/* Four stones with full bills do not share a row: the id outranks the
+   wide-panel two-column rule on purpose. */
+#jewel-list { grid-template-columns: 1fr; }
+.key { grid-template-columns: auto 1fr auto 44px; --ore: var(--gold); }
+.key__what { font-size: 9px; color: var(--ink-dim); text-align: right; white-space: nowrap; }
+.key .ore__have b { color: var(--gold); }
+
+/* Contextual action pinned to the floor of the arena. It sits above the
+   progress bar because it is the one thing in the arena you can press. */
+.arena__act {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 11px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.arena__act[hidden] { display: none; }
+.act-btn {
+  --px: 2;
+  pointer-events: auto;
+  padding: 3px 12px 4px;
+  border: 0;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--ink-dark);
+  text-shadow: 0 1px 0 #fff3;
+  cursor: pointer;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+  animation: actIn .25s ease-out;
+}
+.act-btn[hidden] { display: none; }
+.act-btn:active { transform: translateY(1px); border-image-source: url(assets/ui/button_pressed.png); }
+.act-btn--out {
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+/* The bet button: same chrome, blood in the letters. */
+.act-btn--blood {
+  color: #7a1d24;
+  text-shadow: 0 1px 0 #ffffff33;
+}
+@keyframes actIn {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+/* The equip button is the whole tradeoff of slice 2, so it gets to look like
+   a decision: gold and raised when it is a choice, sunken when it is already
+   in your hand. */
+.equip {
+  --px: 2;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 4px;
+  border: 0;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  text-shadow: 0 1px 0 #fff3;
+  cursor: pointer;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.equip:not(:disabled):active { transform: translateY(1px); border-image-source: url(assets/ui/button_pressed.png); }
+.equip.is-on {
+  cursor: default;
+  color: #e9e6ef;
+  text-shadow: 0 1px 0 #0009;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+
+/* Well Fed, in the HUD next to the level. */
+.fed {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: #b8f0bd;
+  white-space: nowrap;
+}
+.fed[hidden] { display: none; }
+.fed b { font-size: 11px; font-weight: 700; }
+.xpbar__fill--ore { background-image: url(assets/ui/bar_gold.png); }
+
+/* One row per ore: what is in the sack, what it smelts to, and the button
+   that does it. The left rail carries the ore's own colour, the same way a
+   forge slot carries its rarity. */
+/* Yields before the tree does, same rule as .workshop above it. */
+.stock {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 3px;
+  padding: 4px 5px 0;
+  align-content: start;
+}
+.ore {
+  --ore: var(--stone);
+  --px: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto auto 46px;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px 3px 9px;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.ore[hidden] { display: none; }
+.ore::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 3px;
+  background: var(--ore);
+}
+.ore__name { font-size: 11px; font-weight: 700; color: var(--ore); text-align: left; }
+.ore__have { font-size: 11px; color: var(--ink-dim); white-space: nowrap; }
+.ore__have b { color: var(--cream); font-weight: 700; margin-left: 3px; }
+/* The right-hand word: a verb on the benches, the rate on the ledger. */
+.ore__smelt {
+  font-size: 10px;
+  font-weight: 700;
+  text-align: right;
+  color: var(--ink-mute);
+}
+.ore.can-smelt .ore__smelt { color: var(--gold); }
+.ore:disabled { cursor: default; opacity: .7; }
+.ore:not(:disabled):active { transform: translateY(1px); }
+/* The stock list is a ledger, not a bench: nothing here takes a tap. */
+.ore--ledger { cursor: default; }
+.ore--ledger:active { transform: none; }
+
+/* The bestiary wears its subjects' own faces, pixel for pixel. */
+.hunt__thumb {
+  width: 18px;
+  height: 18px;
+  vertical-align: -5px;
+  margin-right: 2px;
+  image-rendering: pixelated;
+}
+
+/* The piece on top, its wearer under it, neither allowed to tangle. */
+.armor__who {
+  display: block;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--ink-dim);
+}
+
+.mine-tools { flex: none; padding: 4px 5px; }
+.mine-tools .slot { grid-template-columns: 26px 1fr auto; }
+.mine-tools .slot__cost .ico { margin-right: 2px; }
+.mine-tools .slot__cost { display: flex; align-items: center; gap: 6px; font-size: 10px; }
+
+/* --- tab 5: pets --- */
+.pets {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 5px;
+  display: grid;
+  gap: 5px;
+  align-content: start;
+}
+/* A pet is a studded board like an ore row; the accent rail is its colour
+   and the thumbnail is the pack sprite itself, not an icon standing in. */
+.pet {
+  --accent: var(--stone);
+  --px: 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px 5px 10px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.pet::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 3px;
+  background: var(--accent);
+}
+.pet.is-locked { opacity: .55; }
+.pet.is-locked .pet__thumb { filter: grayscale(1) brightness(.6); }
+
+.pet__thumb { width: 26px; height: 26px; image-rendering: pixelated; }
+.pet__body { min-width: 0; }
+.pet__name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: 0 1px 0 #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pet__name em { font-style: normal; font-size: 9px; color: var(--cream); margin-left: 4px; }
+.pet__effect {
+  display: block;
+  font-size: 9px;
+  line-height: 1.25;
+  color: var(--ink-dim);
+}
+.pet__effect b { color: var(--cream); }
+
+.pet__feed { justify-content: center; font-size: 9px; padding: 2px 6px 3px; }
+.pet__feed[hidden] { display: none; }
+.pet__feed:disabled { cursor: default; }
+.pet__fish { opacity: .8; }
+.pet__feed.can-buy { animation: nodeGlow 1.8s ease-in-out infinite; }
+
+/* Feed on top, walk below: the whole action column stays one tap wide.
+   The fitted piece is FORGED on the forge tab, where the bars live. */
+.pet__acts { display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
+.pet__walk { justify-content: center; font-size: 9px; padding: 2px 6px 3px; }
+.pet__walk[hidden] { display: none; }
+.pet__walk:disabled { cursor: default; }
+.pet__walk.is-on { color: var(--gold); }
+
+/* --- the Hall of Ancestors: pet boards wearing a ghost --- */
+/* The portrait is the hero's own idle frame, tinted in code; the glow and
+   the translucency are what read as "spirit" rather than "another knight". */
+.spirit__thumb {
+  opacity: .82;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+.spirit.is-locked .spirit__thumb { filter: grayscale(1) brightness(.5); }
+.spirit__locked { display: block; }
+.spirit__locked[hidden] { display: none; }
+
+/* The receipt under the chore: what the kept row pays right now. */
+.spirit__gain { display: block; color: var(--accent); }
+.spirit__gain[hidden] { display: none; }
+
+/* A native select, dressed like the boards around it. Native on purpose:
+   the picker a phone opens for it beats anything hand-rolled here. */
+.spirit__task {
+  display: block;
+  max-width: 100%;
+  margin-top: 1px;
+  font: inherit;
+  font-size: 10px;
+  color: var(--cream);
+  background: #201826;
+  border: 1px solid #4a4258;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+.spirit__task[hidden] { display: none; }
+.spirit__task:focus-visible { outline: 2px solid var(--accent); }
+
+.spirit__up[hidden] { display: none; }
+
+/* --- Omniscience: the ledger inside the Cosmos tab --- */
+.omni {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+}
+.omni[hidden] { display: none; }
+.omni-row { cursor: default; grid-template-columns: auto minmax(0, 1fr) auto 44px; }
+.omni-row .key__what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omni-row .ore__smelt { color: var(--gold); }
+/* the little word that says "this is a record, not your pocket" */
+.omni__tag { font-weight: 400; color: var(--ink-dim); font-size: 9px; }
+
+/* --- the boards: three leagues, two ladders, one modal --- */
+.segmented--ranks { margin: 4px 0 2px; }
+.segmented--ranks button { flex: 1 1 0; min-width: 0; }
+/* the league this save competes in wears gold even when not selected */
+.segmented--ranks button.is-mine:not(.is-on) { color: var(--gold); }
+
+.ranklist { display: grid; gap: 2px; margin: 6px 0; }
+.rank {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 6px;
+  background: #0003;
+  border-radius: 3px;
+}
+.rank b { color: var(--gold); }
+.rank__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank__value { color: var(--cream); white-space: nowrap; }
+.rank.is-me { outline: 1px solid var(--gold); background: #3a2d17; }
+.rank--empty { grid-template-columns: 1fr; text-align: center; color: var(--ink-dim); }
+
+.rank-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 11px;
+  color: var(--cream);
+  background: #201826;
+  border: 1px solid #4a4258;
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+.rank-name:focus-visible { outline: 2px solid var(--gold); }
+
+/* --- tab 4: forge --- */
+.forge {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  padding: 4px 5px;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+/* Each slot is a studded board; the rarity shows as a colour bar down the
+   left edge and in the item name, so the frame stays the pack's. */
+.slot {
+  --px: 1;
+  --rar: var(--stone);
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 6px 3px 9px;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.slot::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 2px; bottom: 2px;
+  width: 3px;
+  background: var(--rar);
+  box-shadow: 0 0 6px -1px var(--rar);
+}
+.slot:active:not(:disabled) { transform: translateY(1px); }
+.slot:disabled { cursor: default; opacity: .6; }
+.slot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.slot__name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: 0 1px 0 #000;
+}
+.slot__name em {
+  font-style: normal;
+  font-size: 9px;
+  color: var(--rar);
+  margin-left: 5px;
+}
+.slot__effect { display: block; font-size: 10px; color: var(--ink-dim); }
+.slot--empty .slot__effect { opacity: .6; }
+
+.slot__cost {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--cream);
+  white-space: nowrap;
+}
+.slot:disabled .slot__cost { color: var(--ink-mute); }
+.slot--maxed .slot__cost { color: var(--gold); }
+
+/* glow when a new item lands */
+.slot.is-new { animation: forged .6s ease-out; }
+@keyframes forged {
+  0%   { box-shadow: 0 0 0 0 var(--rar); filter: brightness(1.8); }
+  100% { box-shadow: 0 0 0 14px transparent; filter: none; }
+}
+
+.odds {
+  flex: none;
+  display: grid;
+  /* One row of however many rarities there are. It was `repeat(5, 1fr)`,
+     which wrapped the moment Mythic joined the ladder. */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 3px 4px 4px;
+  gap: 3px;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank_tall.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
+  border-top: 2px solid #000;
+}
+.odds > div { padding: 2px 1px 3px; background: #1f1712cc; text-align: center; box-shadow: 0 0 0 1px #00000066; }
+.odds dt { font-size: 8px; color: var(--ink-dim); }
+.odds dd { font-size: 10px; font-weight: 700; text-shadow: 0 1px 0 #000; }
+
+/* --- tab 5: ascension (rebirth and awaken share the layout) --- */
+.prestige {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prestige[hidden] { display: none; }
+
+.prestige__gain {
+  --px: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 7px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.prestige__gain strong {
+  font-size: 22px;
+  color: var(--gold);
+  text-shadow: 0 1px 0 #000;
+}
+.prestige__gain.is-empty strong { color: var(--ink-mute); }
+.prestige__gain small {
+  display: block;
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+
+/* Souls read violet, the dust family: the layer above the relic gold. The
+   empty grey still wins, so a dead awaken button does not glow. */
+.prestige__gain--soul:not(.is-empty) strong { color: #c79ae8; }
+#asc-souls b { color: #e0bcff; }
+
+.facts {
+  --px: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.facts > div {
+  padding: 2px 6px 3px;
+  background: #2b1f18;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.facts dt { font-size: 9px; color: var(--ink-dim); }
+.facts dd { font-size: 13px; font-weight: 700; color: var(--cream); text-shadow: 0 1px 0 #000; }
+
+.prestige__note {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.prestige__note b { color: var(--cream); }
+
+.big-btn {
+  --px: 3;
+  width: 100%;
+  padding: 9px 10px 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ink-dark);
+  text-shadow: 0 1px 0 #fff3;
+  cursor: pointer;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.big-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  border-image-source: url(assets/ui/button_pressed.png);
+}
+.big-btn:disabled {
+  cursor: default;
+  color: #eae7ee;
+  text-shadow: 0 1px 0 #00000066;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+
+/* what the relics already bought; hidden when there are none */
+.perks[hidden] { display: none; }
+.perks h3 {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 6px;
+}
+.perks ul {
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+.perks li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px;
+  font-size: 10px;
+  color: var(--ink-dim);
+  background: #241b16;
+  border-left: 3px solid var(--gold-dp);
+  box-shadow: 0 0 0 1px #00000088;
+}
+.perks li b { color: var(--gold); margin-left: auto; }
+
+/* Feats: lifetime marks on the Ascend tab. Rows echo the perks list. */
+.featlist {
+  list-style: none;
+  display: grid;
+  gap: 3px;
+}
+.featlist li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 7px;
+  font-size: 10px;
+  color: var(--ink-dim);
+  background: #241b16;
+  border-left: 3px solid var(--stone);
+  box-shadow: 0 0 0 1px #00000088;
+}
+.featlist li.is-done { border-left-color: var(--gold); }
+.featlist__name { font-weight: 700; color: var(--cream); white-space: nowrap; }
+.featlist li.is-done .featlist__name { color: var(--gold); }
+.featlist__desc { min-width: 0; }
+.featlist__desc b { color: var(--cream); }
+.featlist__mark { white-space: nowrap; color: var(--ink-mute); }
+.featlist li.is-done .featlist__mark { color: var(--gold); }
+
+/* --- footer --- */
+.foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 10px 4px;
+  padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  font-size: 10px;
+  color: var(--cream);
+  text-shadow: 0 1px 0 #000;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/plank_tall.png);
+  background-size: auto, calc(32px * var(--px)) 100%;
+  background-repeat: repeat, repeat-x;
+  image-rendering: pixelated;
+  border-top: 2px solid #000;
+}
+.foot b { color: #ffe9ae; }
+.link {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 10px;
+  color: var(--cream);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link:hover { color: #ffe9ae; }
+
+/* Erase everything lives next to prestige: destructive, not a shortcut. */
+.link--danger {
+  align-self: center;
+  margin-top: 4px;
+  color: #7a4a44;
+  text-shadow: none;
+}
+.link--danger:hover { color: var(--red); }
+
+/* --- quiet scrollbars --- */
+.shop, .tree-scroll, .prestige, .forge { scrollbar-width: thin; scrollbar-color: var(--wood-dk) transparent; }
+.shop::-webkit-scrollbar, .tree-scroll::-webkit-scrollbar,
+.prestige::-webkit-scrollbar, .forge::-webkit-scrollbar { width: 6px; }
+.shop::-webkit-scrollbar-thumb, .tree-scroll::-webkit-scrollbar-thumb,
+.prestige::-webkit-scrollbar-thumb, .forge::-webkit-scrollbar-thumb { background: var(--wood-dk); }
+
+/* --- options modal --- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  background: #000000a8;
+}
+.modal[hidden] { display: none; }
+.modal__box {
+  --px: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(480px, calc(100dvh - 48px));
+  padding: 10px;
+  background: #241b16;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.modal__box .sect { margin: 0; }
+.modal__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 8px;
+  padding: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wood-dk) transparent;
+}
+.opt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink);
+}
+.opt-row.toggle { flex-direction: row-reverse; }
+.opt-row--buttons { justify-content: stretch; }
+.opt-row--buttons .equip { flex: 1 1 0; justify-content: center; text-align: center; }
+.opt-note { font-size: 9px; line-height: 1.35; color: var(--ink-dim); }
+
+/* The import pane: a real box the save can land in whole, because native
+   prompt dialogs vanish inside Android webviews and truncate long pastes. */
+.import-pane { display: grid; gap: 6px; margin-top: 6px; }
+.import-pane textarea {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--cream);
+  background: #241a14;
+  border: 1px solid #4a3626;
+  border-radius: 4px;
+}
+.import-pane textarea:focus-visible { outline: 2px solid var(--gold); }
+.import-pane[hidden] { display: none; }
+#lang-switch button { padding: 2px 10px 3px; }
+
+/* --- loading --- */
+.loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg-deep);
+  color: var(--ink-dim);
+  font-size: 12px;
+  letter-spacing: 3px;
+  z-index: 10;
+  transition: opacity .25s;
+}
+.loading.is-done { opacity: 0; pointer-events: none; }
+
+/* --- tweaks by screen width --- */
+/* Five tabs on a 320px phone: the longest label would otherwise run under
+   its own corner pip. Dropping a point buys the clearance without letting
+   the row wrap, which costs 10px of panel. */
+
+/* --- tweaks by screen height --- */
+@media (min-height: 720px) {
+  .arena { height: 30%; }
+}
+/* Six tabs at 320px leave ~38px of face per button; "Talents" needs the
+   whole of it. One step down keeps every label on one line. */
+@media (max-width: 355px) {
+  .tab { font-size: 8px; letter-spacing: -0.2px; }
+  /* Six rarities across 304px leaves ~47px a column, and "Legendary" at 8px
+     needs 43 of them before padding. One step down keeps the row intact. */
+  .odds dt { font-size: 7px; }
+}
+
+@media (max-height: 600px) {
+  .arena { height: 31%; min-height: 128px; }
+  /* Its top margin is 4px the pane does not have to give down here. */
+  .pane__detail { min-height: 0; margin-top: 0; }
+  /* On a pane this short the full floor no longer fits alongside the panels
+     that cannot shrink. Measured, not guessed: raising it to 140 so a whole
+     web fitted made the SKILLS pane itself scroll -- a scroller inside a
+     scroller, which is worse than the web scrolling on its own. The skills
+     pane spends 173px on its tool bar, stock row and detail line before the
+     web starts; on a 360px-tall screen there is nothing left to take.
+     (Under 480px this whole tradeoff is replaced: see the block below.) */
+  .tree-scroll { min-height: 88px; }
+  .skillbar { padding: 3px 8px; }
+  .mine-tools { padding: 3px 5px; }
+}
+
+/* ============================================================
+   Landscape phones: the panel on a diet
+
+   A phone turned sideways is 320-430px TALL, and chrome drawn for a 700px
+   column reads gigantic there: every button wears 6-8px of wooden frame,
+   and by the time the Skills pane has paid for its switch, tool bar, stock
+   and detail line, the tree is an 88px porthole showing one row of nodes.
+
+   Two moves, both height-keyed so desktop never sees them:
+
+   1. SAME ART, HALF THE FRAME. Every 9-sliced control drops --px from 2
+      to 1: the slices scale cleanly (they are drawn at 1x), the tap face
+      stays, and each row gives back 6-8px of border.
+
+   2. ONE SCROLLER. On the tree panes the porthole compromise inverts:
+      the PANE scrolls as a single column and the tree gets a 300px window
+      -- the whole web, readable, at the cost of the bench scrolling away
+      above it. The old objection (a scroller inside a scroller) does not
+      apply, because the stock and workshop stop being scrollers
+      themselves: one finger, one direction, everything reachable. The
+      parchment detail strip goes sticky so tapping a node still explains
+      itself with the switch three screens up.
+   ============================================================ */
+@media (max-height: 480px) {
+  .tab { --px: 1; padding: 3px 1px 4px; }
+  .segmented button { --px: 1; padding: 3px 6px 4px; }
+  #skill-switch button, #tree-switch button { padding: 3px 2px 4px; }
+  .equip { --px: 1; padding: 3px 7px 4px; }
+  .up { --px: 1; }
+  .pane__head { padding: 2px 6px 3px; gap: 6px; }
+  .pane__detail { --px: 1; margin: 3px 4px 0; padding: 3px 7px 4px; }
+  .skillbar { gap: 6px; }
+  .workshop { gap: 4px; padding: 4px; }
+  .ore { gap: 6px; }
+
+  /* the one-scroller inversion, tree panes only */
+  #pane-talents.is-on, #pane-skills.is-on { overflow-y: auto; }
+  #pane-talents .tree-scroll, #pane-skills .tree-scroll {
+    flex: none;
+    height: 300px;
+    min-height: 0;
+  }
+  .stock, .workshop { flex: none; max-height: none; overflow-y: visible; }
+  #pane-talents .pane__detail, #pane-skills .pane__detail {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+}
+
+/* ============================================================
+   LANDSCAPE -- the shape the game is actually played in
+
+   Portrait was a single 460px column: a phone held upright, three bands
+   stacked. That column is still here and still works, but it caps the game
+   at 460px, so a phone turned sideways spent 45% of its screen on black
+   bars and showed one and a half shop rows.
+
+   Landscape turns the stack into a grid: the HUD keeps the full width, the
+   arena takes a left column, and the whole tabbed panel gets a right column
+   of its own. The panel stops competing with the arena for height, which is
+   the entire point -- it goes from 212px tall to 340, and from 460 wide to
+   490 and beyond.
+
+   THE GATE. Not `(orientation: landscape)`: that fires on a 600x500 desktop
+   window, which has no room for two columns. Wide AND at least as wide as
+   it is tall.
+   ============================================================ */
+@media (min-width: 560px) and (min-aspect-ratio: 1/1) {
+  #app {
+    display: grid;
+    /* The arena never gets so narrow that the fight stops reading, and
+       never so wide that the panel is the cramped one. */
+    grid-template-columns: minmax(300px, 42%) 1fr;
+    grid-template-rows: auto 1fr;
+    max-width: none;
+    /* Landscape puts the notch on a SIDE, so the bottom inset the portrait
+       footer handles is no longer the one that bites. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .hud { grid-column: 1 / -1; }
+
+  /* --- left column: the fight --- */
+  .stage-col {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    border-right: 2px solid #000;
+  }
+  .arena {
+    /* Grid items default to min-content in both axes, which is the same
+       trap `min-height: 0` fixes in flexbox. */
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    /* the seam moves from under the arena to beside it, and onto the column
+       so it runs the whole height rather than stopping under the canvas */
+    border-bottom: 0;
+  }
+
+  /* THE LOAD-BEARING RULE. Left to itself the canvas would fill a tall
+     narrow column, and the renderer derives its zoom from canvas HEIGHT
+     (render.js resize): a tall box zooms in, and the visible stretch of
+     road shrinks to nothing. Pinning the box wide keeps the world within
+     ~10% of the portrait numbers this game was balanced against, and the
+     space left under it is exactly where the action buttons want to be
+     anyway -- off the game world, and low enough to reach one-handed. */
+  #stage {
+    flex: none;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    /* a short column wins: better a wider canvas than a clipped one */
+    max-height: 100%;
+  }
+
+  /* Directly under the canvas, not pinned to the floor: on a tall screen
+     the leftover belongs at the BOTTOM of the column as plain background,
+     not as a black gap wedged between the fight and the numbers. */
+  .statbar { flex: none; border-bottom: 0; }
+
+  /* --- right column: everything else --- */
+  .panel {
+    grid-column: 2;
+    min-width: 0;
+    min-height: 0;
+    /* Pane internals size themselves off THIS box, not the viewport: with
+       the arena taking 42%, viewport width stopped meaning anything to
+       them. */
+    container-type: inline-size;
+    container-name: panel;
+  }
+
+  /* The panel is short and wide now, so the tabs give back a row of height
+     they no longer need to spend on two lines of label. */
+  .tab { font-size: 10px; padding: 3px 2px 4px; }
+}
+
+/* ============================================================
+   Wide panel: put the room to work
+
+   Keyed off the PANEL, not the viewport. A 1180px tablet gives the panel
+   684px; a 667px phone gives it 367px. The viewport number is not the one
+   that decides how many columns fit.
+   ============================================================ */
+/* 470, not 520: an 844x390 phone gives the panel 490px, so a threshold of
+   520 missed the device this rework was for by thirty pixels and left it
+   showing one column of a list that had room for two. */
+@container panel (min-width: 470px) {
+  .shop, .forge, .pets, .featlist { grid-template-columns: repeat(2, 1fr); }
+  .keys, #cauldron { grid-template-columns: repeat(2, 1fr); }
+  .prestige { display: grid; grid-template-columns: repeat(2, 1fr); align-content: start; }
+  .prestige__gain, .prestige__note, .big-btn, .perks, .featlist { grid-column: 1 / -1; }
+}
+
+@container panel (min-width: 820px) {
+  .shop, .forge, .featlist { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* The ledger reads, it does not tap: one column keeps every buff line
+   whole on a phone panel, and only a truly wide panel splits it. */
+@container panel (min-width: 470px) {
+  .omni { grid-template-columns: 1fr; }
+}
+@container panel (min-width: 820px) {
+  .omni { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* On a tall screen the arena column has height to spare and the canvas does
+   not, so give the column more WIDTH instead: a 4:3 canvas grows with it and
+   the leftover shrinks. The panel still clears 520px, so it keeps two
+   columns. */
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) and (min-height: 640px) {
+  #app { grid-template-columns: minmax(300px, 52%) 1fr; }
+}
+
+/* ============================================================
+   Portrait, on a phone: ask for the rotation
+
+   Hidden by every other condition. `pointer: coarse` is the test that
+   matters -- a narrow desktop window is portrait too, and it keeps the old
+   stacked layout because you cannot turn a monitor on its side.
+   ============================================================ */
+.rotate { display: none; }
+
+@media (hover: none) and (pointer: coarse) and (max-aspect-ratio: 1/1) {
+  .rotate {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    padding: 24px;
+    text-align: center;
+    background: var(--bg-deep);
+  }
+  /* A phone drawn with borders, tipping. No sprite for this in the pack and
+     a glyph would land as tofu in a monospace fallback. */
+  .rotate__phone {
+    width: 34px;
+    height: 58px;
+    border: 3px solid var(--cream);
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 2px var(--bg-deep), inset 0 0 0 3px var(--wood);
+    animation: tip 2.2s ease-in-out infinite;
+  }
+  .rotate__say { font-size: 13px; font-weight: 700; color: var(--cream); }
+  .rotate__note { font-size: 10px; color: var(--ink-dim); }
+}
+
+@keyframes tip {
+  0%, 30%   { transform: rotate(0deg); }
+  55%, 100% { transform: rotate(-90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate__phone { animation: none; transform: rotate(-90deg); }
+}
+
+/* ============================================================
+   Landscape with height to spare: the arena becomes a BAND
+
+   Two columns exist because a phone turned sideways is 390px tall and a
+   full-width arena there is a 140px strip: the zoom falls to its floor, the
+   844px of width become 422 units of road, and the hero is an ant in a field
+   while the panel is left with one row.
+
+   Give the screen real height and that reverses. The band gets 240px+, the
+   zoom holds at 3, and the arena becomes the wide vista this game is drawn
+   for -- big sky, a blood moon, the enemy walking in from a long way off --
+   with the panel spread full width underneath in three columns.
+
+   THE THRESHOLD IS NOT A GUESS. The band's height is 38vh and the zoom is
+   round(height / 92), so the zoom holds at 3 only while 38vh >= 230px, i.e.
+   from a 640px-tall viewport up. One pixel under that, the zoom drops to 2,
+   the visible road doubles, and the band is the wrong answer again.
+   ============================================================ */
+@media (min-width: 560px) and (max-width: 1279px) and (min-aspect-ratio: 1/1) and (min-height: 640px) {
+  #app {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+  }
+  .stage-col {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    border-right: 0;
+    /* What the band shows BESIDE the window: the same wood as the HUD, so
+       the arena reads as a thing set into the cabinet rather than a canvas
+       that failed to stretch. */
+    background-color: var(--wood-dkr);
+    /* Dark enough that the window is the lit thing on the band and the wood
+       is what it is set into. At the HUD's overlay the planks read as the
+       subject instead. */
+    background-image: linear-gradient(#000000ad, #000000ad), url(assets/ui/wood.png);
+    background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+    image-rendering: pixelated;
+  }
+
+  /* THE RATIO IS THE HERO'S PLACE ON SCREEN, not a taste call.
+     `heroAnchor` is `1 - WALK_IN / worldWidth`; worldWidth is worldHeight
+     times the canvas ratio; and the zoom holds worldHeight at about 92. So
+     2.2 gives ~200 units of road and stands the hero at 0.55. Full width on
+     a 1920px screen gave 480 units and pinned him at 0.78 against the anchor
+     clamp, with a thousand pixels of ground nobody walks on behind him.
+
+     Narrowing the BOX and not the zoom is the whole point: the sprites stay
+     at the scale they always were, and the panel keeps every pixel of its
+     height, because neither of those is paying for the framing. */
+  .arena {
+    flex: none;
+    height: clamp(240px, 38vh, 380px);
+    aspect-ratio: 2.2 / 1;
+    width: auto;
+    max-width: 100%;
+    margin-inline: auto;
+    /* the seam under the band belongs to the band, not to the window */
+    border-bottom: 0;
+    box-shadow: 0 0 0 2px #000, 0 0 0 5px var(--wood-dk), 0 0 0 7px #000;
+  }
+  /* Fills the window: no aspect clamp needed once the height is real. */
+  #stage {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    max-height: none;
+  }
+  .statbar { border-right: 0; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+  .panel { flex: 1 1 auto; min-height: 0; }
+}
+
+/* The band's 380px cap stays a cap. It was raised once, to 60vh, to buy the
+   camera enough height to zoom in and bring the hero off the right edge --
+   and that is exactly what made the sprites huge and left the panel a strip.
+   Band height is the panel's height. Spend it there. */
+
+/* ============================================================
+   The HUD on a screen that has room
+
+   Every size in the HUD was picked for a 390px-wide phone, where 48px of
+   wood carrying two rows is already a tenth of the screen. On a 1080p
+   monitor those same 48px are a twentieth, and the row that runs the game --
+   the gold, the stage, the experience bar -- reads as a strip of trim rather
+   than the readout it is. So the type and the bar grow with the screen while
+   the wood, the frames and the pixel art stay exactly what they were.
+   ============================================================ */
+@media (min-width: 900px) and (min-height: 700px) {
+  .hud { padding: 6px 12px 7px; gap: 4px; }
+  .hud__row { gap: 12px; }
+  .hud__stage { gap: 5px; }
+  .hud__stage-name { font-size: 16px; }
+  .hud__stage-sub { font-size: 11px; }
+  .stepper { width: 30px; height: 24px; }
+  .purse__now { font-size: 20px; }
+  .purse__rate { font-size: 11px; }
+  /* 24 and not 20: the sheet is 16px a cell, and 1.5x is the step the rest of
+     the game already uses (.ico--lg). 1.25x would put half a source pixel in
+     every icon. */
+  .purse .ico, .hud__btn .ico {
+    width: 24px;
+    height: 24px;
+    background-size: calc(var(--n) * 24px) 24px;
+    background-position: calc(var(--i) * -24px) 0;
+  }
+  .hud__btn { width: 34px; height: 29px; }
+  .gems { font-size: 11px; padding: 2px 6px 3px; }
+  .hud__lvl { font-size: 11px; }
+  .hud__lvl b { font-size: 17px; }
+  .xpbar { height: 16px; }
+  .xpbar__text { font-size: 10px; }
+}
