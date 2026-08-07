@@ -173,7 +173,9 @@ const PT = {
   'AWAKENED: +{0} SOUL(S)': 'DESPERTOU: +{0} ALMA(S)',
   '{0} FORGED': '{0} FORJADA',
   '{0} BREWED': '{0} PREPARADA',
-  'SAVE COPIED TO CLIPBOARD': 'SAVE COPIADO',
+  'SAVE COPIED, AND SAVED AS A FILE': 'SAVE COPIADO, E SALVO EM ARQUIVO',
+  'SAVE SAVED AS A FILE': 'SAVE SALVO EM ARQUIVO',
+  'PASTE A SAVE FIRST': 'COLE UM SAVE PRIMEIRO',
   'THAT DID NOT READ AS A SAVE': 'ISSO NÃO PARECE UM SAVE',
 
   // --- descriptions (node/gear/feat patterns) ---
@@ -428,9 +430,10 @@ const PT = {
   'Export save': 'Exportar save',
   'Import save': 'Importar save',
   'Erase everything and start over': 'Apagar tudo e recomeçar',
-  'Copy your save:': 'Copie seu save:',
-  'Paste your save:': 'Cole seu save:',
-  'Replace the CURRENT save with the pasted one?': 'Substituir o save ATUAL pelo colado?',
+  'Paste your save here': 'Cole seu save aqui',
+  'Read a file': 'Ler um arquivo',
+  'Replace and load': 'Substituir e carregar',
+  'This replaces the current save on this device.': 'Isso substitui o save atual deste aparelho.',
   'Rebirth now pays {0} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?':
     'Renascer agora paga {0} relíquia(s).\n\nVocê perde fase, ouro, upgrades, nível e pontos de talento. Confirmar?',
   'Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive.':

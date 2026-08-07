@@ -459,6 +459,18 @@
         <button class="equip" id="btn-export" type="button">Export save</button>
         <button class="equip" id="btn-import" type="button">Import save</button>
       </div>
+      <!-- The import pane: a real textarea instead of window.prompt, which
+           some Android webviews swallow whole and phone keyboards truncate. -->
+      <div class="import-pane" id="import-pane" hidden>
+        <textarea id="import-text" rows="4" spellcheck="false"></textarea>
+        <div class="opt-row opt-row--buttons">
+          <label class="equip" id="import-file-label">Read a file
+            <input type="file" id="import-file" accept=".txt,text/plain" hidden>
+          </label>
+          <button class="equip" id="import-go" type="button">Replace and load</button>
+        </div>
+        <p class="opt-note" id="import-note">This replaces the current save on this device.</p>
+      </div>
     </div>
     <button class="act-btn" id="options-close" type="button">Close</button>
   </div>

@@ -175,6 +175,8 @@ export class UI {
       options: $('btn-options'), optionsModal: $('options'),
       optSfx: $('opt-sfx'), optMusic: $('opt-music'), optFloat: $('opt-float'),
       langSwitch: $('lang-switch'), optionsClose: $('options-close'),
+      importPane: $('import-pane'), importText: $('import-text'),
+      importFile: $('import-file'), importGo: $('import-go'),
       ranksBtn: $('btn-ranks'), ranks: $('ranks'), ranksClose: $('ranks-close'),
       ranksTitle: $('ranks-title'), ranksNote: $('ranks-note'), ranksFoot: $('ranks-foot'),
       leagueSwitch: $('league-switch'), boardSwitch: $('board-switch'),
@@ -255,6 +257,7 @@ export class UI {
     this.board = 'sprint';
     this.el.ranksBtn.hidden = !hasBackend();
     this.el.rankName.placeholder = t('your name');
+    this.el.importText.placeholder = t('Paste your save here');
     if (hasBackend()) flushQueue();
 
     this.music = new Music(this.sfx, () => !this.state.musicOff);
@@ -313,6 +316,8 @@ export class UI {
       ['#opt-float ~ span', 'Damage numbers'], ['#opt-lang', 'Language'],
       ['#opt-save-note', 'Back up or move your save between devices.'],
       ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
+      ['#import-file-label', 'Read a file'], ['#import-go', 'Replace and load'],
+      ['#import-note', 'This replaces the current save on this device.'],
       ['#options-close', 'Close'], ['#gemshop-close', 'Close'],
       ['#rotate-say', 'Turn your phone sideways'],
       ['#rotate-note', 'Little RPG is played in landscape.'],
@@ -1233,7 +1238,13 @@ export class UI {
       button.classList.toggle('is-on', button.dataset.lang === lang);
     }
 
-    const openOptions = (open) => { el.optionsModal.hidden = !open; };
+    const openOptions = (open) => {
+      el.optionsModal.hidden = !open;
+      // The import pane never survives the modal: a stale paste sitting in
+      // the box is a save replacement waiting for a misclick.
+      el.importPane.hidden = true;
+      el.importText.value = '';
+    };
     el.options.addEventListener('click', () => openOptions(true));
     el.optionsClose.addEventListener('click', () => openOptions(false));
     // Tapping the backdrop closes; tapping the box does not.
@@ -1265,25 +1276,42 @@ export class UI {
       location.reload();
     });
 
+    // Native prompt() and confirm() died here in alpha: Android webviews
+    // swallow them whole (the button "does nothing") and phone clipboards
+    // truncate a 3KB paste. The save now travels as a FILE plus clipboard
+    // on the way out, and lands in a real textarea on the way in.
     el.exportSave.addEventListener('click', async () => {
       const text = state.exportSave();
-      // Clipboard needs a secure context; the single file opened from disk
-      // may not have one, so the prompt fallback keeps the export usable
-      // everywhere the game runs.
+      let copied = false;
       try {
         await navigator.clipboard.writeText(text);
-        this.toast({ text: t('SAVE COPIED TO CLIPBOARD') });
-      } catch {
-        window.prompt(t('Copy your save:'), text);
-      }
+        copied = true;
+      } catch { /* no secure context: the file below still carries it */ }
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+      link.download = 'little-rpg-save.txt';
+      link.click();
+      URL.revokeObjectURL(link.href);
+      this.toast({ text: copied
+        ? t('SAVE COPIED, AND SAVED AS A FILE') : t('SAVE SAVED AS A FILE') });
     });
 
     el.importSave.addEventListener('click', () => {
-      const text = window.prompt(t('Paste your save:'));
-      if (text === null || text.trim() === '') return;
-      // Confirm BEFORE anything is written: a cancel must leave the current
-      // save exactly as it was.
-      if (!confirm(t('Replace the CURRENT save with the pasted one?'))) return;
+      el.importPane.hidden = !el.importPane.hidden;
+      if (!el.importPane.hidden) el.importText.focus();
+    });
+    el.importFile.addEventListener('change', async () => {
+      const file = el.importFile.files?.[0];
+      if (!file) return;
+      el.importText.value = (await file.text()).trim();
+      el.importFile.value = '';
+    });
+    el.importGo.addEventListener('click', () => {
+      const text = el.importText.value;
+      if (!text.trim()) {
+        this.toast({ text: t('PASTE A SAVE FIRST'), bad: true });
+        return;
+      }
       if (!GameState.importSave(text)) {
         this.toast({ text: t('THAT DID NOT READ AS A SAVE'), bad: true });
         return;

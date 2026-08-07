@@ -540,7 +540,11 @@ awakening both**.
 
 The footer's **options** opens the game's one modal: sound effects, music,
 damage numbers, language, and the save export/import. The list scrolls, so
-it stays usable on a short phone.
+it stays usable on a short phone. The save travels as a **file** (plus the
+clipboard when the browser allows it) and comes back through a real
+textarea with a file picker; the first version used `window.prompt`, which
+Android webviews swallow whole and phone clipboards truncate, and it died
+in alpha as "import does not work".
 
 **Portuguese and English.** The English string IS the key: display sites
 call `t('...')`, English falls through untouched, and a missing entry shows

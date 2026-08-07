@@ -1893,8 +1893,27 @@ body { display: flex; justify-content: center; }
 }
 .opt-row.toggle { flex-direction: row-reverse; }
 .opt-row--buttons { justify-content: stretch; }
-.opt-row--buttons .equip { flex: 1 1 0; justify-content: center; }
+.opt-row--buttons .equip { flex: 1 1 0; justify-content: center; text-align: center; }
 .opt-note { font-size: 9px; line-height: 1.35; color: var(--ink-dim); }
+
+/* The import pane: a real box the save can land in whole, because native
+   prompt dialogs vanish inside Android webviews and truncate long pastes. */
+.import-pane { display: grid; gap: 6px; margin-top: 6px; }
+.import-pane textarea {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--cream);
+  background: #241a14;
+  border: 1px solid #4a3626;
+  border-radius: 4px;
+}
+.import-pane textarea:focus-visible { outline: 2px solid var(--gold); }
+.import-pane[hidden] { display: none; }
 #lang-switch button { padding: 2px 10px 3px; }
 
 /* --- loading --- */
