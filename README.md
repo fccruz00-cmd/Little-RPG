@@ -254,13 +254,16 @@ it.
    against that species**, up to ten notches. Kills tally from minute
    one; the grudge only folds once awakened, like the Omniscience marks.
 
-   The second is the **Jewels**: four stones cut with **souls**, three
-   facets each, and every facet reaches all four gathering lines at once.
-   Haste shortens the swing (the third cut makes it instant, to the
-   minimum-swing floor), Plenty adds up to +60% yield, Springs sets
-   nodes up to 45% closer, Study adds up to +90% skill XP. Pure quality
-   of life by design: gathering never pays damage, so its jewels never
-   touch the fight. Awakening also unlocks the **pet armor** bench on
+   The second is the **Jewels**: ten stones cut with **souls**, three
+   facets each, and STRONG on purpose, this being the layer past
+   prestige. The gather-lens four reach every line at once: Haste ends
+   at an instant swing (the minimum-swing floor catches it), Plenty at
+   +100% yield, Springs at 60% closer nodes, Study at +120% skill XP.
+   The whole-economy six cost double: Midas up to +100% gold everywhere,
+   Cinders +100% dust, Tithes +15% treasure chance, Echoes +100% hero
+   XP, the Crucible halves what refining asks in raw, and the Feast
+   makes meals last three times as long. One law survives the pricing:
+   none of them pays damage, the fight is bought elsewhere. Awakening also unlocks the **pet armor** bench on
    the Forge tab: fitting a wild thing for a piece is singularity
    knowledge.
 
