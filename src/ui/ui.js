@@ -21,6 +21,8 @@ import {
   PLANETS, CONSTELLATIONS, CONSTELLATION_BY_ID, observeTime,
 } from '../data/cosmos.js';
 import { OMNI, OMNI_ROWS, omniTier, omniNext } from '../data/omni.js';
+import { BESTIARY, BESTIARY_ROWS, huntTier, huntNext } from '../data/bestiary.js';
+import { JEWELS, JEWEL_BY_ID, JEWEL_MAX } from '../data/jewels.js';
 import { FEATS, featDone } from '../data/feats.js';
 import { ANCESTORS, HALL } from '../data/ancestors.js';
 import { DAILIES_PER_DAY, questProgress } from '../data/quests.js';
@@ -161,6 +163,8 @@ export class UI {
       cosmosSwitch: $('cosmos-switch'), skyStars: $('sky-stars'),
       planetarium: $('planetarium'), constellations: $('constellations'),
       omniList: $('omni-list'),
+      huntList: $('hunt-list'), jewelList: $('jewel-list'),
+      petarmorWrap: $('petarmor-wrap'),
       pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
@@ -284,7 +288,7 @@ export class UI {
     if (lang !== 'pt') return;
     const TEXT = [
       ['[data-tab="upgrades"]', 'Shop'], ['[data-tab="talents"]', 'Talents'],
-      ['[data-tab="skills"]', 'Skills'], ['[data-tab="cosmos"]', 'Cosmos'],
+      ['[data-tab="skills"]', 'Skills'], ['[data-tab="cosmos"]', 'Singularity'],
       ['[data-tab="forge"]', 'Forge'], ['[data-tab="hall"]', 'Ancestors'],
       ['[data-tab="pets"]', 'Pets'], ['[data-tab="prestige"]', 'Ascend'],
       ['[data-tree="talents"]', 'Talents'], ['[data-tree="relics"]', 'Relics'],
@@ -298,6 +302,8 @@ export class UI {
       ['[data-sky="planetarium"]', 'Planetarium'],
       ['[data-sky="constellations"]', 'Constellations'],
       ['[data-sky="omni"]', 'Omniscience'],
+      ['[data-sky="hunt"]', 'Bestiary'],
+      ['[data-sky="jewels"]', 'Jewels'],
       ['[data-league="pure"]', 'Pure'], ['[data-league="gilded"]', 'Gilded'],
       ['[data-league="patron"]', 'Patron'],
       ['[data-board="sprint"]', 'Weekly sprint'], ['[data-board="best"]', 'Best stage'],
@@ -953,6 +959,16 @@ export class UI {
       this.refreshCosmos();
     };
     el.planetarium.addEventListener('click', aimTelescope);
+    // A jewel refuses like a key: disabled, with the price showing.
+    el.jewelList.addEventListener('click', (e) => {
+      const row = e.target.closest('.ore');
+      if (!row || !state.buyJewel(row.dataset.jewel)) return;
+      const jewel = JEWEL_BY_ID[row.dataset.jewel];
+      this.sfx.play('jingle');
+      this.toast({ text: t('{0} CUT: FACET {1}', t(jewel.name).toUpperCase(),
+        ['I', 'II', 'III'][state.jewels[jewel.id] - 1]) });
+      this.refreshCosmos();
+    });
     el.constellations.addEventListener('click', aimTelescope);
 
     el.kitchen.addEventListener('click', (e) => {
@@ -1806,6 +1822,9 @@ export class UI {
     el.autoCraftWrap.hidden = !hasAnvil;
 
     // The parade's pieces: the keys' have/cost readout, the pet's colour.
+    // Fitting a wild thing for armor is singularity knowledge: the whole
+    // bench stays out of sight until the first awakening.
+    el.petarmorWrap.hidden = state.awakens < 1;
     for (const { pet, row, what, have, action } of this.armorRows.values()) {
       const tamed = (state.pets[pet.id] ?? 0) > 0;
       row.hidden = !tamed;
@@ -2098,6 +2117,8 @@ export class UI {
     build(this.el.planetarium, PLANETS);
     build(this.el.constellations, CONSTELLATIONS);
     this.buildOmni();
+    this.buildHunt();
+    this.buildJewels();
   }
 
   /** The ledger: one board per pile, currencies first, then the lines. */
@@ -2149,6 +2170,98 @@ export class UI {
     setText(this.el.planetsFound, String(total));
   }
 
+  /** The bestiary: one board per species, thumbed with its own sprite. */
+  buildHunt() {
+    this.huntRows = [];
+    const frag = document.createDocumentFragment();
+    for (const rowDef of BESTIARY_ROWS) {
+      const el = document.createElement('div');
+      el.className = 'ore key omni-row';
+      el.innerHTML = `
+        <span class="ore__name"><canvas class="hunt__thumb" width="18" height="18"></canvas> ${t(rowDef.name)}</span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b></span>
+        <span class="ore__smelt"></span>`;
+      try { this.drawPetThumb(el.querySelector('canvas'), rowDef.id); } catch { /* no sheet, no thumb */ }
+      frag.append(el);
+      this.huntRows.push({
+        def: rowDef, el,
+        what: el.querySelector('.key__what'),
+        have: el.querySelector('b'),
+        mark: el.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.huntList.append(frag);
+  }
+
+  refreshHunt() {
+    const { state } = this;
+    let total = 0;
+    for (const r of this.huntRows) {
+      const kills = state.hunts[r.def.id] ?? 0;
+      const notches = huntTier(kills, r.def.base);
+      const next = huntNext(kills, r.def.base);
+      total += notches;
+      setHtml(r.have, `${fmt(kills)} <span class="omni__tag">${t('kill(s)')}</span>`);
+      setText(r.mark, notches ? `${notches}/${BESTIARY.cap}` : '');
+      setHtml(r.what, notches
+        ? `<b>${t('x{0} damage to them', (1 + BESTIARY.per * notches).toFixed(2))}</b>`
+          + (next ? ` &middot; ${t('next notch at {0}', fmt(next))}` : ` &middot; ${t('at the summit')}`)
+        : t('first notch at {0}', fmt(r.def.base)));
+      r.el.classList.toggle('is-done', notches >= BESTIARY.cap);
+      r.el.classList.toggle('can-smelt', notches > 0);
+    }
+    setText(this.el.planetsFound, String(total));
+  }
+
+  /** The jewels: four stones, keys-style, priced in souls. */
+  buildJewels() {
+    this.jewelRows = new Map();
+    const frag = document.createDocumentFragment();
+    for (const jewel of JEWELS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'ore';
+      row.dataset.jewel = jewel.id;
+      row.innerHTML = `
+        <span class="ore__name"><i class="ico ico--sm ico--${jewel.icon}"></i> ${t(jewel.name)}</span>
+        <span class="key__what"></span>
+        <span class="ore__have"><b></b> <i class="ico ico--sm ico--orb"></i></span>
+        <span class="ore__smelt"></span>`;
+      frag.append(row);
+      this.jewelRows.set(jewel.id, {
+        jewel, row,
+        what: row.querySelector('.key__what'),
+        cost: row.querySelector('b'),
+        have: row.querySelector('.ore__have'),
+        action: row.querySelector('.ore__smelt'),
+      });
+    }
+    this.el.jewelList.append(frag);
+  }
+
+  refreshJewels() {
+    const { state } = this;
+    let cut = 0;
+    for (const { jewel, row, what, cost, have, action } of this.jewelRows.values()) {
+      const rank = state.jewels[jewel.id] ?? 0;
+      cut += rank;
+      const price = state.jewelCost(jewel.id);
+      const now = rank ? jewel.describe(rank, jewel.facets[rank - 1]) : t(jewel.blurb);
+      setHtml(what, rank && price != null
+        ? `<b>${now}</b> &middot; ${jewel.describe(rank + 1, jewel.facets[rank])}`
+        : rank ? `<b>${now}</b>` : now);
+      have.style.visibility = price == null ? 'hidden' : 'visible';
+      if (price != null) setText(cost, fmt(price));
+      setText(action, price == null ? t('max')
+        : state.canBuyJewel(jewel.id) ? `${rank}/${JEWEL_MAX}` : t('need'));
+      row.disabled = !state.canBuyJewel(jewel.id);
+      row.classList.toggle('can-smelt', state.canBuyJewel(jewel.id));
+      row.classList.toggle('is-done', price == null);
+    }
+    setText(this.el.planetsFound, `${cut}/${JEWELS.length * JEWEL_MAX}`);
+  }
+
   showSky(view) {
     this.skyView = view;
     for (const button of this.el.cosmosSwitch.querySelectorAll('button')) {
@@ -2157,6 +2270,8 @@ export class UI {
     this.el.planetarium.hidden = view !== 'planetarium';
     this.el.constellations.hidden = view !== 'constellations';
     this.el.omniList.hidden = view !== 'omni';
+    this.el.huntList.hidden = view !== 'hunt';
+    this.el.jewelList.hidden = view !== 'jewels';
     this.refreshCosmos();
   }
 
@@ -2165,6 +2280,16 @@ export class UI {
     if (this.skyView === 'omni') {
       setHtml(el.cosmosDetail, t('Omniscience counts everything you have ever <b>gained</b>, lifetime. Spending never subtracts: the tally grows with your farm on its own, every mark of ten pays its own permanent buff, and the ledger survives every reset.'));
       this.refreshOmni();
+      return;
+    }
+    if (this.skyView === 'hunt') {
+      setHtml(el.cosmosDetail, t('The Bestiary counts every kill by the name of what died, lifetime, through every reset. Each notch of ten kills past a species\' first mark pays <b>more damage against that species</b>, forever.'));
+      this.refreshHunt();
+      return;
+    }
+    if (this.skyView === 'jewels') {
+      setHtml(el.cosmosDetail, t('Jewels are cut with <b>souls</b> and never break: each facet betters every gathering line at once, and the third cut of the first stone makes the swing instant.'));
+      this.refreshJewels();
       return;
     }
     const stars = this.skyView === 'constellations';

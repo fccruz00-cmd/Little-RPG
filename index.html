@@ -117,12 +117,12 @@
       <button class="tab" data-tab="hall" type="button" role="tab" id="tab-hall" hidden>
         Ancestors<i class="pip" id="pip-hall" hidden></i>
       </button>
-      <!-- the layer an awakening opens above the road -->
-      <button class="tab" data-tab="cosmos" type="button" role="tab" id="tab-cosmos" hidden>
-        Cosmos<i class="pip" id="pip-cosmos" hidden></i>
-      </button>
       <button class="tab" data-tab="prestige" type="button" role="tab">
         Ascend<i class="pip" id="pip-prestige" hidden></i>
+      </button>
+      <!-- past the last reset: the layer an awakening opens -->
+      <button class="tab" data-tab="cosmos" type="button" role="tab" id="tab-cosmos" hidden>
+        Singularity<i class="pip" id="pip-cosmos" hidden></i>
       </button>
     </nav>
 
@@ -241,14 +241,17 @@
       <div class="tree-scroll" id="tree-cooking" hidden></div>
     </div>
 
-    <!-- tab: the cosmos (shows up after the first awakening). Two catalogs
-         share one telescope: planets automate, constellations empower. -->
+    <!-- tab: the Singularity (shows up after the first awakening). The
+         whole awakened layer behind one switch: the old cosmos catalogs,
+         the bestiary's kill ledger, and the soul-cut jewels. -->
     <div class="pane" id="pane-cosmos">
       <div class="pane__head">
         <div class="segmented" id="cosmos-switch">
           <button class="is-on" data-sky="planetarium" type="button">Planetarium</button>
           <button data-sky="constellations" type="button" id="sky-stars">Constellations</button>
           <button data-sky="omni" type="button">Omniscience</button>
+          <button data-sky="hunt" type="button">Bestiary</button>
+          <button data-sky="jewels" type="button">Jewels</button>
         </div>
         <span class="pane__points">
           <i class="ico ico--sm ico--telescope"></i> <b id="planets-found">0/8</b>
@@ -257,8 +260,12 @@
       <p class="pane__detail" id="cosmos-detail"></p>
       <div class="skyline" id="planetarium"></div>
       <div class="skyline" id="constellations" hidden></div>
-      <!-- Omniscience: the ledger of every pile ever held, one buff each -->
+      <!-- Omniscience: the ledger of every pile ever gained, one buff each -->
       <div class="keys omni" id="omni-list" hidden></div>
+      <!-- The bestiary: every kill counted by name, notches paying grudge -->
+      <div class="keys omni" id="hunt-list" hidden></div>
+      <!-- The jewels: four stones, three facets each, priced in souls -->
+      <div class="keys" id="jewel-list" hidden></div>
     </div>
 
     <!-- tab 4: forge (shows up after the first rebirth) -->

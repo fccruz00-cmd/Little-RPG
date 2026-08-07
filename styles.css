@@ -1225,6 +1225,10 @@ body { display: flex; justify-content: center; }
   margin: 2px 2px -2px;
 }
 .keys { display: grid; gap: 3px; }
+.keys[hidden] { display: none; }
+/* Four stones with full bills do not share a row: the id outranks the
+   wide-panel two-column rule on purpose. */
+#jewel-list { grid-template-columns: 1fr; }
 .key { grid-template-columns: auto 1fr auto 44px; --ore: var(--gold); }
 .key__what { font-size: 9px; color: var(--ink-dim); text-align: right; white-space: nowrap; }
 .key .ore__have b { color: var(--gold); }
@@ -1382,6 +1386,15 @@ body { display: flex; justify-content: center; }
 /* The stock list is a ledger, not a bench: nothing here takes a tap. */
 .ore--ledger { cursor: default; }
 .ore--ledger:active { transform: none; }
+
+/* The bestiary wears its subjects' own faces, pixel for pixel. */
+.hunt__thumb {
+  width: 18px;
+  height: 18px;
+  vertical-align: -5px;
+  margin-right: 2px;
+  image-rendering: pixelated;
+}
 
 /* The piece on top, its wearer under it, neither allowed to tangle. */
 .armor__who {

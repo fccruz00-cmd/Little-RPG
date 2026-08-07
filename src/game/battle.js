@@ -941,6 +941,8 @@ export class Battle {
       }
       if (target.hp / target.maxHp <= 0.3) dealt *= 1 + state.bonus.executeMul;
       if (target.isBoss || target.isElite) dealt *= 1 + state.bossDamage;
+      // The bestiary's grudge: notches against this species, by name.
+      dealt *= state.huntMul(target.def.id);
 
       if (target.trait) {
         target.hitsTaken += 1;
@@ -993,6 +995,9 @@ export class Battle {
   killEnemy(target) {
     const { state } = this;
     state.stats.kills += 1;
+    // The bestiary's ledger: every kill under the name of what died. An
+    // elite is its mob writ large, so it credits the species either way.
+    state.hunts[target.def.id] = (state.hunts[target.def.id] ?? 0) + 1;
     state.streak += 1;   // Frenzy; reset wherever the hero goes down
     if (target.isBoss) state.stats.bossKills += 1;
     target.dead = true;

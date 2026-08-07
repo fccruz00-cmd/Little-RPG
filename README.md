@@ -11,8 +11,9 @@ playing offline.
 
 The **UI** keeps the top; under it the **Fight** takes a column of its own
 and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
-**Skills**, **Pets**, **Ancestors**, **Cosmos** and **Ascend**: the
-journey reads left to right, work, friends, the dead, the sky, the leap.
+**Skills**, **Pets**, **Ancestors**, **Ascend** and **Singularity**: the
+journey reads left to right, work, friends, the dead, the leap, and what
+waits past the last reset.
 
 ```
 +--------------------------------------------------+
@@ -243,8 +244,31 @@ it.
    *up* while the tool allows and falls back down after, because the dead
    widen your hands but cannot sharpen your axe. The blessing is a rule of
    gathering itself, so the Cosmos' planets work with blessed hands too.
-7. **Cosmos**: only appears after the first awakening. Two catalogs behind
-   one switch — the **Planetarium** and the **Constellations** — drawn as
+7. **Ascend**: the two reset layers behind one switch.
+   - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
+     the depth of the run into relics. The first one lands at stage 25; since
+     the formula is cumulative minus what you already collected, repeating
+     the same depth does not pay twice. The **Relic Echo** lifts every
+     payout by a quarter of its base per rebirth already taken this cycle,
+     so rebirth number six pays real relics at depths number one had
+     already milked dry; awakening resets the echo with the counter. The pane also keeps the **sprint**:
+     the deepest stage inside a run's first 30 minutes of game time — a
+     personal time-trial with no server behind it, because "how fast does my
+     build open" is the question each rebirth actually answers.
+   - *Awaken* is the layer above: it wipes everything Rebirth wipes **plus
+     relics, the relic tree, rebirths, dust and gear**, and pays **souls**.
+     Souls are measured against every relic the ascension earned, from all
+     three sources: banked by past rebirths, still pending in the current
+     run, and paid by dungeon clears. The first soul lands at 50 relics.
+     Souls and the soul tree survive every later awakening, as does the
+     Skills tab. The **Soul Echo** lifts every payout by half its base per
+     awakening already taken, so cycles climb instead of repeating, and
+     the two uncapped rails at the ends of the soul lanes (Transcendence
+     and Undying, +12% damage or health a rank at ever-steeper cost) make
+     sure a soul never arrives with nowhere to go.
+8. **Singularity**: only appears after the first awakening, and closes the
+   strip: everything the deepest reset unlocks, behind one switch. The
+   first two catalogs share the telescope — the **Planetarium** and the **Constellations** — drawn as
    sideways-scrolling rows of card portraits joined O → O → O, sharing
    **one telescope**: an hour spent charting The Sword is an hour Jupiter
    is not being found, and that is the whole decision. Observation runs on
@@ -301,28 +325,23 @@ it.
    | The River   | 7   | 16% faster work, every gathering skill |
    | The Twins   | 9   | enchants +60% stronger |
    | The Crown   | 12  | the set bonus +60% stronger |
-8. **Ascend**: the two reset layers behind one switch.
-   - *Rebirth* wipes stage, gold, upgrades, level and skill points, and turns
-     the depth of the run into relics. The first one lands at stage 25; since
-     the formula is cumulative minus what you already collected, repeating
-     the same depth does not pay twice. The **Relic Echo** lifts every
-     payout by a quarter of its base per rebirth already taken this cycle,
-     so rebirth number six pays real relics at depths number one had
-     already milked dry; awakening resets the echo with the counter. The pane also keeps the **sprint**:
-     the deepest stage inside a run's first 30 minutes of game time — a
-     personal time-trial with no server behind it, because "how fast does my
-     build open" is the question each rebirth actually answers.
-   - *Awaken* is the layer above: it wipes everything Rebirth wipes **plus
-     relics, the relic tree, rebirths, dust and gear**, and pays **souls**.
-     Souls are measured against every relic the ascension earned, from all
-     three sources: banked by past rebirths, still pending in the current
-     run, and paid by dungeon clears. The first soul lands at 50 relics.
-     Souls and the soul tree survive every later awakening, as does the
-     Skills tab. The **Soul Echo** lifts every payout by half its base per
-     awakening already taken, so cycles climb instead of repeating, and
-     the two uncapped rails at the ends of the soul lanes (Transcendence
-     and Undying, +12% damage or health a rank at ever-steeper cost) make
-     sure a soul never arrives with nowhere to go.
+
+   The fourth catalog is the **Bestiary**: every kill counted under the
+   name of what died, lifetime, through every reset, thirty-five species
+   across mobs and bosses. Each **notch**, one per power of ten past the
+   species' base (100 kills for a mob, 10 for a boss), pays **+6% damage
+   against that species**, up to ten notches. Kills tally from minute
+   one; the grudge only folds once awakened, like the Omniscience marks.
+
+   The fifth is the **Jewels**: four stones cut with **souls**, three
+   facets each, and every facet reaches all four gathering lines at once.
+   Haste shortens the swing (the third cut makes it instant, to the
+   minimum-swing floor), Plenty adds up to +60% yield, Springs sets
+   nodes up to 45% closer, Study adds up to +90% skill XP. Pure quality
+   of life by design: gathering never pays damage, so its jewels never
+   touch the fight. Awakening also unlocks the **pet armor** bench on
+   the Forge tab: fitting a wild thing for a piece is singularity
+   knowledge.
 
 ### The talent web
 

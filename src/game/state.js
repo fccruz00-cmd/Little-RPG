@@ -41,6 +41,8 @@ import {
   ANCESTORS, HALL, RESERVES, BOUNTY, spiritUpCost, spiritsAwake,
 } from '../data/ancestors.js';
 import { OMNI_ROWS, omniTier } from '../data/omni.js';
+import { BESTIARY, BESTIARY_BY_ID, huntTier } from '../data/bestiary.js';
+import { JEWELS, JEWEL_BY_ID, JEWEL_MAX } from '../data/jewels.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
 const MULTIPLIER_KEYS = [
@@ -107,6 +109,12 @@ function defaults() {
     // pets: tamed for good, fed on raw fish, all of it awaken-proof.
     // Every tamed pet's buff is on; the collection is the progression.
     pets: {},         // petId -> level (absent = not tamed yet)
+
+    // Singularity: the bestiary's kill ledger (speciesId -> lifetime kills,
+    // notches pay damage vs that species once awakened) and the jewels
+    // (jewelId -> facets cut, paid in souls, bettering every line).
+    hunts: {},
+    jewels: {},
     petArmor: {},     // petId -> armor tier, bolted on like the tame itself
 
     // cauldron: potion id -> seconds of effect remaining
@@ -308,6 +316,8 @@ export class GameState {
     this.refined = { ...(data.refined ?? {}) };
     this.keys = { ...(data.keys ?? {}) };
     this.pets = { ...(data.pets ?? {}) };
+    this.hunts = { ...(data.hunts ?? {}) };
+    this.jewels = { ...(data.jewels ?? {}) };
     this.petArmor = { ...(data.petArmor ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
     this.dishes = { ...(data.dishes ?? {}) };
@@ -513,6 +523,13 @@ export class GameState {
     b.yieldMul *= 1 + this.bonus.yieldAll + (this.constPowers.yieldAll ?? 0);
     b.gatherSpeed *= this.bonus.workAll * (1 - (this.constPowers.workAll ?? 0));
     b.gatherXpMul *= 1 + (this.constPowers.skillXp ?? 0);
+    // Singularity jewels: cut once with souls, shining on every line at
+    // once. Haste's third facet zeroes the term and workTime's minWork
+    // floor catches it: "instant" still costs the minimum swing.
+    b.gatherSpeed *= 1 - this.jewelFacet('haste');
+    b.yieldMul *= 1 + this.jewelFacet('plenty');
+    b.nodeMul *= 1 + this.jewelFacet('springs');
+    b.gatherXpMul *= 1 + this.jewelFacet('study');
     this._gatherBonus[skillId] = b;
     return b;
   }
@@ -809,6 +826,45 @@ export class GameState {
     return this.gatherBonus('smithing').forgeCostLess;
   }
 
+  // --- the Singularity: bestiary and jewels ---------------------------
+  /**
+   * Damage multiplier against one species. The ledger counts from the
+   * first kill and survives everything; the grudge only folds once the
+   * first awakening opens the eye, same law as the Omniscience marks.
+   */
+  huntMul(speciesId) {
+    if (this.awakens <= 0) return 1;
+    const row = BESTIARY_BY_ID[speciesId];
+    if (!row) return 1;
+    return 1 + BESTIARY.per * huntTier(this.hunts[speciesId] ?? 0, row.base);
+  }
+
+  /** The facet value a jewel currently shines at (0 uncut). */
+  jewelFacet(id) {
+    const rank = this.jewels[id] ?? 0;
+    return rank ? JEWEL_BY_ID[id].facets[rank - 1] : 0;
+  }
+
+  /** Souls the next facet asks, or null at the third cut. */
+  jewelCost(id) {
+    return JEWEL_BY_ID[id]?.costs[this.jewels[id] ?? 0] ?? null;
+  }
+
+  canBuyJewel(id) {
+    const cost = this.jewelCost(id);
+    return this.awakens > 0 && cost != null && this.souls >= cost;
+  }
+
+  buyJewel(id) {
+    if (!this.canBuyJewel(id)) return false;
+    this.souls -= this.jewelCost(id);
+    this.jewels[id] = (this.jewels[id] ?? 0) + 1;
+    // Facets fold into the gather lens, so every cache of it is stale.
+    this._gatherBonus = {};
+    this.save();
+    return true;
+  }
+
   // --- pets -----------------------------------------------------------
   /**
    * Tames every pet whose objective the save has met and does not own yet.
@@ -857,7 +913,10 @@ export class GameState {
 
   canArmorPet(id) {
     const cost = this.petArmorNext(id);
-    return cost != null
+    // The bench itself is smith work, but FITTING a wild thing for armor
+    // is singularity knowledge: the pieces sell only once awakened.
+    return this.awakens > 0
+      && cost != null
       && (this.refined[cost.ore] ?? 0) >= cost.bars
       && (this.refined[cost.log] ?? 0) >= cost.planks;
   }
@@ -1951,7 +2010,8 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, potions, dishes, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels,
+      potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec,
@@ -1963,7 +2023,8 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, potions, dishes, stats,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels,
+      potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
       buyMax, muted, musicOff, floatersOff, lang, goldPerSec, lastSeen: Date.now(),
