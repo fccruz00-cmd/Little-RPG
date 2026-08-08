@@ -1420,6 +1420,23 @@ body { display: flex; justify-content: center; }
 .ore--ledger { cursor: default; }
 .ore--ledger:active { transform: none; }
 
+/* The expedition desk: three pickers, a send, and the pets on the road. */
+.trips { display: flex; flex-direction: column; gap: 5px; padding: 5px; min-height: 0; overflow-y: auto; }
+.trips[hidden] { display: none; }
+.trips select {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 3px 4px;
+  font: inherit;
+  font-size: 10px;
+  color: var(--cream);
+  background: #241a14;
+  border: 1px solid #4a3626;
+  border-radius: 3px;
+}
+.trips select:focus-visible { outline: 2px solid var(--gold); }
+#trip-go { flex: 0 0 auto; }
+
 /* The bestiary wears its subjects' own faces, pixel for pixel. */
 .hunt__thumb {
   width: 18px;

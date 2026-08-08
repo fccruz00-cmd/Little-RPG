@@ -900,6 +900,9 @@ export class Battle {
         hero.anim.play('walk', { fps: 11 });
       }
       hero.attackTimer = Math.min(hero.attackTimer, 0.15);
+      // Out of range there is no swing in flight, so the catch-up below has
+      // nothing to land when the next fight starts.
+      hero.swung = true;
       if (!target) {
         this.spawnTimer -= dt;
         if (this.spawnTimer <= 0) this.spawnEnemy();
@@ -914,6 +917,15 @@ export class Battle {
     const period = aura / state.attackRate;
     hero.attackTimer -= dt;
     if (hero.attackTimer <= 0) {
+      // A swing that never reached its hit frame still lands. The hit is
+      // gated on animation progress, which `hero.anim.update` advances AFTER
+      // this runs -- so once the period drops under two frames (attack speed
+      // ~30/s, or a slow phone at any speed) the restart below lands exactly
+      // where the hit would have registered, and the window is never seen.
+      // A 72h audit found the hero swinging for fifty-four hours at 67
+      // trillion dps without scratching a seven billion HP mob. The stat is
+      // the contract; the animation is decoration.
+      if (!hero.swung) this.heroStrike(target);
       hero.attackTimer = period;
       hero.swung = false;
       hero.anim.playTimed('attack', Math.min(period * 0.9, 0.55), { force: true });

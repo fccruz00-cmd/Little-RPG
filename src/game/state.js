@@ -42,6 +42,9 @@ import {
 } from '../data/ancestors.js';
 import { OMNI_ROWS, omniTier } from '../data/omni.js';
 import { BESTIARY, BESTIARY_BY_ID, huntTier } from '../data/bestiary.js';
+import {
+  ROAD_BY_ID, TRIP_BY_ID, slotsFor, haul, reachFor,
+} from '../data/expeditions.js';
 import { JEWELS, JEWEL_BY_ID, JEWEL_MAX } from '../data/jewels.js';
 
 /** Bonus keys that stack by multiplying; everything else adds up. */
@@ -115,6 +118,11 @@ function defaults() {
     // (jewelId -> facets cut, paid in souls, bettering every line).
     hunts: {},
     jewels: {},
+
+    // Pets that are out working: petId -> { road, trip, done } where `done`
+    // is a game-clock stamp. Trips ride the save, so closing the tab is the
+    // point rather than a punishment.
+    trips: {},
     petArmor: {},     // petId -> armor tier, bolted on like the tame itself
 
     // cauldron: potion id -> seconds of effect remaining
@@ -318,11 +326,18 @@ export class GameState {
     this.pets = { ...(data.pets ?? {}) };
     this.hunts = { ...(data.hunts ?? {}) };
     this.jewels = { ...(data.jewels ?? {}) };
+    this.trips = { ...(data.trips ?? {}) };
     this.petArmor = { ...(data.petArmor ?? {}) };
     this.potions = { ...(data.potions ?? {}) };
     this.dishes = { ...(data.dishes ?? {}) };
     this.redeemed = Array.isArray(data.redeemed) ? [...data.redeemed] : [];
     this.stats = { ...emptyStats(), ...(data.stats ?? {}) };
+    // The lifetime reset counter gates the forge and the hall, so it must
+    // never sit below the resets the save is already showing. A migrated
+    // save gets this seeded; an IMPORT or a hand-edited one would otherwise
+    // walk in with prestiges on the board and both doors shut.
+    this.stats.rebirths = Math.max(this.stats.rebirths ?? 0,
+      (this.prestiges ?? 0) + (this.awakens ?? 0));
     this.quests = data.quests ?? null;
     this.rollQuests();
     this.cosmos = {
@@ -846,6 +861,77 @@ export class GameState {
 
   get forgeDiscount() {
     return this.gatherBonus('smithing').forgeCostLess;
+  }
+
+  // --- expeditions: work for the pets that do not walk ----------------
+  /** Trips this save can have out at once; ancestors open the rest. */
+  get tripSlots() {
+    return slotsFor(this.spiritCount);
+  }
+
+  get tripsOut() {
+    return Object.keys(this.trips).length;
+  }
+
+  /** A pet can go if it is tamed, home, and not the one walking with you. */
+  canSendPet(id) {
+    return !!this.pets[id] && !this.trips[id] && id !== this.companion
+      && this.tripsOut < this.tripSlots;
+  }
+
+  sendPet(id, roadId, tripId) {
+    if (!this.canSendPet(id) || !ROAD_BY_ID[roadId] || !TRIP_BY_ID[tripId]) return false;
+    this.trips[id] = {
+      road: roadId, trip: tripId,
+      done: this.clock + TRIP_BY_ID[tripId].minutes * 60,
+    };
+    this.save();
+    return true;
+  }
+
+  /** Seconds left on a pet's trip, or 0 when it is standing at the door. */
+  tripLeft(id) {
+    const out = this.trips[id];
+    return out ? Math.max(0, out.done - this.clock) : 0;
+  }
+
+  /**
+   * Collects one finished trip. Returns what it carried, or null. The haul
+   * lands in the same piles the road fills, so the refinery and the pets
+   * downstream treat it as any other gather.
+   */
+  collectPet(id) {
+    const out = this.trips[id];
+    if (!out || this.tripLeft(id) > 0) return null;
+    const road = ROAD_BY_ID[out.road];
+    const trip = TRIP_BY_ID[out.trip];
+    const level = this.pets[id] ?? 1;
+    const amount = haul(road, trip, level, this.petArmor[id] ?? 0);
+    delete this.trips[id];
+    let carried;
+    if (road.dust) {
+      this.dust += amount;
+      carried = { dust: amount };
+    } else {
+      const list = SKILLS[road.skill].resources;
+      const res = list[Math.min(reachFor(level), list.length - 1)];
+      this.raw[res.id] = (this.raw[res.id] ?? 0) + amount;
+      carried = { amount, resource: res, skill: road.skill };
+      // A trip is honest work, so the line it walked learns from it.
+      this.gainGatherXp(road.skill, amount * res.xp * 0.1);
+    }
+    this.save();
+    return carried;
+  }
+
+  /** Every trip standing at the door, collected at once. */
+  collectAllPets() {
+    const got = [];
+    for (const id of Object.keys(this.trips)) {
+      const carried = this.collectPet(id);
+      if (carried) got.push({ id, ...carried });
+    }
+    return got;
   }
 
   // --- the Singularity: bestiary and jewels ---------------------------
@@ -2045,7 +2131,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, singularity,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, trips, singularity,
       potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,
@@ -2058,7 +2144,7 @@ export class GameState {
       souls, awakens, extraRelics, soulTalents, path, pathFree,
       dust, gear, gearMods, autoCraftOn,
       skills, skillTalents, tools, raw, refined, tool, autoSwitch,
-      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, singularity,
+      fedTier, fedTimer, keys, deepestKey, bossHeld, pets, petArmor, hunts, jewels, trips, singularity,
       potions, dishes, stats,
       quests, gems, bestGps, redeemed, runClock, sprintBest, idolOwned, speed,
       cosmos, ancestors, companion, nick, omni,

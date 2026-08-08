@@ -15,6 +15,9 @@ import {
 } from '../data/gear.js';
 import { KEYS, DUNGEON } from '../data/dungeon.js';
 import { PETS, PET_BY_ID, PET_ARMOR } from '../data/pets.js';
+import {
+  ROADS, ROAD_BY_ID, TRIPS, TRIP_BY_ID, haul, reachFor,
+} from '../data/expeditions.js';
 import { POTIONS } from '../data/potions.js';
 import { DISHES } from '../data/dishes.js';
 import {
@@ -172,6 +175,9 @@ export class UI {
       petarmorWrap: $('petarmor-wrap'),
       pipPets: $('pip-pets'),
       petsList: $('pets-list'), petsCount: $('pets-count'), petDetail: $('pet-detail'),
+      petsSwitch: $('pets-switch'), tripsPane: $('trips-pane'), tripList: $('trip-list'),
+      tripPet: $('trip-pet'), tripRoad: $('trip-road'), tripTrip: $('trip-trip'),
+      tripGo: $('trip-go'), tripNote: $('trip-note'),
       dustHave: $('dust-have'), forgeList: $('forge-list'), odds: $('odds'),
       autoCraft: $('autocraft'), autoCraftWrap: $('autocraft-wrap'),
       setStatus: $('set-status'),
@@ -310,6 +316,8 @@ export class UI {
       ['[data-tab="awaken"]', 'Awaken'],
       ['[data-lore="hunt"]', 'Bestiary'],
       ['[data-lore="jewels"]', 'Jewels'],
+      ['[data-pets="parade"]', 'Parade'], ['[data-pets="trips"]', 'Expeditions'],
+      ['#trip-go', 'Send'],
       ['#sing-go', 'Singularity'],
       ['[data-league="pure"]', 'Pure'], ['[data-league="gilded"]', 'Gilded'],
       ['[data-league="patron"]', 'Patron'],
@@ -320,7 +328,6 @@ export class UI {
       ['#pane-upgrades .toggle span', 'Buy max'],
       ['#autocraft-wrap span', 'Auto forge'],
       ['#equip-label', 'Equip'],
-      ['#pane-pets .pane__hint', "Every tamed pet's buff is on."],
       ['#tree-detail', 'Tap a node to invest.'],
       ['#skill-detail', 'Tap a node to invest.'],
       ['#perks h3', 'Permanent bonuses'],
@@ -1124,6 +1131,34 @@ export class UI {
       this.sfx.play('forge');
       this.toast({ text: describeEnchant(mod).toUpperCase() });
       this.refreshForge();
+    });
+
+    el.petsSwitch.addEventListener('click', (e) => {
+      const button = e.target.closest('button');
+      if (button) this.showPets(button.dataset.pets);
+    });
+    for (const picker of [el.tripPet, el.tripRoad, el.tripTrip]) {
+      picker.addEventListener('change', () => this.refreshTrips());
+    }
+    el.tripGo.addEventListener('click', () => {
+      const id = el.tripPet.value;
+      if (!state.sendPet(id, el.tripRoad.value, el.tripTrip.value)) return;
+      this.sfx.play('buy');
+      this.toast({ text: t('{0} SETS OUT', PET_BY_ID[id].name.toUpperCase()) });
+      this.refreshTrips();
+    });
+    el.tripList.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-trip]');
+      if (!row) return;
+      const id = row.dataset.trip;
+      const carried = state.collectPet(id);
+      if (!carried) return;
+      this.sfx.play('jingle');
+      this.toast({ text: carried.dust
+        ? t('{0} IS HOME: +{1} DUST', PET_BY_ID[id].name.toUpperCase(), fmt(carried.dust))
+        : t('{0} IS HOME: +{1} {2}', PET_BY_ID[id].name.toUpperCase(),
+          fmt(carried.amount), carried.resource.name.toUpperCase()) });
+      this.refreshTrips();
     });
 
     el.petsList.addEventListener('click', (e) => {
@@ -2830,6 +2865,7 @@ export class UI {
   refreshPets() {
     const { state, el } = this;
     setText(el.petsCount, `${Object.keys(state.pets).length}/${PETS.length}`);
+    if ((this.petsView ?? 'parade') === 'trips') { this.refreshTrips(); return; }
 
     for (const { pet, row, lvl, effect, feed } of this.petRows.values()) {
       const level = state.pets[pet.id] ?? 0;
@@ -2874,6 +2910,72 @@ export class UI {
       walk.disabled = walking;
       walk.classList.toggle('is-on', walking);
       setText(walk, walking ? t('with you') : t('follow'));
+    }
+  }
+
+  /** Flips the Pets tab between the parade and the working pets. */
+  showPets(view) {
+    this.petsView = view;
+    for (const button of this.el.petsSwitch.querySelectorAll('button')) {
+      button.classList.toggle('is-on', button.dataset.pets === view);
+    }
+    this.el.petsList.hidden = view !== 'parade';
+    this.el.petDetail.hidden = view !== 'parade';
+    this.el.tripsPane.hidden = view !== 'trips';
+    this.refreshPets();
+  }
+
+  /** The expedition desk: who is home, where they can go, who is due back. */
+  refreshTrips() {
+    const { state, el } = this;
+    const home = PETS.filter((p) => state.pets[p.id] && p.id !== state.companion
+      && !state.trips[p.id]);
+    // The pickers only rebuild when the cast changes: a select rewritten
+    // under a finger closes its own dropdown on a phone.
+    const sig = home.map((p) => p.id).join() + '|' + state.tripSlots;
+    if (sig !== this._tripSig) {
+      this._tripSig = sig;
+      setHtml(el.tripPet, home.map((p) =>
+        `<option value="${p.id}">${p.name} ${t('Lv {0}', state.pets[p.id])}</option>`).join(''));
+      setHtml(el.tripRoad, ROADS.map((r) =>
+        `<option value="${r.id}">${t(r.name)}</option>`).join(''));
+      setHtml(el.tripTrip, TRIPS.map((tr) =>
+        `<option value="${tr.id}">${t(tr.name)} &middot; ${duration(tr.minutes * 60)}</option>`).join(''));
+    }
+    const full = state.tripsOut >= state.tripSlots;
+    el.tripGo.disabled = full || home.length === 0;
+    el.tripGo.classList.toggle('can-buy', !el.tripGo.disabled);
+
+    // What the picked trio would bring home, before it leaves.
+    const pet = PET_BY_ID[el.tripPet.value];
+    const road = ROAD_BY_ID[el.tripRoad.value];
+    const trip = TRIP_BY_ID[el.tripTrip.value];
+    if (pet && road && trip) {
+      const level = state.pets[pet.id] ?? 1;
+      const amount = haul(road, trip, level, state.petArmor[pet.id] ?? 0);
+      const what = road.dust ? t('dust')
+        : SKILLS[road.skill].resources[Math.min(reachFor(level),
+          SKILLS[road.skill].resources.length - 1)].name;
+      setHtml(el.tripNote, t('{0} would come back with <b>{1} {2}</b>. Trips run on game time and finish while the tab is closed. Slots: {3}/{4}.',
+        pet.name, fmt(amount), what, state.tripsOut, state.tripSlots));
+    } else {
+      setHtml(el.tripNote, t('Every tamed pet but the one walking with you can be sent out. Trips run on game time and finish while the tab is closed. Slots: {0}/{1}.',
+        state.tripsOut, state.tripSlots));
+    }
+
+    // One row per pet on the road, newest first, each its own collect.
+    const rows = Object.entries(state.trips).map(([id, out]) => {
+      const p = PET_BY_ID[id], r = ROAD_BY_ID[out.road];
+      const left = state.tripLeft(id);
+      return `<button class="ore" data-trip="${id}" ${left > 0 ? 'disabled' : ''}>
+        <span class="ore__name"><i class="ico ico--sm ico--${r?.icon ?? 'bag'}"></i> ${p?.name ?? id}</span>
+        <span class="key__what">${t(r?.name ?? '')}</span>
+        <span class="ore__have"><b>${left > 0 ? duration(left) : t('home')}</b></span>
+        <span class="ore__smelt">${left > 0 ? '' : t('collect')}</span></button>`;
+    }).join('');
+    setHtml(el.tripList, rows);
+    for (const row of el.tripList.querySelectorAll('.ore')) {
+      row.classList.toggle('can-smelt', !row.disabled);
     }
   }
 
