@@ -340,7 +340,10 @@
     <!-- tab 5: pets. The slime is free; the rest are objectives. -->
     <div class="pane" id="pane-pets">
       <div class="pane__head">
-        <span class="pane__hint">Every tamed pet's buff is on.</span>
+        <div class="segmented" id="pets-switch">
+          <button class="is-on" data-pets="parade" type="button">Parade</button>
+          <button data-pets="trips" type="button">Expeditions</button>
+        </div>
         <span class="pane__points"><i class="ico ico--sm ico--fish"></i> <b id="pets-count">1/5</b></span>
       </div>
       <p class="pane__detail" id="pet-detail">
@@ -350,6 +353,17 @@
         your pick, walks beside you</b>.
       </p>
       <div class="pets" id="pets-list"></div>
+      <!-- The other twenty-one: sent out, and back with something. -->
+      <div class="trips" id="trips-pane" hidden>
+        <div class="opt-row opt-row--buttons" id="trip-picks">
+          <select id="trip-pet" aria-label="Pet"></select>
+          <select id="trip-road" aria-label="Road"></select>
+          <select id="trip-trip" aria-label="Length"></select>
+          <button class="equip" id="trip-go" type="button">Send</button>
+        </div>
+        <p class="pane__detail" id="trip-note"></p>
+        <div class="keys" id="trip-list"></div>
+      </div>
     </div>
 
     <!-- tab 6: ascension, the two reset layers -->

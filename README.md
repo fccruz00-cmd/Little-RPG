@@ -562,6 +562,18 @@ cost curve (5 fish, times 1.32 a level) is the only cap. Like everything the
 gathering economy touches, pets and their levels survive **rebirth and
 awakening both**.
 
+**Expeditions** are the job for the twenty-one that do not walk. Behind
+the Pets tab's second switch, any tamed pet except the companion can be
+sent down one of five roads (the four gathering lines, plus the ruins
+for dust) for **a short hop, a long haul or the deep road** (10, 60 or
+240 minutes of game time, the longer ones at a better rate). Nothing is
+risked and nothing can be lost: a pet that can die is a pet you stop
+sending. The haul scales with the pet's **level and armor**, so feeding
+and forging pay twice, and it lands in the same piles a gather fills,
+teaching that line a little on the way in. Trips run on game time and
+finish with the tab closed, which is the point. One slot to start, one
+more per two ancestors awake, five at the ceiling.
+
 Every pet also owns exactly **one piece of armor**, shaped to the body
 that wears it: a **Gel Helm** because a jelly has nowhere to hang a
 cuirass, **Oven Mitts** for Auntie Imp, a **Furnace Door** for the
