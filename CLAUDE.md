@@ -34,14 +34,19 @@ today.
    - If not done earlier: run `supabase/verify.sql` once in the SQL
      editor (idempotent; forces Google-verified devices into the patron
      league whatever their save claims).
-3. **PWA packaging**: the TWA route (PWABuilder/Bubblewrap) needs the
-   game hosted on HTTPS plus a manifest.json and a service worker. The
-   hosting half is DONE: GitHub Pages at
-   https://fccruz00-cmd.github.io/Little-RPG/ , fed by
-   `.github/workflows/pages.yml` (mirrors every push of main and the
-   working branch onto `gh-pages`). manifest.json and the service
-   worker still do not exist. Note the leaderboard is LIVE on that
-   domain: `hasBackend()` is only false on localhost.
+3. **PWA packaging**: DONE, all three halves. Hosting is Vercel at
+   https://little-rpg.vercel.app (production follows `main`; the working
+   branch gets its own preview URL). `manifest.json` ships fullscreen +
+   landscape with 192/512 plain and maskable icons, and `sw.js`
+   precaches all 251 files so the game installs and plays with no
+   signal. Both the worker and the icons are GENERATED, never
+   hand-edited: `tools/build_sw.py` walks the repo and stamps a content
+   hash, `tools/build_icons.py` composes the icons out of the knight and
+   the moon. `build_single_file.py` calls build_sw at the end, so the
+   worker can never go stale behind a code change. What is left for the
+   store is only Bubblewrap/PWABuilder wrapping the URL into a TWA.
+   Note the leaderboard is LIVE on that domain: `hasBackend()` is only
+   false on localhost.
 4. **Store compliance**: PRIVACY.md still has placeholders and the
    leaderboard now collects a nickname, so the privacy policy and the
    Play Data Safety form are mandatory; the four third-party asset packs

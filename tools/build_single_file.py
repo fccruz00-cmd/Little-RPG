@@ -13,6 +13,8 @@ import os
 import re
 import sys
 
+import build_sw   # sibling module: python puts this script's folder first
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENTRY = "src/main.js"
 IMPORT_RE = re.compile(r"""(\bfrom\s*|^\s*import\s*)(['"])([./][^'"]+)\2""", re.M)
@@ -98,6 +100,11 @@ def main():
     html = re.sub(r'\s*<link rel="stylesheet"[^>]*>', "", html)
     html = re.sub(r'\s*<link rel="icon"[^>]*>', "", html)
     html = re.sub(r'\s*<script type="module"[^>]*></script>', "", html)
+    # The installable half belongs to the hosted game: this file is a
+    # download that runs from disk, where a manifest and a service worker
+    # have nothing to attach to.
+    html = re.sub(r'\s*<link rel="manifest"[^>]*>', "", html)
+    html = re.sub(r'\s*<link rel="apple-touch-icon"[^>]*>', "", html)
 
     head_extra = (
         f'<link rel="icon" href="{images["assets/icons/icons.png"]}" type="image/png">\n'
@@ -118,6 +125,12 @@ def main():
         fh.write(html)
     size = os.path.getsize(out_path) / 1024
     print(f"{out_path}  ({size:.0f} KB, {len(images)} images, {len(modules)} modules)")
+
+    # The service worker rides along, because a stale one is the worst kind
+    # of bug: its precache would keep serving the code we just replaced,
+    # forever, to everyone who already installed. The house rule is already
+    # "rebuild the single file after any change", so this hangs off that.
+    build_sw.main()
 
 
 if __name__ == "__main__":

@@ -7,7 +7,25 @@
 <meta name="description" content="Idle RPG: the hero walks a straight line, kills on its own and clears stages while you buy upgrades, level up and spend skill points.">
 <title>Little RPG</title>
 <link rel="icon" href="assets/icons/icons.png" type="image/png">
+<!-- Installable: the manifest names it, the worker keeps it playable with
+     no signal. iOS reads its own tags rather than the manifest. -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Little RPG">
 <link rel="stylesheet" href="styles.css">
+<script>
+  // The single-file build runs from file://, where there are no service
+  // workers and no manifest: registering there only prints an error at a
+  // player who double-clicked an .html to play offline already.
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
 </head>
 <body>
 
