@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.little_rpg.twa",
+        "sha256_cert_fingerprints": ["7F:E2:A6:61:0D:10:D3:92:1F:AC:FA:34:4D:9A:3B:08:E0:23:FB:0C:E5:BC:B8:84:82:9A:6E:ED:BE:90:58:9B"]
+      }
+    }]
