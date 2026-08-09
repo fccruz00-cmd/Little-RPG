@@ -165,12 +165,14 @@ Fix it before you sell anything. In rough order of effort:
 
 ## 6. Before you publish
 
-- **Fill in `PRIVACY.md`.** `<name or company>` and `<contact email>` are
-  still placeholders, and Play requires a working privacy policy URL for any
-  app with in-app purchases. The policy already describes gem purchases; it
-  cannot be published with the contact blank.
-- **Data safety form.** Declare purchase history. Nothing else changes: the
-  game still collects no personal data and makes no requests of its own.
+- **Privacy policy: DONE.** `PRIVACY.md` is filled in and rewritten around
+  the leaderboard, and `tools/build_privacy.py` renders it to the page Play
+  asks for: <https://little-rpg.vercel.app/privacy.html>.
+- **Data safety form.** Two things are collected, both for App functionality,
+  neither shared: **User IDs** (the leaderboard nickname) and **Other IDs**
+  (the random device UUID in `little-rpg.device.v1`). Encrypted in transit,
+  deletion on request by email, collection not optional. Everything else in
+  the form is zero, and purchase data belongs to Play, not to us.
 - **Asset licences.** Four third-party art packs are in this repo with no
   licence file, one of them a paid product. This is the blocking item for a
   commercial release, and it is not a code problem.
@@ -222,3 +224,30 @@ device rather than only the one your hand prefers.
 If you skip the lock entirely, nothing breaks: a phone held upright shows the
 "turn your phone sideways" prompt, and turning it reveals the game. The lock
 just means nobody ever meets that screen.
+
+---
+
+## 9. The store art
+
+Two images are required, and both are in the repo.
+
+**Icon, 512x512.** `assets/app/icon-512.png`, the same file the installed
+app uses, so the icon in the listing and the icon on the home screen can
+never be two different pictures. `tools/build_icons.py` generates it.
+
+**Feature graphic, 1024x500.** `docs/store/feature-graphic-1024x500.png`.
+Not a mock-up: `tools/store/shoot-scene.mjs` loads the game, hides every
+piece of UI, forces the arena canvas to exactly 1024x500 and shoots a burst
+of real frames while the hero walks and fights. Pick the one where the
+fight reads best (`scene-06.png` is the one that shipped) and
+`tools/store/compose.py` lays the title over it, drawn at a quarter size
+and blown up NEAREST so the letters are pixels like everything else in the
+picture.
+
+Both live OUTSIDE `assets/`, deliberately. `build_sw.py` walks `assets/`
+for the precache and `build_single_file.py` turns every PNG under it into a
+data URI, so a store banner parked there would be downloaded by every
+player and inlined into the single-file build, twice over, for nothing.
+
+To reshoot: serve the repo, `node tools/store/shoot-scene.mjs`, then
+`python3 tools/store/compose.py`.
