@@ -1,13 +1,14 @@
-node_modules/
-.DS_Store
-*.log
+# The Play Store signing key and everything that carries it. Losing this
+# key means never updating the listing again; LEAKING it means somebody
+# else can ship an update as you. It lives in the owner's own backup, never
+# in the repository.
+signing.keystore
+signing-key-info.txt
+*.keystore
+*.jks
+*.aab
+*.apk
 
-# Descomente se os pacotes de arte não puderem ser redistribuídos: aí cada
-# pessoa regenera com `python3 tools/extract_assets.py` (veja o README).
-# assets/characters/
-# assets/ui/
-# assets/icons/
-
-# Python bytecode from tools/
+# Python leaves these behind now that the build imports a sibling module.
 __pycache__/
 *.pyc
