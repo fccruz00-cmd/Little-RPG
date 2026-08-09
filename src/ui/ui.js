@@ -340,6 +340,7 @@ export class UI {
       ['#btn-export', 'Export save'], ['#btn-import', 'Import save'],
       ['#import-file-label', 'Read a file'], ['#import-go', 'Replace and load'],
       ['#import-note', 'This replaces the current save on this device.'],
+      ['#opt-privacy', 'Privacy policy'],
       ['#petarmor-title', 'Pet armor'],
       ['#options-close', 'Close'], ['#gemshop-close', 'Close'],
       ['#rotate-say', 'Turn your phone sideways'],

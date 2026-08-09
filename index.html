@@ -546,6 +546,13 @@
         </div>
         <p class="opt-note" id="import-note">This replaces the current save on this device.</p>
       </div>
+      <!-- Absolute on purpose: the downloaded single file has no sibling
+           page to point at, and inside the installed app this stays in
+           scope and opens without leaving it. -->
+      <p class="opt-note opt-note--legal">
+        <a id="opt-privacy" href="https://little-rpg.vercel.app/privacy.html"
+           target="_blank" rel="noopener">Privacy policy</a>
+      </p>
     </div>
     <button class="act-btn" id="options-close" type="button">Close</button>
   </div>

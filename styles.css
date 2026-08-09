@@ -1446,6 +1446,11 @@ body { display: flex; justify-content: center; }
   image-rendering: pixelated;
 }
 
+/* Same story one level down: the name cell of an armor row has to be
+   allowed to shrink, or it sets the width of the whole two-column list. */
+#petarmor-list .ore { grid-template-columns: minmax(0, 1fr) auto auto 46px; }
+#petarmor-list .ore__name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
 /* The piece on top, its wearer under it, neither allowed to tangle. */
 .armor__who {
   display: block;
@@ -1968,6 +1973,9 @@ body { display: flex; justify-content: center; }
 .opt-row--buttons { justify-content: stretch; }
 .opt-row--buttons .equip { flex: 1 1 0; justify-content: center; text-align: center; }
 .opt-note { font-size: 9px; line-height: 1.35; color: var(--ink-dim); }
+.opt-note--legal { margin-top: 8px; text-align: center; }
+.opt-note--legal a { color: var(--ink-dim); }
+.opt-note--legal a:hover { color: var(--gold); }
 
 /* The import pane: a real box the save can land in whole, because native
    prompt dialogs vanish inside Android webviews and truncate long pastes. */
@@ -2195,7 +2203,10 @@ body { display: flex; justify-content: center; }
    showing one column of a list that had room for two. */
 @container panel (min-width: 470px) {
   .shop, .forge, .pets, .featlist { grid-template-columns: repeat(2, 1fr); }
-  .keys, #cauldron { grid-template-columns: repeat(2, 1fr); }
+  /* minmax(0, 1fr), not 1fr: a bare fr track floors at its content, so one
+     long row (the pet armor, which carries a piece AND its wearer) sizes
+     both columns past the panel and the list clips at the right edge. */
+  .keys, #cauldron { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .prestige { display: grid; grid-template-columns: repeat(2, 1fr); align-content: start; }
   .prestige__gain, .prestige__note, .big-btn, .perks, .featlist { grid-column: 1 / -1; }
 }
