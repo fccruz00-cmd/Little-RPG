@@ -18,5 +18,12 @@
     { "src": "assets/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "assets/app/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "assets/app/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "docs/store/screenshots/1-combate-e-loja.png", "sizes": "2304x1296", "type": "image/png", "label": "The hero fights on his own while you spend what he brings back" },
+    { "src": "docs/store/screenshots/2-talentos.png", "sizes": "2304x1296", "type": "image/png", "label": "Three talent trees, rebuilt every rebirth" },
+    { "src": "docs/store/screenshots/5-pets.png", "sizes": "2304x1296", "type": "image/png", "label": "Tame pets, armour them, send them on expeditions" },
+    { "src": "docs/store/screenshots/7-bestiario.png", "sizes": "2304x1296", "type": "image/png", "label": "The bestiary: every kill counts against its own species" },
+    { "src": "docs/store/screenshots/8-singularidade.png", "sizes": "2304x1296", "type": "image/png", "label": "The Singularity opens the sky" }
   ]
 }
