@@ -251,3 +251,22 @@ player and inlined into the single-file build, twice over, for nothing.
 
 To reshoot: serve the repo, `node tools/store/shoot-scene.mjs`, then
 `python3 tools/store/compose.py`.
+
+**Screenshots, 2 to 8 of them.** `docs/store/screenshots/`, eight of them,
+2304x1296 (16:9, inside Play's 320..3840). `tools/store/shoot-screens.mjs`
+loads one save deep enough that every tab has something in it, then shoots
+one frame per tab with the fight running.
+
+Two things about that script are deliberate. It shoots at **1152x648 with
+deviceScaleFactor 2**, because 1152 is inside the 560..1279 media query, so
+the game lays itself out the way a landscape PHONE does; the desktop
+two-column layout would leave a fifth of the frame as empty cabinet, and
+these are filed as phone screenshots. And it runs with **`lang: 'pt'`**,
+because the listing's default language is pt-BR and an English screenshot
+under a Portuguese listing is the first thing that reads as sloppy.
+
+The demo save is tuned for the picture, not for plausibility alone: no
+dungeon keys (an unspent key parks two buttons over the arena), damage
+numbers off (two floaters overlapping read as a broken string), pets
+levelled, and enchants present so the Forge's Encantos header has rows
+under it.

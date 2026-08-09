@@ -1477,7 +1477,10 @@ export class UI {
     this.el.treeSouls.hidden = name !== 'souls';
     this.el.treePoints.classList.toggle('is-relic', name !== 'talents');
     this.el.respec.hidden = name !== 'talents';
-    setText(this.el.treeDetail, 'Tap a node to invest.');
+    // t(), not the bare string: applyStatic translates this line once at
+    // boot, and writing the English back here left a Portuguese screen with
+    // one English sentence on it from the first tree switch onward.
+    setText(this.el.treeDetail, t('Tap a node to invest.'));
     this.refreshTrees(true);
   }
 
@@ -2679,7 +2682,7 @@ export class UI {
       button.classList.toggle('is-on', button.dataset.skill === id);
     }
     for (const other of SKILL_IDS) this.el.trees[other].hidden = other !== id;
-    setText(this.el.skillDetail, 'Tap a node to invest.');
+    setText(this.el.skillDetail, t('Tap a node to invest.'));
     this.refreshSkills();
   }
 
