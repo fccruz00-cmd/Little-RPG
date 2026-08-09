@@ -8,7 +8,7 @@
 // versioned: if it is in the cache it is the right file, and the stamp
 // changes the moment any of them does. Network-only for the leaderboard,
 // so an offline player keeps playing and simply does not submit.
-const VERSION = '52b7fd2557af';
+const VERSION = '2cb2c3bf039d';
 const CACHE = `little-rpg-${VERSION}`;
 const SHELL = [
   ".",
