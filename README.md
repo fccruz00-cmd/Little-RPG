@@ -4,10 +4,13 @@ A browser idle auto-battler, played with the phone turned sideways. The hero
 walks a straight line on its own, runs into monsters, kills them without
 input and clears stages. All you decide is where the gold goes.
 
-**Play it**: <https://fccruz00-cmd.github.io/Little-RPG/> — redeployed by
-a workflow on every push, so the link always serves the latest build.
-`little-rpg.html` at the same address is the whole game in one file, for
-playing offline.
+**Play it**: <https://little-rpg.vercel.app> — redeployed on every merge
+to `main`, so the link always serves the latest build. It is an
+**installable app**: your phone will offer to add it to the home screen,
+where it opens fullscreen, locked to landscape, and **plays with no
+signal** (a service worker precaches all 251 files). `little-rpg.html`
+in the repo is the same game in one file, for playing straight off a
+download.
 
 The **UI** keeps the top; under it the **Fight** takes a column of its own
 and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
@@ -586,6 +589,34 @@ dressed, and the pet's card on the Pets tab wears the result. One fitted piece i
 the pet you already love, not a second gear system, and it makes the
 parade the smith's last, longest customer. Like the tame itself, the
 piece is bolted on for good: it survives rebirth and awakening.
+
+### Installable, and playable with no signal
+
+The hosted game is a **PWA**: `manifest.json` asks for fullscreen and
+locks the orientation to landscape (the game is drawn sideways, so the
+installed app never has to argue with the rotate prompt), and ships
+192/512 icons in both plain and **maskable** flavours, so an Android
+launcher can cut them to whatever shape it likes without eating the
+knight.
+
+`sw.js` precaches **every file the game asks for on a cold boot**, all
+251 of them, about 1 MB. Cache-first, because every byte here is static
+and versioned; the leaderboard is network-only, so a player with no
+signal keeps playing and simply does not submit, and a navigation with
+the network gone still opens the shell.
+
+Neither file is hand-written. `tools/build_icons.py` composes the icons
+out of the game's own art (the knight's idle frame, the moon over the
+road) at NEAREST, and `tools/build_sw.py` **walks** the repo for the
+precache list and stamps it with a content hash, so a changed pixel
+mints a new cache name and the old one is dropped on activate. A
+hand-kept list of 251 files is a list that goes stale, and a stale
+service worker serves the code you just replaced, forever, to everyone
+who installed. `build_single_file.py` calls the worker build at the
+end, so the two can never disagree.
+
+The single-file download drops all of it: it runs from `file://`, where
+there is no worker to register and no manifest to read.
 
 ### Options and languages
 

@@ -1,0 +1,22 @@
+{
+  "name": "Little RPG",
+  "short_name": "Little RPG",
+  "description": "Idle RPG: the hero walks a straight line, kills on its own and clears stages while you buy upgrades, level up and spend skill points.",
+  "id": "little-rpg",
+  "start_url": ".",
+  "scope": ".",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#14121c",
+  "theme_color": "#14121c",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "assets/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/app/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/app/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
