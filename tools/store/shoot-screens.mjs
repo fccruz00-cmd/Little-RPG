@@ -1,4 +1,4 @@
-// The eight phone screenshots a Play listing wants, at 1920x1080 (16:9,
+// The eight phone screenshots a Play listing wants, at 2304x1296 (16:9,
 // both sides inside Play's 320..3840). Real UI, nothing hidden, nothing
 // mocked: one save deep enough that every tab has something in it, and
 // then one shot per tab.

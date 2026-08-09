@@ -270,3 +270,38 @@ dungeon keys (an unspent key parks two buttons over the arena), damage
 numbers off (two floaters overlapping read as a broken string), pets
 levelled, and enchants present so the Forge's Encantos header has rows
 under it.
+
+---
+
+## 10. The package name, and the two fingerprints
+
+**The package name is permanent.** A Play Console app is bound to it at
+creation and it can never be changed; an `.aab` whose applicationId says
+anything else is rejected, whatever else is right about it. This listing is
+`com.kloutz.littlerpg`, so that is what the bundle and
+`.well-known/assetlinks.json` must both say. PWABuilder defaults to
+something derived from the host (`app.vercel.little_rpg.twa`), which is not
+it: set the Package ID by hand in the generator.
+
+**Regenerating keeps the old key.** PWABuilder will happily mint a fresh
+signing key, and two keys means two fingerprints and a listing that can
+never be updated from the other machine. Upload the existing
+`signing.keystore` instead, with the password from `signing-key-info.txt`,
+and the fingerprint below stays true.
+
+**There are two fingerprints, and the one that matters is Google's.** With
+Play App Signing on (the default for a new app) Google re-signs the bundle
+with its OWN key, so the certificate a phone actually sees is not the
+upload key PWABuilder made. A TWA verified only against the upload key
+shows the browser address bar in production and looks exactly like the
+"website in a wrapper" that store review rejects.
+
+So after the first upload: Play Console -> Setup -> App integrity -> App
+signing, copy the **SHA-256 of the app signing key**, and ADD it to the
+`sha256_cert_fingerprints` array (it takes a list; keep the upload key
+there too, so a locally built APK still verifies). Then redeploy and check
+it landed:
+
+```
+curl -s https://little-rpg.vercel.app/.well-known/assetlinks.json
+```
