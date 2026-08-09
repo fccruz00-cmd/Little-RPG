@@ -22,7 +22,7 @@ OUT = os.path.join(ROOT, "sw.js")
 
 # Everything the game asks the network for on a cold boot.
 ROOTS = ["src", "assets"]
-FILES = ["index.html", "styles.css", "manifest.json"]
+FILES = ["index.html", "styles.css", "manifest.json", "privacy.html"]
 SKIP_DIRS = {"__pycache__"}
 KEEP = {".js", ".css", ".html", ".json", ".png", ".webp", ".ogg", ".mp3"}
 
@@ -95,10 +95,13 @@ self.addEventListener('fetch', (event) => {{
   if (url.origin !== self.location.origin) return;
 
   // A navigation offline still opens the game: the shell answers for it.
+  // The page asked for comes first, so an offline tap on the privacy policy
+  // gets the privacy policy and not the game wearing its URL.
   if (request.mode === 'navigate') {{
     event.respondWith(
       fetch(request)
-        .catch(() => caches.match('index.html', {{ cacheName: CACHE }}))
+        .catch(() => caches.match(request, {{ cacheName: CACHE, ignoreSearch: true }})
+          .then((hit) => hit || caches.match('index.html', {{ cacheName: CACHE }})))
     );
     return;
   }}

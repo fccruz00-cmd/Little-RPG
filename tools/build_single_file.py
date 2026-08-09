@@ -13,7 +13,8 @@ import os
 import re
 import sys
 
-import build_sw   # sibling module: python puts this script's folder first
+import build_privacy   # sibling modules: python puts this script's folder first
+import build_sw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENTRY = "src/main.js"
@@ -125,6 +126,11 @@ def main():
         fh.write(html)
     size = os.path.getsize(out_path) / 1024
     print(f"{out_path}  ({size:.0f} KB, {len(images)} images, {len(modules)} modules)")
+
+    # The privacy page is generated from PRIVACY.md and precached by the
+    # worker, so it is rendered BEFORE the worker walks the repo: the other
+    # order would stamp a hash that does not include the page just written.
+    build_privacy.main()
 
     # The service worker rides along, because a stale one is the worst kind
     # of bug: its precache would keep serving the code we just replaced,

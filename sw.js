@@ -8,13 +8,14 @@
 // versioned: if it is in the cache it is the right file, and the stamp
 // changes the moment any of them does. Network-only for the leaderboard,
 // so an offline player keeps playing and simply does not submit.
-const VERSION = '37c9d994b64e';
+const VERSION = '52b7fd2557af';
 const CACHE = `little-rpg-${VERSION}`;
 const SHELL = [
   ".",
   "index.html",
   "styles.css",
   "manifest.json",
+  "privacy.html",
   "src/format.js",
   "src/i18n.js",
   "src/main.js",
@@ -297,10 +298,13 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   // A navigation offline still opens the game: the shell answers for it.
+  // The page asked for comes first, so an offline tap on the privacy policy
+  // gets the privacy policy and not the game wearing its URL.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .catch(() => caches.match('index.html', { cacheName: CACHE }))
+        .catch(() => caches.match(request, { cacheName: CACHE, ignoreSearch: true })
+          .then((hit) => hit || caches.match('index.html', { cacheName: CACHE })))
     );
     return;
   }

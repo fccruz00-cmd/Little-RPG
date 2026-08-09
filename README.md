@@ -600,20 +600,21 @@ launcher can cut them to whatever shape it likes without eating the
 knight.
 
 `sw.js` precaches **every file the game asks for on a cold boot**, all
-251 of them, about 1 MB. Cache-first, because every byte here is static
-and versioned; the leaderboard is network-only, so a player with no
-signal keeps playing and simply does not submit, and a navigation with
-the network gone still opens the shell.
+252 of them, about 1.1 MB. Cache-first, because every byte here is
+static and versioned; the leaderboard is network-only, so a player with
+no signal keeps playing and simply does not submit, and a navigation
+with the network gone still opens the page that was asked for, falling
+back to the shell.
 
 Neither file is hand-written. `tools/build_icons.py` composes the icons
 out of the game's own art (the knight's idle frame, the moon over the
 road) at NEAREST, and `tools/build_sw.py` **walks** the repo for the
 precache list and stamps it with a content hash, so a changed pixel
 mints a new cache name and the old one is dropped on activate. A
-hand-kept list of 251 files is a list that goes stale, and a stale
+hand-kept list of 252 files is a list that goes stale, and a stale
 service worker serves the code you just replaced, forever, to everyone
-who installed. `build_single_file.py` calls the worker build at the
-end, so the two can never disagree.
+who installed. `build_single_file.py` calls the privacy page and the
+worker builds at the end, so none of the three can disagree.
 
 The single-file download drops all of it: it runs from `file://`, where
 there is no worker to register and no manifest to read.
@@ -1270,10 +1271,20 @@ at rows 56-59, inside the 57-61 spread pack 01 already had.
 
 ## Privacy
 
-The game has no servers and makes no network requests. Progress lives in one
-`localStorage` entry on your own device and is never transmitted. See
-[PRIVACY.md](PRIVACY.md) for the full policy, including what the store
-handles when someone buys the game.
+Progress lives in one `localStorage` entry on your own device and is never
+uploaded: there is no account, no analytics, no ad network and no third-party
+script anywhere in the project.
+
+One feature does leave the device, and the policy says so first: the
+**leaderboard**. Rebirthing, awakening, opening the boards or saving a
+nickname posts six fields (a random device UUID, the nickname, the league and
+three stage numbers) to Supabase. Nothing else in the game makes a request,
+and nothing is sent from `localhost`.
+
+[PRIVACY.md](PRIVACY.md) is the full policy, and it is the source: the page a
+store reads, <https://little-rpg.vercel.app/privacy.html>, is **generated**
+from it by `tools/build_privacy.py`, so the hosted text cannot drift behind
+the markdown. The game links it from the options modal.
 
 ## Asset credits
 

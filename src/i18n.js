@@ -446,6 +446,7 @@ const PT = {
   'Read a file': 'Ler um arquivo',
   'Replace and load': 'Substituir e carregar',
   'This replaces the current save on this device.': 'Isso substitui o save atual deste aparelho.',
+  'Privacy policy': 'Política de privacidade',
   'Rebirth now pays {0} relic(s).\n\nYou lose stage, gold, upgrades, level and skill points. Confirm?':
     'Renascer agora paga {0} relíquia(s).\n\nVocê perde fase, ouro, upgrades, nível e pontos de talento. Confirmar?',
   'Awakening pays {0} soul(s).\n\nYou lose everything Rebirth takes, PLUS relics, the relic tree, rebirths, dust and gear. Souls and the Skills tab survive.':
