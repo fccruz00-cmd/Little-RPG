@@ -119,6 +119,9 @@ export class UI {
       tabs: $('tabs'),
       shop: $('shop-list'), buyMax: $('buy-max'),
       quests: $('quests'), questsTitle: $('quests-title'), questsNext: $('quests-next'),
+      eventIcon: $('event-icon'), eventName: $('event-name'), eventDesc: $('event-desc'),
+      eventLeft: $('event-left'), eventBoon: $('event-boon'), eventStamps: $('event-stamps'),
+      eventGift: $('event-gift'), eventChest: $('event-chest'),
       treeSwitch: $('tree-switch'), treePoints: $('tree-points'), treeDetail: $('tree-detail'),
       respec: $('btn-respec'),
       treeTalents: $('tree-talents'), treeRelics: $('tree-relics'),
@@ -507,8 +510,9 @@ export class UI {
     const now = performance.now();
     if (!force && now - (this._questsAt ?? 0) < 1000) return;
     this._questsAt = now;
+    const wallNow = Date.now();
     const { state } = this;
-    const { dailies, weekly } = state.questBoard();
+    const { dailies, weekly, event } = state.questBoard(wallNow);
     const list = [...dailies.map((q) => ({ q, weekly: false })), { q: weekly, weekly: true }];
     for (let i = 0; i < this.questRows.length; i++) {
       const r = this.questRows[i];
@@ -526,8 +530,28 @@ export class UI {
       r.row.classList.toggle('is-done', claimed);
     }
     // when the board turns over, so nobody has to guess the reset hour
-    const left = (86400000 - (Date.now() % 86400000)) / 1000;
+    const left = (86400000 - (wallNow % 86400000)) / 1000;
     setText(this.el.questsNext, t('new in {0}', duration(left)));
+
+    // Festival and welcome gift: the event shares the weekly contract's
+    // clock, while the gift is one independent visit per UTC day. Five lit
+    // stamps pay the chest; a missed day never turns a lit one off.
+    const weekEnd = ((state.quests.week + 1) * 7 - 3) * 86400000;
+    const visits = Math.min(5, state.quests.giftDays.length);
+    this.el.eventIcon.className = `ico ico--${event.icon}`;
+    setText(this.el.eventName, t(event.name));
+    setText(this.el.eventDesc, t(event.desc));
+    setText(this.el.eventBoon, t(event.boon));
+    setText(this.el.eventLeft, t('ends in {0}', duration((weekEnd - wallNow) / 1000)));
+    setHtml(this.el.eventStamps,
+      Array.from({ length: 5 }, (_, i) => `<i class="${i < visits ? 'is-on' : ''}"></i>`).join(''));
+    this.el.eventStamps.setAttribute('aria-label', t('{0} of 5 weekly visits', visits));
+    const giftReady = state.canClaimDailyGift(wallNow);
+    this.el.eventGift.disabled = !giftReady;
+    setText(this.el.eventGift, t(giftReady ? 'daily gift' : 'claimed today'));
+    setText(this.el.eventChest, t(state.quests.giftBonusClaimed
+      ? 'weekly chest collected' : '5 visits: +7 bonus gems'));
+    this.el.eventChest.classList.toggle('is-earned', state.quests.giftBonusClaimed);
   }
 
   /**
@@ -1073,6 +1097,17 @@ export class UI {
       this.sfx.play('jingle');
       this.toast({ text: t('+{0} GEM(S)', gems) });
       this.refreshQuests();
+    });
+
+    el.eventGift.addEventListener('click', () => {
+      const gift = state.claimDailyGift();
+      if (!gift) return;
+      this.sfx.play('jingle');
+      this.toast({ text: t(gift.chest
+        ? 'WEEKLY CHEST: +{0} GEM(S), +{1} GOLD'
+        : 'DAILY GIFT: +{0} GEM(S), +{1} GOLD', gift.gems, fmt(gift.gold)) });
+      this.refreshQuests();
+      this.refreshShop(true);
     });
 
     el.actBoss.addEventListener('click', () => { battle.tryBoss(); state.save(); });

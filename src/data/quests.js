@@ -38,12 +38,40 @@ export const DAILY_POOL = [
   { id: 'delve',   stat: 'dungeonWins', need: 1,   gems: 5, desc: 'clear a dungeon' },
 ];
 
-// One a week, bigger on purpose: it is the one that outlives a sitting.
-export const WEEKLY_POOL = [
-  { id: 'wkills',  stat: 'kills',       need: 2500, gems: 20, desc: 'defeat 2,500 enemies' },
-  { id: 'wbosses', stat: 'bossKills',   need: 40,   gems: 20, desc: 'bring down 40 bosses' },
-  { id: 'wdelve',  stat: 'dungeonWins', need: 3,    gems: 25, desc: 'clear 3 dungeons' },
-  { id: 'wforges', stat: 'forges',      need: 60,   gems: 20, desc: 'forge 60 times' },
+/**
+ * The weekly festival: one named world mood, one useful boon and one long
+ * objective. This is deliberately the existing weekly contract grown into
+ * content, not a second checklist competing for the same screen.
+ *
+ * `bonus` is a tiny whole-game nudge. It changes which week feels best for a
+ * play style without making absence expensive: no exclusive item, no streak
+ * that collapses, and next week's event is another boon rather than a loss.
+ */
+export const WEEKLY_EVENTS = [
+  {
+    id: 'golden_hunt', name: 'Golden Hunt', icon: 'gold',
+    desc: 'Monsters carry extra coin this week.', boon: '+15% gold',
+    bonus: { gold: 1.15 },
+    quest: { id: 'wkills', stat: 'kills', need: 2500, gems: 20, desc: 'defeat 2,500 enemies' },
+  },
+  {
+    id: 'heroes_rally', name: "Heroes' Rally", icon: 'damage',
+    desc: 'Every strike lands harder this week.', boon: '+10% damage',
+    bonus: { damage: 1.10 },
+    quest: { id: 'wbosses', stat: 'bossKills', need: 40, gems: 20, desc: 'bring down 40 bosses' },
+  },
+  {
+    id: 'scholars_road', name: "Scholar's Road", icon: 'book',
+    desc: 'Every victory teaches more this week.', boon: '+15% experience',
+    bonus: { xp: 1.15 },
+    quest: { id: 'wdelve', stat: 'dungeonWins', need: 3, gems: 25, desc: 'clear 3 dungeons' },
+  },
+  {
+    id: 'harvest_fair', name: 'Harvest Fair', icon: 'crate',
+    desc: 'Every gathering trip yields more this week.', boon: '+12% gathering yield',
+    bonus: { gather: 1.12 },
+    quest: { id: 'wforges', stat: 'forges', need: 60, gems: 20, desc: 'forge 60 times' },
+  },
 ];
 
 export const DAILIES_PER_DAY = 3;
@@ -81,7 +109,13 @@ export function dailyQuests(day) {
 }
 
 export function weeklyQuest(week) {
-  return dealFrom(WEEKLY_POOL, week + 7919, 1)[0];
+  return weeklyEvent(week).quest;
+}
+
+/** Same festival for every player in the same UTC week. */
+export function weeklyEvent(week) {
+  const i = ((week % WEEKLY_EVENTS.length) + WEEKLY_EVENTS.length) % WEEKLY_EVENTS.length;
+  return WEEKLY_EVENTS[i];
 }
 
 /** Progress line: "castle 40/300". Clamped so a done contract reads full. */

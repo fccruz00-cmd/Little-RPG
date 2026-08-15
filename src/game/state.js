@@ -31,7 +31,7 @@ import {
 } from '../data/gems.js';
 import { FEATS, featRanks, emptyStats } from '../data/feats.js';
 import {
-  dayIndex, weekIndex, dailyQuests, weeklyQuest, questDone,
+  dayIndex, weekIndex, dailyQuests, weeklyQuest, weeklyEvent, questDone,
 } from '../data/quests.js';
 import { PATH_BY_ID } from '../data/paths.js';
 import {
@@ -554,7 +554,8 @@ export class GameState {
     // The Harvest branch of the soul tree is the one bonus source outside
     // the skill's own tree: it reaches every line at once. The charted sky
     // reaches the same way -- Plough, River and Owl touch every skill.
-    b.yieldMul *= 1 + this.bonus.yieldAll + (this.constPowers.yieldAll ?? 0);
+    b.yieldMul *= (1 + this.bonus.yieldAll + (this.constPowers.yieldAll ?? 0))
+      * this.eventMultiplier('gather');
     b.gatherSpeed *= this.bonus.workAll * (1 - (this.constPowers.workAll ?? 0));
     b.gatherXpMul *= 1 + (this.constPowers.skillXp ?? 0);
     // The gather-lens jewels: cut once with souls, shining on every line
@@ -574,7 +575,8 @@ export class GameState {
   // --- derived stats ------------------------------------------------
   get damage()     {
     return statValue('damage', this.levels.damage) * this.bonus.dmgMul
-      * this.potionMul('fury') * (1 + statValue('might', this.levels.might));
+      * this.potionMul('fury') * (1 + statValue('might', this.levels.might))
+      * this.eventMultiplier('damage');
   }
   get attackRate() {
     return statValue('attackRate', this.levels.attackRate) * this.bonus.atkSpeedMul * this.frenzyMul;
@@ -598,7 +600,7 @@ export class GameState {
   get regen()      { return statValue('regen', this.levels.regen) * this.bonus.regenMul * this.fedRegenMul; }
   get goldGain()   {
     return statValue('goldGain', this.levels.goldGain) * this.bonus.goldMul
-      * this.potionMul('lucky') * this.dishMul('pie');
+      * this.potionMul('lucky') * this.dishMul('pie') * this.eventMultiplier('gold');
   }
   get moveSpeed()  {
     return statValue('moveSpeed', this.levels.moveSpeed) * this.bonus.moveMul
@@ -606,7 +608,7 @@ export class GameState {
   }
   get xpGain()     {
     return this.bonus.xpMul * statValue('insight', this.levels.insight)
-      * this.dishMul('jam');
+      * this.dishMul('jam') * this.eventMultiplier('xp');
   }
   get damageTaken(){
     return this.bonus.damageTaken * this.fedArmor * (1 - statValue('armor', this.levels.armor));
@@ -1906,8 +1908,16 @@ export class GameState {
     if (this.quests.week !== week) {
       Object.assign(this.quests, {
         week, weekSnap: { ...this.stats }, weekClaimed: false,
+        giftDays: [], giftBonusClaimed: false,
       });
+      // A festival can change gathering yield. That fold is cached, so a
+      // session crossing Monday must discard it when the world mood rolls.
+      this._gatherBonus = {};
     }
+    // Saves made before festivals already have this week's quest board. Give
+    // those saves the new fields without forcing a new board or a migration.
+    if (!Array.isArray(this.quests.giftDays)) this.quests.giftDays = [];
+    if (this.quests.giftBonusClaimed == null) this.quests.giftBonusClaimed = false;
   }
 
   /** Today's three contracts and the week's one, freshly rolled over. */
@@ -1916,7 +1926,42 @@ export class GameState {
     return {
       dailies: dailyQuests(this.quests.day),
       weekly: weeklyQuest(this.quests.week),
+      event: weeklyEvent(this.quests.week),
     };
+  }
+
+  /** Multiplier granted by the current festival for one system. */
+  eventMultiplier(kind) {
+    return weeklyEvent(this.quests?.week ?? weekIndex()).bonus[kind] ?? 1;
+  }
+
+  /** Today's gift is independent: missing yesterday never breaks a streak. */
+  canClaimDailyGift(now = Date.now()) {
+    this.rollQuests(now);
+    return !this.quests.giftDays.includes(dayIndex(now));
+  }
+
+  /**
+   * Pays one small daily welcome and the five-visit weekly chest. Gold is
+   * five minutes of the save's proven rate, so it stays useful without
+   * distorting offline income or handing a new save a progression skip.
+   */
+  claimDailyGift(now = Date.now()) {
+    if (!this.canClaimDailyGift(now)) return null;
+    const day = dayIndex(now);
+    this.quests.giftDays.push(day);
+    let gems = 1;
+    let chest = false;
+    if (this.quests.giftDays.length >= 5 && !this.quests.giftBonusClaimed) {
+      this.quests.giftBonusClaimed = true;
+      gems += 7;
+      chest = true;
+    }
+    const gold = Math.max(25, this.bestGps * 300);
+    this.gold += gold;
+    this.grantGems(gems);
+    this.save();
+    return { gems, gold, chest, visits: this.quests.giftDays.length };
   }
 
   canClaimQuest(quest, weekly = false) {

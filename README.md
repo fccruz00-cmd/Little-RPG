@@ -833,13 +833,20 @@ introduces itself by handing you something.
 
 The faucet has two taps. **Dungeons**: full clears only, never partial runs,
 and the first time a clear takes you deeper than the save ever has pays a
-one-off bounty on top — five tiers, 150 bounty gems. **Contracts**: three
-dailies and one weekly, pinned above the shop list, worth roughly 10–15 gems
-a day. Progress is a *stats delta* against a snapshot taken when the board
-rolled, so the lifetime counters do all the bookkeeping and no kill site
-changed; the UTC day index deals the board deterministically, so there is
-nothing to re-roll by clearing data, and skipping a day by clock forfeits
-that day's gems — the exploit priced at exactly what it pays.
+one-off bounty on top — five tiers, 150 bounty gems. **Contracts and the
+weekly festival**: three dailies plus one named weekly objective, pinned
+above the shop list, worth roughly 10–15 gems a day. The festival rotates
+between Golden Hunt, Heroes' Rally, Scholar's Road and Harvest Fair; each
+puts a small boon on one play style for the week without locking an exclusive
+reward behind attendance.
+
+The same board carries a **daily welcome gift**: one gem plus five minutes of
+the save's proven gold rate. Five distinct visits in the UTC week add a
+seven-gem chest. It is attendance without a streak trap — missing Tuesday
+does not erase Monday, and five of seven leaves room for a life. Progress is
+a *stats delta* against a snapshot taken when the board rolled, so lifetime
+counters do the contract bookkeeping; UTC day and week indexes deal the
+same content to everyone and roll a live session over without a relaunch.
 
 | ware | costs | gives |
 |---|---:|---|
@@ -1024,75 +1031,33 @@ local cache when the network is away.
 **Little RPG is a landscape game.** Turned sideways, the HUD keeps the full
 width and everything under it becomes two columns: the arena and the stat
 readout on the left, the whole tabbed panel on the right. The panel stops
-competing with the arena for height, which is the entire point — on an
-844x390 phone it goes from **212px tall to 340**, and from 460px wide to 490.
+competing with the arena for height, and that left/right relationship stays
+the same on phones, tablets and desktop windows.
 
 Before the rework, `#app` was capped at 460px and centred, so the same phone
 spent **45% of its screen on black bars** and showed one and a half shop
 rows; a 1180px tablet wasted 61%.
 
-The one rule that makes it work is that **the canvas keeps a wide box**
-(`aspect-ratio: 4/3`), rather than filling a tall column. The renderer
-derives its zoom from canvas *height*, so a tall narrow canvas zooms in and
-the visible stretch of road shrinks — the enemy stops walking in and starts
-arriving mid-swing. Pinning the box wide keeps the world within ~10% of the
-portrait numbers the game was balanced against (117x88 at scale 3, against
-portrait's 130x84 at 3), and the space left under it is where the action
-buttons live: off the game world, and low enough to reach one-handed.
+The phone split deliberately favours the game world: the arena gets **55%**
+instead of the old 42%, with a 320px floor, while the panel keeps a 240px
+floor. That measures as `367 / 300` on a 667px-wide phone and `464 / 380` on
+an 844px one. At 380px the upgrade shop uses two compact columns; narrower
+panels stay on one so names and prices remain readable.
 
 **Under 480px of height — every landscape phone — the panel goes on a
 diet.** Every 9-sliced control drops its frame scale from 2x to 1x (same
-art, half the border), and the tree panes invert their scrolling: instead
-of the web peering through an 88px porthole under a stack of pinned bars,
-the **pane scrolls as one column** and the web gets a 300px window — the
-whole tree, readable, with the parchment detail strip pinned sticky so a
-tapped node still explains itself. The stock and workshop stop being
-scrollers of their own, so it is one finger, one direction. The tab row
-scrolls sideways when nine tabs outgrow a narrow panel, rather than
-clipping the last two off the screen.
+art, half the border), the repeatable shop rows lose excess padding and the
+footer and tabs get shallower. The arena fills the vertical room beside that
+panel, so no part of a small phone is wasted. The tree panes still invert
+their scrolling: the **pane scrolls as one column** and the web gets a 300px
+window, with the parchment detail strip pinned sticky. The tab row scrolls
+sideways when nine tabs outgrow the panel instead of clipping the last ones.
 
-**With height to spare, the arena becomes a band instead.** From a 640px-tall
-viewport up — tablets, small desktop windows — the two columns give way to the
-shape the game is drawn for: a strip of world across the top, big sky and a
-blood moon, with the panel spread underneath.
-
-That threshold is not a taste call. The band is `38vh` tall and the zoom is
-`round(height / 92)`, so the zoom holds at 3 only while `38vh >= 230px` —
-which is exactly 640. One pixel under, the zoom drops to 2, the visible road
-doubles, and the hero is an ant in a field. Measured across the switch:
-`639px -> 139 world units @3`, `640px -> 333 @3`. The framing changes; the
-sprite size does not.
-
-A phone in landscape is 375-430px tall, so it always gets the columns — a
-band there would be a 140px strip with one row of shop under it.
-
-**And past 1280px wide the columns come back**, for the opposite reason. A
-band is the right answer while width is the thing in short supply; once there
-is 1920px of it, splitting gives the fight a 996px column and the panel a
-922px one, and both are bigger than either gets stacked. So there are three
-shapes, and each threshold is the point where the previous one stops paying:
-
-| | shape | why |
-|---|---|---|
-| under 640px tall | columns | no room for a band without dropping the zoom |
-| 640 tall, under 1280 wide | band, arena a 2.2:1 window in it | height to spare, width in short supply |
-| 1280 wide and up | columns | enough width that both halves get a real one |
-
-**A wide band needed a window, not a wider camera.** The zoom comes from
-canvas *height*, so a band stretched edge to edge on a 1920px screen showed
-**480 units of road** — four times a phone's — and since `heroAnchor` is
-`1 - WALK_IN / worldWidth`, 91 units of 480 put the hero at 0.81, clamped to
-0.78: near the right edge with a thousand pixels of ground nobody walks on
-behind him.
-
-Zooming in fixes the framing and bills the other two things on the screen for
-it: band height is what buys the zoom, so a centred hero meant **doubled
-sprites and a panel squeezed to a strip**. It was built, measured and
-reverted. What works is narrowing the **box** — `.arena` is
-`aspect-ratio: 2.2 / 1`, centred, with the cabinet's wood either side and a
-bevel around it. The ratio is arithmetic: worldWidth is worldHeight times the
-canvas ratio and the zoom holds worldHeight near 92, so 2.2 is ~200 units of
-road and stands the hero at 0.55, with the zoom untouched and the panel whole.
+Taller landscape screens retain the same two columns but keep the canvas at
+`4:3`. The renderer derives zoom from canvas *height*, so filling a tall,
+narrow tablet column would make the sprites enormous and shrink the visible
+road. Phones can safely fill their short column; tablets keep the camera box
+that the game was balanced against.
 
 It also closed a leak that predated it. The 0.78 clamp is what kept the hero
 on screen, and past ~420 units of road it quietly stopped the gap being
@@ -1130,10 +1095,11 @@ and each source pixel still covers exactly `dpr x scale` of them.
 The gate is `(min-width: 560px) and (min-aspect-ratio: 1/1)` — not
 `orientation: landscape`, which fires on a 600x500 desktop window that has no
 room for two columns. Pane internals switch on a **container query** against
-the panel itself, because once the arena takes 42% the viewport width stops
-meaning anything to them: the shop, forge, pets and feats go to two columns
-at 470px of panel and three at 820px. The webs do not switch at all: they
-are three lanes at every width, and only the cell size changes.
+the panel itself, because the viewport width no longer describes the room
+they have. The shop gets its phone-specific second column at 360px; the
+sentence-heavy lists wait for 470px, and the widest lists reach three columns
+at 820px. The webs do not switch at all: they are three lanes at every width,
+and only the cell size changes.
 
 **Portrait still works** and is still the whole original stylesheet. A phone
 held upright gets a "turn your phone sideways" prompt; a narrow *desktop*
