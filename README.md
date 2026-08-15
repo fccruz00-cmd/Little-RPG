@@ -833,13 +833,20 @@ introduces itself by handing you something.
 
 The faucet has two taps. **Dungeons**: full clears only, never partial runs,
 and the first time a clear takes you deeper than the save ever has pays a
-one-off bounty on top — five tiers, 150 bounty gems. **Contracts**: three
-dailies and one weekly, pinned above the shop list, worth roughly 10–15 gems
-a day. Progress is a *stats delta* against a snapshot taken when the board
-rolled, so the lifetime counters do all the bookkeeping and no kill site
-changed; the UTC day index deals the board deterministically, so there is
-nothing to re-roll by clearing data, and skipping a day by clock forfeits
-that day's gems — the exploit priced at exactly what it pays.
+one-off bounty on top — five tiers, 150 bounty gems. **Contracts and the
+weekly festival**: three dailies plus one named weekly objective, pinned
+above the shop list, worth roughly 10–15 gems a day. The festival rotates
+between Golden Hunt, Heroes' Rally, Scholar's Road and Harvest Fair; each
+puts a small boon on one play style for the week without locking an exclusive
+reward behind attendance.
+
+The same board carries a **daily welcome gift**: one gem plus five minutes of
+the save's proven gold rate. Five distinct visits in the UTC week add a
+seven-gem chest. It is attendance without a streak trap — missing Tuesday
+does not erase Monday, and five of seven leaves room for a life. Progress is
+a *stats delta* against a snapshot taken when the board rolled, so lifetime
+counters do the contract bookkeeping; UTC day and week indexes deal the
+same content to everyone and roll a live session over without a relaunch.
 
 | ware | costs | gives |
 |---|---:|---|

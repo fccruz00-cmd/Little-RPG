@@ -883,6 +883,84 @@ body { display: flex; justify-content: center; }
 .quests__next { margin-left: auto; font-style: normal; font-size: 9px; color: #b9a17a; }
 .quest.is-done { opacity: .55; }
 
+/* One world mood for the whole UTC week. It sits with contracts because the
+   objective is the weekly contract grown into a named event, not another
+   menu the player must remember to inspect. */
+.week-event {
+  --px: 1;
+  display: grid;
+  gap: 3px;
+  padding: 4px 7px 5px;
+  color: var(--ink);
+  background: linear-gradient(135deg, #332017, #1c1823);
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  image-rendering: pixelated;
+}
+.week-event__head {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+}
+.week-event__head > span { min-width: 0; }
+.week-event__head b {
+  display: block;
+  overflow: hidden;
+  font-size: 10px;
+  color: var(--cream);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.week-event__head small {
+  display: block;
+  overflow: hidden;
+  font-size: 8px;
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.week-event__head em { font-size: 8px; color: #b9a17a; white-space: nowrap; }
+.week-event__foot { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.week-event__boon { font-size: 9px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.week-event__stamps { display: flex; gap: 3px; margin-left: auto; }
+.week-event__stamps i {
+  width: 6px;
+  height: 6px;
+  background: #120e0c;
+  border: 1px solid #6f5f4c;
+  box-shadow: inset 0 0 0 1px #0008;
+}
+.week-event__stamps i.is-on { background: var(--gold); border-color: #ffe09b; }
+.event-gift {
+  --px: 1;
+  min-height: 24px;
+  padding: 1px 6px 2px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  cursor: pointer;
+  white-space: nowrap;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+.event-gift:disabled {
+  color: #d5d0d7;
+  cursor: default;
+  border-image-source: url(assets/ui/button_disabled.png);
+}
+.event-gift:not(:disabled):active { transform: translateY(1px); }
+.week-event__chest { font-size: 8px; color: var(--ink-dim); text-align: right; }
+.week-event__chest.is-earned { color: var(--green); }
+
 /* A path card carries four trade-off clauses; two abreast clips them, so
    the list stays one column even where .keys goes to two. */
 #path-list { grid-template-columns: 1fr; }
@@ -2088,6 +2166,11 @@ body { display: flex; justify-content: center; }
   .shop { gap: 2px; padding: 2px 3px; }
   .quests { gap: 2px; }
   .sect--quests { margin-top: 0; }
+  .week-event { gap: 2px; padding: 2px 4px 3px; }
+  .week-event__head small { display: none; }
+  .week-event__chest { display: none; }
+  .week-event__foot { gap: 4px; }
+  .event-gift { min-height: 21px; padding-inline: 4px; font-size: 8px; }
   .up {
     grid-template-columns: 24px minmax(0, 1fr) auto;
     gap: 4px;
