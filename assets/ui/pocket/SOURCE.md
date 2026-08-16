@@ -21,3 +21,11 @@ Mappings:
 - `cosmos.png`: `0 - Sprites/Tab icons/Style 1/5.png`
 - `more.png`: `0 - Sprites/Tab icons/Style 2/6.png`
 - `active-frame.png`: `2 - Gold/Content/Side Tabs/2.png`
+- `frame-sm-*.png`: `2 - Gold/Content/Holders/1.png` through `9.png`
+  (the complete 16px nine-tile holder)
+- `frame-lg-*.png`: `2 - Gold/Content/Holders/19.png` through `27.png`
+  (the complete 32px nine-tile holder)
+- `compass.png`: `2 - Gold/Content/Map/Compass/1.png`
+- `mountains.png`: `2 - Gold/Content/Map/Design/1.png`
+- `route.png`: `2 - Gold/Content/Map/Design/6.png`
+- `pin.png`: `2 - Gold/Content/Map/Pin Points/2.png`

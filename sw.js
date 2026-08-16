@@ -8,7 +8,7 @@
 // versioned: if it is in the cache it is the right file, and the stamp
 // changes the moment any of them does. Network-only for the leaderboard,
 // so an offline player keeps playing and simply does not submit.
-const VERSION = 'bd8d9d3d0579';
+const VERSION = '221fef321cb8';
 const CACHE = `little-rpg-${VERSION}`;
 const SHELL = [
   ".",
@@ -270,12 +270,34 @@ const SHELL = [
   "assets/ui/wood.png",
   "assets/ui/pocket/active-frame.png",
   "assets/ui/pocket/awaken.png",
+  "assets/ui/pocket/compass.png",
   "assets/ui/pocket/cosmos.png",
   "assets/ui/pocket/forge.png",
+  "assets/ui/pocket/frame-lg-b.png",
+  "assets/ui/pocket/frame-lg-bl.png",
+  "assets/ui/pocket/frame-lg-br.png",
+  "assets/ui/pocket/frame-lg-fill.png",
+  "assets/ui/pocket/frame-lg-l.png",
+  "assets/ui/pocket/frame-lg-r.png",
+  "assets/ui/pocket/frame-lg-t.png",
+  "assets/ui/pocket/frame-lg-tl.png",
+  "assets/ui/pocket/frame-lg-tr.png",
+  "assets/ui/pocket/frame-sm-b.png",
+  "assets/ui/pocket/frame-sm-bl.png",
+  "assets/ui/pocket/frame-sm-br.png",
+  "assets/ui/pocket/frame-sm-fill.png",
+  "assets/ui/pocket/frame-sm-l.png",
+  "assets/ui/pocket/frame-sm-r.png",
+  "assets/ui/pocket/frame-sm-t.png",
+  "assets/ui/pocket/frame-sm-tl.png",
+  "assets/ui/pocket/frame-sm-tr.png",
   "assets/ui/pocket/hall.png",
   "assets/ui/pocket/more.png",
+  "assets/ui/pocket/mountains.png",
   "assets/ui/pocket/pets.png",
+  "assets/ui/pocket/pin.png",
   "assets/ui/pocket/prestige.png",
+  "assets/ui/pocket/route.png",
   "assets/ui/pocket/shop.png",
   "assets/ui/pocket/skills.png",
   "assets/ui/pocket/talents.png"

@@ -2430,3 +2430,335 @@ body { display: flex; justify-content: center; }
   .xpbar { height: 16px; }
   .xpbar__text { font-size: 10px; }
 }
+
+/* ============================================================
+   Mini Pocket Status — Gold interface skin
+
+   Unlike the first pass, this uses the bundle's actual scalable holder
+   construction for the management surface, navigation, controls and cards.
+   The nine source tiles remain separate PNGs and are assembled by CSS, which
+   preserves their pixel edges at every panel size. Nothing in #stage or the
+   renderer references this skin.
+   ============================================================ */
+:root {
+  --pocket-paper: #efbd80;
+  --pocket-paper-hi: #f7d29b;
+  --pocket-ink: #35232d;
+  --pocket-ink-soft: #77513f;
+  --pocket-blue: #263c50;
+  --pocket-blue-hi: #335a70;
+  --pocket-coral: #dc6d68;
+  --pocket-coral-dk: #8f3f48;
+
+  --pocket-frame-sm:
+    url(assets/ui/pocket/frame-sm-tl.png) left top / 16px 16px no-repeat,
+    url(assets/ui/pocket/frame-sm-tr.png) right top / 16px 16px no-repeat,
+    url(assets/ui/pocket/frame-sm-bl.png) left bottom / 16px 16px no-repeat,
+    url(assets/ui/pocket/frame-sm-br.png) right bottom / 16px 16px no-repeat,
+    url(assets/ui/pocket/frame-sm-t.png) center top / calc(100% - 32px) 16px no-repeat,
+    url(assets/ui/pocket/frame-sm-b.png) center bottom / calc(100% - 32px) 16px no-repeat,
+    url(assets/ui/pocket/frame-sm-l.png) left center / 16px calc(100% - 32px) no-repeat,
+    url(assets/ui/pocket/frame-sm-r.png) right center / 16px calc(100% - 32px) no-repeat,
+    url(assets/ui/pocket/frame-sm-fill.png) center / 100% 100% no-repeat;
+
+  --pocket-frame-lg:
+    url(assets/ui/pocket/frame-lg-tl.png) left top / 32px 32px no-repeat,
+    url(assets/ui/pocket/frame-lg-tr.png) right top / 32px 32px no-repeat,
+    url(assets/ui/pocket/frame-lg-bl.png) left bottom / 32px 32px no-repeat,
+    url(assets/ui/pocket/frame-lg-br.png) right bottom / 32px 32px no-repeat,
+    url(assets/ui/pocket/frame-lg-t.png) center top / calc(100% - 64px) 32px no-repeat,
+    url(assets/ui/pocket/frame-lg-b.png) center bottom / calc(100% - 64px) 32px no-repeat,
+    url(assets/ui/pocket/frame-lg-l.png) left center / 32px calc(100% - 64px) no-repeat,
+    url(assets/ui/pocket/frame-lg-r.png) right center / 32px calc(100% - 64px) no-repeat,
+    url(assets/ui/pocket/frame-lg-fill.png) center / 100% 100% no-repeat;
+}
+
+/* The whole management half now reads as the opened pocket ledger. */
+.panel {
+  position: relative;
+  gap: 5px;
+  padding: 14px 14px 13px;
+  overflow: hidden;
+  color: var(--pocket-ink);
+  background: var(--pocket-frame-lg);
+  image-rendering: pixelated;
+}
+
+.panel::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  right: 18px;
+  bottom: 16px;
+  width: 128px;
+  height: 136px;
+  pointer-events: none;
+  opacity: .11;
+  background:
+    url(assets/ui/pocket/route.png) right bottom / 58px 132px no-repeat,
+    url(assets/ui/pocket/mountains.png) left bottom / 92px auto no-repeat;
+  image-rendering: pixelated;
+}
+
+.panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.tabs {
+  gap: 5px;
+  padding: 1px 2px 5px;
+  overflow-y: visible;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.tab,
+.segmented button,
+.stepper,
+.hud__btn,
+.act-btn,
+.equip,
+.big-btn {
+  border: 0;
+  color: var(--pocket-ink);
+  text-shadow: none;
+  background: var(--pocket-frame-sm);
+  image-rendering: pixelated;
+}
+
+.tab {
+  min-height: 40px;
+  padding: 7px 8px 8px;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: .72;
+  transition: transform .12s ease, opacity .12s ease, filter .12s ease;
+}
+
+.tab:hover { opacity: .92; }
+
+.tab.is-on {
+  color: var(--pocket-coral-dk);
+  opacity: 1;
+  transform: translateY(-2px);
+  filter: brightness(1.04) saturate(1.08);
+  box-shadow: 0 5px 0 -3px var(--pocket-blue), 0 7px 12px -8px #000;
+}
+
+.tab.is-on::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 5px;
+  height: 2px;
+  background: var(--pocket-coral);
+  box-shadow: 0 1px 0 var(--pocket-coral-dk);
+}
+
+.tab.is-on:active,
+.tab:not(.is-on):active,
+.act-btn:active,
+.equip:not(:disabled):active,
+.big-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.pane {
+  overflow: hidden;
+  background: transparent;
+}
+
+.pane__head {
+  position: relative;
+  min-height: 42px;
+  margin: 0 1px;
+  padding: 7px 12px 8px 43px;
+  color: var(--pocket-ink);
+  background: var(--pocket-frame-sm);
+  border: 0;
+  image-rendering: pixelated;
+}
+
+.pane__head::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 25px;
+  height: 26px;
+  transform: translateY(-50%);
+  background: url(assets/ui/pocket/compass.png) center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+.pane__head,
+.pane__head *,
+.slot__name,
+.pet__name,
+.facts dd,
+.prestige__gain strong {
+  text-shadow: none;
+}
+
+.pane__hint,
+.pane__points,
+.pane__detail,
+.toggle,
+.shop__shelf,
+.quests__next {
+  color: var(--pocket-ink-soft);
+}
+
+.pane__points b,
+.pane__points.is-relic b,
+.pane__detail b,
+.toggle b {
+  color: var(--pocket-coral-dk);
+}
+
+.pane__detail {
+  margin: 5px 3px 0;
+  padding: 7px 12px 8px;
+  border: 0;
+  background: var(--pocket-frame-sm);
+}
+
+.shop,
+.tree-scroll,
+.forge,
+.pets,
+.prestige,
+.stock,
+.trips,
+.omni,
+.skyline {
+  background: transparent;
+}
+
+/* Ledger rows use the pack's small nine-tile holder instead of the old
+   orange/grey buttons. Rarity rails and gameplay state remain untouched. */
+.up,
+.ore,
+.slot,
+.pet,
+.pcard,
+.prestige__gain,
+.facts > div,
+.featlist li,
+.perks li,
+.rank,
+.mobile-action {
+  border: 0;
+  color: var(--pocket-ink);
+  text-shadow: none;
+  background: var(--pocket-frame-sm);
+  box-shadow: 0 2px 0 #b16c55, 0 4px 7px -6px #000;
+  image-rendering: pixelated;
+}
+
+.up {
+  min-height: 52px;
+  padding: 7px 11px 8px;
+}
+
+.up:disabled,
+.ore:disabled,
+.slot:disabled,
+.pet.is-locked {
+  color: #735f58;
+  filter: saturate(.35);
+  opacity: .66;
+}
+
+.up__effect,
+.ore__have,
+.slot__effect,
+.pet__effect,
+.pcard__what,
+.prestige__gain small,
+.facts dt,
+.prestige__note,
+.featlist li,
+.rank,
+.perks li {
+  color: var(--pocket-ink-soft);
+}
+
+.up__cost,
+.ore__have b,
+.slot__cost,
+.pet__effect b,
+.facts dd,
+.prestige__note b,
+.rank__value,
+.featlist__name,
+.featlist__desc b {
+  color: var(--pocket-ink);
+}
+
+.up--best {
+  box-shadow: 0 0 0 2px var(--pocket-coral), 0 5px 12px -7px #000;
+}
+
+.shop__shelf,
+.sect {
+  color: var(--pocket-blue);
+  border-bottom-color: var(--pocket-coral);
+}
+
+.shop__shelf::before,
+.mobile-more__title::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 14px;
+  margin-right: 5px;
+  vertical-align: -3px;
+  background: url(assets/ui/pocket/pin.png) center / contain no-repeat;
+  image-rendering: pixelated;
+}
+
+.statbar {
+  gap: 5px;
+  padding: 5px 6px 6px;
+  background: var(--pocket-blue);
+  border-bottom-color: #142532;
+}
+
+.statbar > div {
+  padding: 5px 3px 6px;
+  color: var(--pocket-ink);
+  background: var(--pocket-frame-sm);
+  border: 0;
+  box-shadow: 0 2px 0 var(--pocket-coral-dk);
+}
+
+.statbar dt {
+  color: var(--pocket-ink-soft);
+  text-shadow: none;
+}
+
+.statbar dd {
+  color: var(--pocket-ink);
+  text-shadow: none;
+}
+
+.hud {
+  background-color: var(--pocket-blue);
+  background-image:
+    linear-gradient(90deg, #102433e8, #263c50e8),
+    url(assets/ui/pocket/mountains.png);
+  background-position: center, right 12px center;
+  background-size: auto, 84px auto;
+  background-repeat: repeat, no-repeat;
+  box-shadow: inset 0 -3px 0 var(--pocket-coral-dk), 0 2px 0 #101c27;
+}
+
+.stepper,
+.hud__btn {
+  color: var(--pocket-ink);
+}

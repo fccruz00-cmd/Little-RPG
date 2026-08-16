@@ -496,3 +496,106 @@ html[data-ui="mobile"] .modal__scroll {
     margin-inline: auto;
   }
 }
+
+/* Mini Pocket Status mobile skin: the same Gold holder system as browser,
+   rearranged for touch instead of reverting to generic dark mobile cards. */
+html[data-ui="mobile"] .panel {
+  gap: 4px;
+  padding: 9px 9px 8px;
+  background: var(--pocket-frame-lg);
+}
+
+.mobile-subnav {
+  min-height: 50px;
+  gap: 6px;
+  padding: 2px 2px 5px;
+  background: transparent;
+  border: 0;
+}
+
+.mobile-subnav__button {
+  min-height: 44px;
+  padding: 7px 11px 8px;
+  border: 0;
+  color: var(--pocket-ink);
+  text-shadow: none;
+  background: var(--pocket-frame-sm);
+  opacity: .72;
+}
+
+.mobile-subnav__button.is-on {
+  color: var(--pocket-coral-dk);
+  text-shadow: none;
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0 -2px var(--pocket-blue);
+}
+
+html[data-ui="mobile"] .pane__head {
+  min-height: 48px;
+  padding: 8px 10px 9px 43px;
+}
+
+html[data-ui="mobile"] .pane__detail {
+  margin-inline: 2px;
+  padding: 8px 11px 9px;
+}
+
+html[data-ui="mobile"] .up {
+  min-height: 58px;
+  padding: 8px 11px 9px;
+}
+
+.mobile-more {
+  padding: 7px 3px;
+  background: transparent;
+}
+
+.mobile-more__title {
+  margin: 4px 7px 9px;
+  color: var(--pocket-blue);
+}
+
+.mobile-action {
+  min-height: 62px;
+  padding: 9px 12px 10px;
+  color: var(--pocket-ink);
+  background: var(--pocket-frame-sm);
+}
+
+.mobile-action__copy small { color: var(--pocket-ink-soft); }
+.mobile-action__arrow { color: var(--pocket-coral-dk); }
+
+.mobile-nav {
+  gap: 5px;
+  min-height: calc(68px + env(safe-area-inset-bottom));
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  background-color: var(--pocket-blue);
+  background-image:
+    linear-gradient(#142a3be8, #263c50f5),
+    url(assets/ui/pocket/mountains.png);
+  background-position: center, right 8px bottom 4px;
+  background-size: auto, 96px auto;
+  background-repeat: repeat, no-repeat;
+  border-top: 3px solid var(--pocket-coral-dk);
+  box-shadow: 0 -2px 0 #112330;
+}
+
+.mobile-nav__button {
+  min-height: 56px;
+  padding: 6px 2px 7px;
+  color: var(--pocket-ink);
+  background: var(--pocket-frame-sm);
+  opacity: .68;
+}
+
+.mobile-nav__button.is-on {
+  color: var(--pocket-coral-dk);
+  border: 0;
+  background: var(--pocket-frame-sm);
+  opacity: 1;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 0 -2px var(--pocket-coral-dk), 0 8px 12px -8px #000;
+}
+
+.mobile-nav__button:disabled { opacity: .28; }

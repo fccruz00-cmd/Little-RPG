@@ -10,7 +10,7 @@ All you decide is where the gold goes.
 The site is redeployed on every merge to `main`, so both links serve the
 latest build. Each entry is installable: the browser UI keeps its landscape
 layout, while the mobile entry uses a portrait-first HUD and bottom
-navigation. Both **play with no signal** (a service worker precaches all 267
+navigation. Both **play with no signal** (a service worker precaches all 289
 files), share the same save and game simulation, and render the fight through
 the same canvas. `little-rpg.html` in the repo remains the browser game in one
 file, for playing straight off a download.
@@ -603,7 +603,7 @@ mobile entry its portrait orientation. Both ship 192/512 icons in plain and
 it likes without eating the knight.
 
 `sw.js` precaches **every file the game asks for on a cold boot**, all
-267 of them, about 1.1 MB. Cache-first, because every byte here is
+289 of them, about 1.1 MB. Cache-first, because every byte here is
 static and versioned; the leaderboard is network-only, so a player with
 no signal keeps playing and simply does not submit, and a navigation
 with the network gone still opens the page that was asked for, falling
@@ -614,7 +614,7 @@ out of the game's own art (the knight's idle frame, the moon over the
 road) at NEAREST, and `tools/build_sw.py` **walks** the repo for the
 precache list and stamps it with a content hash, so a changed pixel
 mints a new cache name and the old one is dropped on activate. A
-hand-kept list of 267 files is a list that goes stale, and a stale
+hand-kept list of 289 files is a list that goes stale, and a stale
 service worker serves the code you just replaced, forever, to everyone
 who installed. `build_single_file.py` calls the privacy page and the
 worker builds at the end, so none of the three can disagree.
@@ -1245,11 +1245,13 @@ whole vocabulary is sixteen crops:
 | `bar_track` + `bar_red`/`bar_violet`/`bar_gold` | `1 1 2 1` | XP and stage progress |
 | `check_off` / `check_on` | whole | the checkboxes, in place of the browser's |
 
-The browser tabs and the dedicated mobile navigation add a small set of
-glyphs and a selected-state frame from the user-supplied **Mini Pocket Status
-2.1** bundle. They only change navigation chrome; arena sprites, canvas
-composition and combat rendering remain untouched. Exact source mappings and
-the licence note live in `assets/ui/pocket/SOURCE.md`.
+The browser and dedicated mobile navigation use the Gold system from the
+user-supplied **Mini Pocket Status 2.1** bundle: two complete nine-tile holder
+sets build the management panel, cards and controls, while its map compass,
+route, mountain ornaments, tab frame and glyphs carry the navigation. The
+skin only changes interface chrome; arena sprites, canvas composition and
+combat rendering remain untouched. Exact source mappings and the licence note
+live in `assets/ui/pocket/SOURCE.md`.
 
 Two rules keep it from falling apart:
 
@@ -1311,8 +1313,8 @@ The game uses crops from five third-party packs:
 - **Mini Medieval User Interface v1.1** by [VEXED](https://v3x3d.itch.io/),
   buttons and frames
 - **Premium - Raven Fantasy Icons**, upgrade and item icons
-- **Super Asset Bundle #5 Mini Pocket Status 2.1**, browser/mobile navigation
-  glyphs and the selected-state frame
+- **Super Asset Bundle #5 Mini Pocket Status 2.1**, Gold management panels,
+  card holders, controls, navigation glyphs and map ornaments
 
 The eight farm-and-kitchen icons (seedling, hoe, crate, cookpot, stew, pie,
 rations, jam — cells 39–46 of the icon strip), the nine night-sky icons
