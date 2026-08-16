@@ -223,7 +223,11 @@ html[data-ui="mobile"] .foot {
 .mobile-subnav__button {
   --px: 1;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 1 0 auto;
+  gap: 5px;
   min-width: 92px;
   min-height: 40px;
   padding: 5px 10px 6px;
@@ -246,6 +250,13 @@ html[data-ui="mobile"] .foot {
   font-weight: 700;
   text-shadow: 0 1px 0 #fff3;
   border-image-source: url(assets/ui/button.png);
+}
+
+.mobile-subnav__button.is-on .pocket-icon,
+.mobile-nav__button.is-on .pocket-icon {
+  background-image: var(--pocket-image), url(assets/ui/pocket/active-frame.png);
+  background-position: center, left center;
+  background-size: var(--pocket-canvas, 16px) var(--pocket-canvas, 16px), 36px 24px;
 }
 
 .mobile-subnav__pip,
@@ -408,7 +419,9 @@ html[data-ui="mobile"] .up {
   cursor: pointer;
 }
 
-.mobile-nav__button .ico {
+.mobile-nav__button .pocket-icon {
+  width: 28px;
+  height: 22px;
   opacity: .72;
 }
 
@@ -423,7 +436,7 @@ html[data-ui="mobile"] .up {
   image-rendering: pixelated;
 }
 
-.mobile-nav__button.is-on .ico {
+.mobile-nav__button.is-on .pocket-icon {
   opacity: 1;
 }
 

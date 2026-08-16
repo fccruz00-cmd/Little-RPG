@@ -8,7 +8,7 @@
 // versioned: if it is in the cache it is the right file, and the stamp
 // changes the moment any of them does. Network-only for the leaderboard,
 // so an offline player keeps playing and simply does not submit.
-const VERSION = '844348c84440';
+const VERSION = 'bd8d9d3d0579';
 const CACHE = `little-rpg-${VERSION}`;
 const SHELL = [
   ".",
@@ -267,7 +267,18 @@ const SHELL = [
   "assets/ui/plank.png",
   "assets/ui/plank_tall.png",
   "assets/ui/scroll.png",
-  "assets/ui/wood.png"
+  "assets/ui/wood.png",
+  "assets/ui/pocket/active-frame.png",
+  "assets/ui/pocket/awaken.png",
+  "assets/ui/pocket/cosmos.png",
+  "assets/ui/pocket/forge.png",
+  "assets/ui/pocket/hall.png",
+  "assets/ui/pocket/more.png",
+  "assets/ui/pocket/pets.png",
+  "assets/ui/pocket/prestige.png",
+  "assets/ui/pocket/shop.png",
+  "assets/ui/pocket/skills.png",
+  "assets/ui/pocket/talents.png"
 ];
 
 self.addEventListener('install', (event) => {

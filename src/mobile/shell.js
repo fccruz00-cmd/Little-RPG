@@ -44,19 +44,19 @@ if (document.documentElement.dataset.ui === 'mobile') {
   };
 
   const GROUPS = {
-    battle: { icon: 'damage', tabs: ['upgrades'], initial: 'upgrades' },
-    grow: { icon: 'book', tabs: ['upgrades', 'talents'], initial: 'talents' },
-    craft: { icon: 'pick', tabs: ['skills', 'forge', 'pets'], initial: 'skills' },
-    legacy: { icon: 'relic', tabs: ['prestige', 'hall', 'awaken', 'cosmos'], initial: 'prestige' },
-    more: { icon: 'gear', tabs: [], initial: null },
+    battle: { icon: 'upgrades', tabs: ['upgrades'], initial: 'upgrades' },
+    grow: { icon: 'talents', tabs: ['upgrades', 'talents'], initial: 'talents' },
+    craft: { icon: 'forge', tabs: ['skills', 'forge', 'pets'], initial: 'skills' },
+    legacy: { icon: 'prestige', tabs: ['prestige', 'hall', 'awaken', 'cosmos'], initial: 'prestige' },
+    more: { icon: 'more', tabs: [], initial: null },
   };
 
   const MORE_ACTIONS = [
-    { id: 'contracts', icon: 'gem' },
-    { id: 'bestiary', icon: 'book', sourceTab: 'awaken' },
-    { id: 'ranks', icon: 'crown', sourceButton: 'btn-ranks' },
-    { id: 'store', icon: 'shop', sourceButton: 'btn-store' },
-    { id: 'options', icon: 'gear', sourceButton: 'btn-options' },
+    { id: 'contracts', icon: 'prestige' },
+    { id: 'bestiary', icon: 'awaken', sourceTab: 'awaken' },
+    { id: 'ranks', icon: 'hall', sourceButton: 'btn-ranks' },
+    { id: 'store', icon: 'upgrades', sourceButton: 'btn-store' },
+    { id: 'options', icon: 'more', sourceButton: 'btn-options' },
   ];
 
   const onReady = ({ state }) => {
@@ -97,7 +97,7 @@ if (document.documentElement.dataset.ui === 'mobile') {
       button.type = 'button';
       button.dataset.action = action.id;
       button.innerHTML = `
-        <i class="ico ico--lg ico--${action.icon}" aria-hidden="true"></i>
+        <i class="pocket-icon pocket-icon--${action.icon}" aria-hidden="true"></i>
         <span class="mobile-action__copy"><strong>${title}</strong><small>${note}</small></span>
         <span class="mobile-action__arrow" aria-hidden="true">›</span>`;
       moreList.append(button);
@@ -114,7 +114,7 @@ if (document.documentElement.dataset.ui === 'mobile') {
       button.type = 'button';
       button.dataset.mobileSection = name;
       button.innerHTML = `
-        <i class="ico ico--lg ico--${group.icon}" aria-hidden="true"></i>
+        <i class="pocket-icon pocket-icon--${group.icon}" aria-hidden="true"></i>
         <span>${copy.nav[name]}</span>
         <i class="mobile-nav__pip" hidden aria-hidden="true"></i>`;
       nav.append(button);
@@ -197,7 +197,7 @@ if (document.documentElement.dataset.ui === 'mobile') {
         button.type = 'button';
         button.dataset.tab = name;
         button.setAttribute('role', 'tab');
-        button.innerHTML = `${copy.tabs[name]}<i class="mobile-subnav__pip" hidden aria-hidden="true"></i>`;
+        button.innerHTML = `<i class="pocket-icon pocket-icon--${name}" aria-hidden="true"></i>${copy.tabs[name]}<i class="mobile-subnav__pip" hidden aria-hidden="true"></i>`;
         subnav.append(button);
       }
       setSubnavState();

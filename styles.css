@@ -107,6 +107,36 @@ body { display: flex; justify-content: center; }
   image-rendering: pixelated;
   vertical-align: -3px;
 }
+
+/* Navigation glyphs selected from the user-supplied Mini Pocket Status 2.1
+   pack. Keep them at their native 16/32px canvas sizes: the 32px variants
+   carry a centred 16px drawing, so cropping the empty canvas is sharper than
+   resampling it. The game renderer and its art never use these assets. */
+.pocket-icon,
+.tab::before {
+  display: inline-block;
+  width: 24px;
+  height: 18px;
+  flex: none;
+  background-image: var(--pocket-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: var(--pocket-canvas, 16px) var(--pocket-canvas, 16px);
+  image-rendering: pixelated;
+}
+
+.tab::before { content: ''; }
+
+.pocket-icon--upgrades, .tab[data-tab="upgrades"] { --pocket-image: url(assets/ui/pocket/shop.png); --pocket-canvas: 32px; }
+.pocket-icon--talents,  .tab[data-tab="talents"]  { --pocket-image: url(assets/ui/pocket/talents.png); }
+.pocket-icon--forge,    .tab[data-tab="forge"]    { --pocket-image: url(assets/ui/pocket/forge.png); }
+.pocket-icon--skills,   .tab[data-tab="skills"]   { --pocket-image: url(assets/ui/pocket/skills.png); }
+.pocket-icon--pets,     .tab[data-tab="pets"]     { --pocket-image: url(assets/ui/pocket/pets.png); }
+.pocket-icon--hall,     .tab[data-tab="hall"]     { --pocket-image: url(assets/ui/pocket/hall.png); --pocket-canvas: 32px; }
+.pocket-icon--awaken,   .tab[data-tab="awaken"]   { --pocket-image: url(assets/ui/pocket/awaken.png); --pocket-canvas: 32px; }
+.pocket-icon--prestige, .tab[data-tab="prestige"] { --pocket-image: url(assets/ui/pocket/prestige.png); }
+.pocket-icon--cosmos,   .tab[data-tab="cosmos"]   { --pocket-image: url(assets/ui/pocket/cosmos.png); --pocket-canvas: 32px; }
+.pocket-icon--more { --pocket-image: url(assets/ui/pocket/more.png); }
 .ico--damage        { --i: 0; }
 .ico--attack_speed  { --i: 1; }
 .ico--crit          { --i: 2; }
@@ -575,6 +605,10 @@ body { display: flex; justify-content: center; }
 .tab {
   --px: 2;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   padding: 2px 1px 3px;
   border: 0;
   font: inherit;
@@ -596,6 +630,11 @@ body { display: flex; justify-content: center; }
   font-weight: 700;
   text-shadow: 0 1px 0 #fff3;
   border-image-source: url(assets/ui/button.png);
+}
+.tab.is-on::before {
+  background-image: var(--pocket-image), url(assets/ui/pocket/active-frame.png);
+  background-position: center, left center;
+  background-size: var(--pocket-canvas, 16px) var(--pocket-canvas, 16px), 36px 24px;
 }
 .tab.is-on:active { transform: translateY(1px); border-image-source: url(assets/ui/button_pressed.png); }
 .tab:not(.is-on):active { transform: translateY(1px); }
