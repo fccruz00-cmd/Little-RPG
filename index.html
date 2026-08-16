@@ -9,13 +9,26 @@
 <link rel="icon" href="assets/icons/icons.png" type="image/png">
 <!-- Installable: the manifest names it, the worker keeps it playable with
      no signal. iOS reads its own tags rather than the manifest. -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" id="app-manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/app/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Little RPG">
 <link rel="stylesheet" href="styles.css">
+<script>
+  // Mobile is an explicit shell, never a breakpoint imposed on the browser
+  // build. The app-store/PWA entry point selects it with ?ui=mobile; opening
+  // index.html normally keeps the existing browser interface unchanged.
+  if (new URLSearchParams(location.search).get('ui') === 'mobile') {
+    document.documentElement.dataset.ui = 'mobile';
+    document.getElementById('app-manifest').href = 'manifest-mobile.json';
+    const mobileStyles = document.createElement('link');
+    mobileStyles.rel = 'stylesheet';
+    mobileStyles.href = 'mobile.css';
+    document.head.append(mobileStyles);
+  }
+</script>
 <script>
   // The single-file build runs from file://, where there are no service
   // workers and no manifest: registering there only prints an error at a
@@ -642,6 +655,9 @@
 
 <div class="loading" id="loading"><span>loading...</span></div>
 
+<!-- The mobile shell is inert in the browser build. It only rearranges the
+     existing controls when the explicit mobile entry point selected it. -->
+<script type="module" src="src/mobile/shell.js"></script>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

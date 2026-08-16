@@ -1,22 +1,24 @@
 # Little RPG
 
-A browser idle auto-battler, played with the phone turned sideways. The hero
-walks a straight line on its own, runs into monsters, kills them without
-input and clears stages. All you decide is where the gold goes.
+An idle auto-battler for browsers and phones. The hero walks a straight line
+on its own, runs into monsters, kills them without input and clears stages.
+All you decide is where the gold goes.
 
-**Play it**: <https://little-rpg.vercel.app> — redeployed on every merge
-to `main`, so the link always serves the latest build. It is an
-**installable app**: your phone will offer to add it to the home screen,
-where it opens fullscreen, locked to landscape, and **plays with no
-signal** (a service worker precaches all 251 files). `little-rpg.html`
-in the repo is the same game in one file, for playing straight off a
-download.
+- **Play it in a browser**: <https://little-rpg.vercel.app>
+- **Open the portrait mobile UI**: <https://little-rpg.vercel.app/mobile.html>
 
-The **UI** keeps the top; under it the **Fight** takes a column of its own
-and the tabbed panel takes another — **Shop**, **Talents**, **Forge**,
-**Skills**, **Pets**, **Ancestors**, **Awaken**, **Ascend** and
-**Singularity**: the journey reads left to right, work, friends, the
-dead, the awakened trophies, the leap, and the door past every reset.
+The site is redeployed on every merge to `main`, so both links serve the
+latest build. Each entry is installable: the browser UI keeps its landscape
+layout, while the mobile entry uses a portrait-first HUD and bottom
+navigation. Both **play with no signal** (a service worker precaches all 256
+files), share the same save and game simulation, and render the fight through
+the same canvas. `little-rpg.html` in the repo remains the browser game in one
+file, for playing straight off a download.
+
+The browser **UI** keeps the top; under it the **Fight** takes a column of its
+own and the tabbed panel takes another. The mobile UI leaves that fight
+renderer untouched, stacks the management panel below it and groups the same
+tabs behind thumb-sized bottom navigation.
 
 ```
 +--------------------------------------------------+
@@ -32,7 +34,8 @@ dead, the awakened trophies, the leap, and the door past every reset.
 +---------------------------+----------------------+
 ```
 
-(A phone held upright asks you to turn it. See *Layout*.)
+(The browser entry still asks an upright phone to turn. Use `mobile.html` for
+the dedicated portrait interface.)
 
 ## Running it
 
@@ -46,6 +49,7 @@ folder beside it. Saved progress works too.
 ```sh
 python3 -m http.server 8000
 # open http://localhost:8000
+# mobile UI: http://localhost:8000/mobile.html
 ```
 
 After changing anything, regenerate the single file:
@@ -592,15 +596,14 @@ piece is bolted on for good: it survives rebirth and awakening.
 
 ### Installable, and playable with no signal
 
-The hosted game is a **PWA**: `manifest.json` asks for fullscreen and
-locks the orientation to landscape (the game is drawn sideways, so the
-installed app never has to argue with the rotate prompt), and ships
-192/512 icons in both plain and **maskable** flavours, so an Android
-launcher can cut them to whatever shape it likes without eating the
-knight.
+The hosted game is a **PWA**: `manifest.json` asks for fullscreen and locks
+the browser UI to landscape, while `manifest-mobile.json` gives the explicit
+mobile entry its portrait orientation. Both ship 192/512 icons in plain and
+**maskable** flavours, so an Android launcher can cut them to whatever shape
+it likes without eating the knight.
 
 `sw.js` precaches **every file the game asks for on a cold boot**, all
-252 of them, about 1.1 MB. Cache-first, because every byte here is
+256 of them, about 1.1 MB. Cache-first, because every byte here is
 static and versioned; the leaderboard is network-only, so a player with
 no signal keeps playing and simply does not submit, and a navigation
 with the network gone still opens the page that was asked for, falling
@@ -611,7 +614,7 @@ out of the game's own art (the knight's idle frame, the moon over the
 road) at NEAREST, and `tools/build_sw.py` **walks** the repo for the
 precache list and stamps it with a content hash, so a changed pixel
 mints a new cache name and the old one is dropped on activate. A
-hand-kept list of 252 files is a list that goes stale, and a stale
+hand-kept list of 256 files is a list that goes stale, and a stale
 service worker serves the code you just replaced, forever, to everyone
 who installed. `build_single_file.py` calls the privacy page and the
 worker builds at the end, so none of the three can disagree.
@@ -1021,9 +1024,9 @@ local cache when the network is away.
 
 ## Layout
 
-**Little RPG is a landscape game.** Turned sideways, the HUD keeps the full
-width and everything under it becomes two columns: the arena and the stat
-readout on the left, the whole tabbed panel on the right. The panel stops
+**The browser UI is a landscape game.** Turned sideways, the HUD keeps the
+full width and everything under it becomes two columns: the arena and the
+stat readout on the left, the whole tabbed panel on the right. The panel stops
 competing with the arena for height, which is the entire point — on an
 844x390 phone it goes from **212px tall to 340**, and from 460px wide to 490.
 
@@ -1135,15 +1138,21 @@ meaning anything to them: the shop, forge, pets and feats go to two columns
 at 470px of panel and three at 820px. The webs do not switch at all: they
 are three lanes at every width, and only the cell size changes.
 
-**Portrait still works** and is still the whole original stylesheet. A phone
-held upright gets a "turn your phone sideways" prompt; a narrow *desktop*
-window does not, because you cannot rotate a monitor — the test is
-`pointer: coarse`, not width.
+**Portrait remains explicit.** The browser entry still uses the original
+stylesheet and shows a phone held upright a "turn your phone sideways"
+prompt; a narrow *desktop* window does not, because you cannot rotate a
+monitor — the test is `pointer: coarse`, not width. `mobile.html` instead
+selects `?ui=mobile`, loads `mobile.css` and adds the portrait HUD, grouped
+subnavigation and bottom navigation. It does not replace `#stage`, import game
+rules or instantiate another renderer: every action is forwarded to the
+existing UI around the same `GameState`, `Battle` and `Renderer`.
 
 
 ```
 index.html          the shell: HUD, arena column, tabbed panel
+mobile.html         explicit redirect into the portrait mobile shell
 styles.css          UI: every frame, strip and bar is 9-sliced pack art
+mobile.css          portrait-only layout and mobile navigation chrome
 src/
   main.js           bootstrap, the game loop (fixed 1/60 s step) and the
                     background loop that runs it while the tab is hidden
@@ -1168,6 +1177,7 @@ src/
     state.js        derived stats, trees, level, forge, ascension, save/load
     battle.js       arena simulation (knows nothing about canvas or DOM)
     render.js       canvas: procedural scenery, sprites, bars, numbers
+  mobile/shell.js   forwards mobile navigation to the existing UI controls
   store/billing.js  Play Billing, the only code that talks to anything
   ui/ui.js          HUD, tabs, shop, trees, forge and ascension panel
 little-rpg.html     GENERATED, the whole game in one file

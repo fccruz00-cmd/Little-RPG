@@ -1,0 +1,485 @@
+/* ============================================================
+   Little RPG mobile shell
+
+   This file never loads in the normal browser entry point. It changes only
+   document chrome and navigation. #stage is still the same canvas, with the
+   same Renderer, aspect ratio, sprite sheets, camera and battle loop.
+   ============================================================ */
+
+html[data-ui="mobile"],
+html[data-ui="mobile"] body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+html[data-ui="mobile"] body {
+  display: flex;
+  justify-content: center;
+  overscroll-behavior: none;
+}
+
+html[data-ui="mobile"] #app {
+  display: flex;
+  flex-direction: column;
+  grid-template-columns: none;
+  grid-template-rows: none;
+  width: 100%;
+  max-width: 520px;
+  height: 100%;
+  height: 100dvh;
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px #000, 0 0 48px #0009;
+}
+
+/* The mobile app is portrait-first, so the browser build's rotate gate is
+   never part of this shell. */
+html[data-ui="mobile"] .rotate {
+  display: none !important;
+}
+
+/* --- compact, thumb-sized HUD -------------------------------------- */
+html[data-ui="mobile"] .hud {
+  z-index: 6;
+  flex: none;
+  padding: calc(7px + env(safe-area-inset-top)) 9px 7px;
+  gap: 5px;
+}
+
+html[data-ui="mobile"] .hud__row {
+  gap: 7px;
+}
+
+html[data-ui="mobile"] .hud__stage {
+  gap: 5px;
+}
+
+html[data-ui="mobile"] .stepper {
+  --px: 1;
+  width: 44px;
+  height: 44px;
+}
+
+html[data-ui="mobile"] .hud__stage-name {
+  font-size: 14px;
+}
+
+html[data-ui="mobile"] .hud__stage-sub,
+html[data-ui="mobile"] .purse__rate {
+  font-size: 10px;
+}
+
+html[data-ui="mobile"] .purse__now {
+  font-size: 17px;
+}
+
+html[data-ui="mobile"] .hud__tools {
+  gap: 5px;
+}
+
+html[data-ui="mobile"] .hud__btn {
+  width: 44px;
+  height: 44px;
+}
+
+/* Store, rankings and settings live in the mobile More menu. Keeping only
+   speed here prevents the fight HUD from wrapping on narrow phones. */
+html[data-ui="mobile"] .hud__tools #btn-ranks,
+html[data-ui="mobile"] .hud__tools #btn-store,
+html[data-ui="mobile"] .hud__tools #btn-options {
+  display: none;
+}
+
+html[data-ui="mobile"] .hud__row--xp {
+  min-height: 22px;
+}
+
+html[data-ui="mobile"] .xpbar {
+  height: 14px;
+}
+
+html[data-ui="mobile"] .xpbar__text {
+  font-size: 9px;
+}
+
+/* --- original fight renderer, untouched --------------------------- */
+html[data-ui="mobile"] .stage-col {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  grid-column: auto;
+  grid-row: auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  background: var(--bg-deep);
+}
+
+html[data-ui="mobile"] .arena {
+  flex: none;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  aspect-ratio: 4 / 3;
+  margin: 0;
+  border: 0;
+  border-bottom: 2px solid #000;
+  box-shadow: none;
+}
+
+html[data-ui="mobile"] #stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+}
+
+html[data-ui="mobile"] .arena__act {
+  left: 8px;
+  right: 8px;
+  bottom: 13px;
+  justify-content: center;
+}
+
+html[data-ui="mobile"] .act-btn {
+  min-height: 44px;
+  padding-inline: 14px;
+}
+
+html[data-ui="mobile"] .statbar {
+  flex: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px 5px 5px;
+  border: 0;
+  border-bottom: 2px solid #000;
+}
+
+html[data-ui="mobile"] .statbar > div {
+  min-height: 44px;
+  display: grid;
+  align-content: center;
+}
+
+html[data-ui="mobile"] .statbar dt {
+  font-size: 8px;
+}
+
+html[data-ui="mobile"] .statbar dd {
+  font-size: 13px;
+}
+
+/* --- management area ---------------------------------------------- */
+html[data-ui="mobile"] .panel {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  grid-column: auto;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  container-type: inline-size;
+  container-name: panel;
+  background: var(--slate);
+}
+
+html[data-ui="mobile"] .tabs,
+html[data-ui="mobile"] .foot {
+  display: none;
+}
+
+.mobile-subnav {
+  flex: none;
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 4px 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  background-color: var(--wood);
+  background-image: linear-gradient(#00000059, #00000059), url(assets/ui/wood.png);
+  background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+  border-bottom: 2px solid #000;
+}
+
+.mobile-subnav[hidden] {
+  display: none;
+}
+
+.mobile-subnav::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-subnav__button {
+  --px: 1;
+  position: relative;
+  flex: 1 0 auto;
+  min-width: 92px;
+  min-height: 40px;
+  padding: 5px 10px 6px;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button_disabled.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  background: transparent;
+  color: #e9e6ef;
+  font: inherit;
+  font-size: 11px;
+  text-shadow: 0 1px 0 #0009;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+.mobile-subnav__button.is-on {
+  color: var(--ink-dark);
+  font-weight: 700;
+  text-shadow: 0 1px 0 #fff3;
+  border-image-source: url(assets/ui/button.png);
+}
+
+.mobile-subnav__pip,
+.mobile-nav__pip {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px #000, 0 0 5px var(--gold);
+}
+
+.mobile-subnav__pip[hidden],
+.mobile-nav__pip[hidden] {
+  display: none;
+}
+
+html[data-ui="mobile"] .pane {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+html[data-ui="mobile"] .pane__head {
+  min-height: 44px;
+  padding: 4px 7px 5px;
+}
+
+html[data-ui="mobile"] .pane__detail {
+  font-size: 11px;
+}
+
+html[data-ui="mobile"] .segmented button,
+html[data-ui="mobile"] .equip,
+html[data-ui="mobile"] .slot,
+html[data-ui="mobile"] .ore,
+html[data-ui="mobile"] .key,
+html[data-ui="mobile"] .up {
+  min-height: 44px;
+}
+
+html[data-ui="mobile"] .shop,
+html[data-ui="mobile"] .forge,
+html[data-ui="mobile"] .pets,
+html[data-ui="mobile"] .featlist,
+html[data-ui="mobile"] .keys,
+html[data-ui="mobile"] #cauldron {
+  grid-template-columns: 1fr;
+}
+
+html[data-ui="mobile"] .up {
+  --px: 1;
+  padding-block: 6px 7px;
+}
+
+/* The More destination is presentation only: every row forwards to the
+   original button or tab, so billing, leaderboards and save behavior stay in
+   their existing owners. */
+.mobile-more {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--slate);
+}
+
+.mobile-more.is-on {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-more__title {
+  margin: 2px 2px 7px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.mobile-more__list {
+  display: grid;
+  gap: 6px;
+}
+
+.mobile-action {
+  --px: 1;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 56px;
+  padding: 7px 9px 8px;
+  border-style: solid;
+  border-width: calc(var(--px) * 6px) calc(var(--px) * 6px) calc(var(--px) * 7px);
+  border-image-source: url(assets/ui/board.png);
+  border-image-slice: 6 6 7 6;
+  border-image-repeat: round;
+  background: #2b1f18;
+  color: var(--cream);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+.mobile-action[hidden] {
+  display: none;
+}
+
+.mobile-action__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mobile-action__copy strong {
+  font-size: 12px;
+}
+
+.mobile-action__copy small {
+  color: var(--ink-dim);
+  font-size: 10px;
+}
+
+.mobile-action__arrow {
+  color: var(--gold);
+  font-size: 16px;
+}
+
+/* --- primary mobile navigation ------------------------------------ */
+.mobile-nav {
+  z-index: 7;
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  min-height: calc(61px + env(safe-area-inset-bottom));
+  padding: 4px 5px calc(5px + env(safe-area-inset-bottom));
+  background-color: var(--wood-dkr);
+  background-image: linear-gradient(#0000004d, #0000004d), url(assets/ui/wood.png);
+  background-size: auto, calc(32px * var(--px)) calc(6px * var(--px));
+  border-top: 2px solid #000;
+}
+
+.mobile-nav__button {
+  --px: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 4px 1px 5px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.mobile-nav__button .ico {
+  opacity: .72;
+}
+
+.mobile-nav__button.is-on {
+  color: var(--ink-dark);
+  font-weight: 700;
+  border-style: solid;
+  border-width: calc(var(--px) * 3px) calc(var(--px) * 3px) calc(var(--px) * 4px);
+  border-image-source: url(assets/ui/button.png);
+  border-image-slice: 3 3 4 3 fill;
+  border-image-repeat: stretch;
+  image-rendering: pixelated;
+}
+
+.mobile-nav__button.is-on .ico {
+  opacity: 1;
+}
+
+.mobile-nav__button:disabled {
+  cursor: default;
+  filter: saturate(0);
+  opacity: .34;
+}
+
+/* Modals become bottom-reachable full surfaces without changing their
+   contents or actions. */
+html[data-ui="mobile"] .modal {
+  padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+}
+
+html[data-ui="mobile"] .modal__box {
+  width: min(100%, 500px);
+  max-height: 100%;
+}
+
+html[data-ui="mobile"] .modal__scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 355px) {
+  html[data-ui="mobile"] .hud {
+    padding-inline: 6px;
+  }
+
+  html[data-ui="mobile"] .stepper,
+  html[data-ui="mobile"] .hud__btn {
+    width: 40px;
+  }
+
+  html[data-ui="mobile"] .hud__stage-name {
+    font-size: 12px;
+  }
+
+  html[data-ui="mobile"] .purse__now {
+    font-size: 14px;
+  }
+
+  .mobile-nav__button {
+    font-size: 8px;
+  }
+}
+
+/* A phone may still be turned. Keep the same 4:3 canvas and single-column
+   controls; do not fall back into the browser build's two-column grid. */
+@media (min-aspect-ratio: 1/1) {
+  html[data-ui="mobile"] #app {
+    max-width: 620px;
+  }
+
+  html[data-ui="mobile"] .arena {
+    width: min(100%, 440px);
+    margin-inline: auto;
+  }
+}

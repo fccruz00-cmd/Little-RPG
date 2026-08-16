@@ -22,7 +22,15 @@ OUT = os.path.join(ROOT, "sw.js")
 
 # Everything the game asks the network for on a cold boot.
 ROOTS = ["src", "assets"]
-FILES = ["index.html", "styles.css", "manifest.json", "privacy.html"]
+FILES = [
+    "index.html",
+    "mobile.html",
+    "styles.css",
+    "mobile.css",
+    "manifest.json",
+    "manifest-mobile.json",
+    "privacy.html",
+]
 SKIP_DIRS = {"__pycache__"}
 KEEP = {".js", ".css", ".html", ".json", ".png", ".webp", ".ogg", ".mp3"}
 

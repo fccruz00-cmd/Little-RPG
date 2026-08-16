@@ -44,6 +44,10 @@ async function boot() {
 
   // Debug handle: lets you inspect and poke state from the console.
   globalThis.__rpg = { state, battle, renderer, ui };
+  // A presentation shell may join the running game without owning any game
+  // rules. The mobile entry point listens for this and only rearranges the
+  // existing controls around the same state, battle and renderer.
+  dispatchEvent(new CustomEvent('rpg:ready', { detail: globalThis.__rpg }));
 
   // The canvas is a grid cell now, not a full-width band, so it can change
   // size without the window doing anything: a rotation, the mobile URL bar
