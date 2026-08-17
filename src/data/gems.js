@@ -1,0 +1,90 @@
+/**
+ * Gems: the one currency the dungeon pays and the shop spends.
+ *
+ * Everything else in the game is earned in one place and spent in the same
+ * place. Gems cross the whole board instead: they come out of dungeons and
+ * go back in as gold, as time, or as gear. That is deliberate, because a
+ * currency you can also be sold has to be worth something everywhere, or
+ * buying it is a trap.
+ *
+ * THE RULES THIS FILE EXISTS TO KEEP
+ *
+ * 1. Every gem is earnable. The faucet below is the whole faucet; a purchase
+ *    tops the same purse up and unlocks nothing a clear cannot.
+ * 2. Nothing here is exclusive. The Mythic Chest is the one ware that hands
+ *    over power rather than pace, and the forge rolls Mythic too -- rarely,
+ *    and more often the deeper Smithing goes. Gems buy the shortcut, never
+ *    the destination. The permanent tracks (relics, souls, feats, pets) do
+ *    not accept gems at all and are not meant to.
+ * 3. Prices are fixed, and every ware says what it gives before you buy it.
+ *    A price that climbs with what you have already bought, or a box that
+ *    MIGHT contain the good thing, is how a shop starts hunting the people
+ *    worst at leaving it alone.
+ */
+
+/**
+ * Gems a FULL clear pays, by key tier. Partial runs pay none: gems follow
+ * relics here rather than dust, because a currency that also costs money must
+ * never be farmable by dying in room two on a loop.
+ */
+export const GEM_DROP = [2, 3, 5, 8, 12];
+
+/**
+ * A one-off bounty the first time a clear takes you deeper than you have ever
+ * been. It is measured against `deepestKey`, which nothing resets, so this is
+ * paid once per tier for the life of the save. Five tiers, 150 gems: enough
+ * to meet the shop properly without ever having to open a wallet.
+ */
+export const GEM_FIRST = [10, 15, 25, 40, 60];
+
+/** The Bloodmoon doubles gems the same way it doubles everything else. */
+
+// --- the shop -------------------------------------------------------
+// Three consumables, one per thing a stuck player actually lacks: money,
+// time, or a slot that will not roll. Costs are in the same neighbourhood as
+// a few clears, so the shop is a place you visit between runs rather than a
+// tab. The Gilded Idol is the one PERMANENT ware, and it stays inside rule
+// 2 on purpose: it buys pace (the offline discount, lifted for good), never
+// power, and it is priced like the long-term purchase it is.
+
+export const CACHE_SECONDS = 3600;  // Coin Cache: an hour of your best rate
+export const SKIP_SECONDS = 7200;   // Hourglass: two hours of real fighting
+export const CHEST_FLOOR = 5;       // Mythic Chest: Mythic, index into RARITIES
+
+export const GEM_WARES = [
+  {
+    id: 'coin', name: 'Coin Cache', icon: 'gold', cost: 20,
+    blurb: 'an hour of your best gold rate, paid now',
+    // Priced off the best rate the save has ever held, not the live one.
+    // The moment this ware is worth anything is the hour after a rebirth,
+    // when the live rate is zero and the shop is exactly what you want.
+  },
+  {
+    id: 'skip', name: 'Hourglass', icon: 'boss', cost: 30,
+    blurb: 'the fight really runs two hours, in a few seconds',
+    // Not a payout: the simulation runs. Kills, experience, dust, stages,
+    // gathering and every drop along the way, at full rate rather than the
+    // offline half.
+  },
+  {
+    id: 'chest', name: 'Mythic Chest', icon: 'it_chest', cost: 60,
+    blurb: 'your weakest slot, reforged Mythic',
+    // Guaranteed, never a roll. A box that MIGHT contain the good thing is
+    // the mechanic this shop exists to avoid; you can see what 60 gems buys
+    // before you spend them, every time.
+    //
+    // Aimed at the weakest slot on purpose, and that is also the spending
+    // cap: the set bonus keys off the LOWEST rarity worn, so the chest walks
+    // a board up one slot at a time and then refuses. Seven purchases is
+    // everything it will ever sell you.
+  },
+  {
+    id: 'idol', name: 'Gilded Idol', icon: 'crown', cost: 150,
+    blurb: 'offline gold at the full rate, forever',
+    // One purchase, ever: after it the night pays what the day does. It
+    // survives rebirth, awakening, everything short of the erase button --
+    // the one honest "permanent offer" this genre has.
+  },
+];
+
+export const WARE_BY_ID = Object.fromEntries(GEM_WARES.map((w) => [w.id, w]));
