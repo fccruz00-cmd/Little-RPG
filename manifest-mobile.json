@@ -1,0 +1,22 @@
+{
+  "name": "Little RPG Mobile",
+  "short_name": "Little RPG",
+  "description": "Idle RPG with a portrait-first mobile interface and the original Little RPG battle renderer.",
+  "id": "little-rpg-mobile",
+  "start_url": "index.html?ui=mobile",
+  "scope": ".",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#14121c",
+  "theme_color": "#14121c",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "assets/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/app/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/app/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

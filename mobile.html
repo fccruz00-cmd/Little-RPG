@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#14121c">
+<title>Little RPG Mobile</title>
+<link rel="manifest" href="manifest-mobile.json">
+<link rel="icon" href="assets/icons/icons.png" type="image/png">
+<script>
+  // A dedicated, bookmarkable and installable entry point. The query selects
+  // a presentation shell; the simulation and renderer still boot from the
+  // canonical page so browser and mobile can never drift in game behavior.
+  const target = new URL('index.html', location.href);
+  target.searchParams.set('ui', 'mobile');
+  location.replace(target);
+</script>
+</head>
+<body>
+  <p><a href="index.html?ui=mobile">Open Little RPG Mobile</a></p>
+</body>
+</html>
