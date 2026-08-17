@@ -17,10 +17,14 @@
 <meta name="apple-mobile-web-app-title" content="Little RPG">
 <link rel="stylesheet" href="styles.css">
 <script>
-  // Mobile is an explicit shell, never a breakpoint imposed on the browser
-  // build. The app-store/PWA entry point selects it with ?ui=mobile; opening
-  // index.html normally keeps the existing browser interface unchanged.
-  if (new URLSearchParams(location.search).get('ui') === 'mobile') {
+  // Phones select the portrait shell automatically. Desktop browsers keep
+  // the wide interface, while ?ui=mobile and ?ui=browser remain explicit
+  // overrides for testing and unusual devices.
+  const requestedUi = new URLSearchParams(location.search).get('ui');
+  const phoneLike = /Android.+Mobile|iPhone|iPod/i.test(navigator.userAgent)
+    || (matchMedia('(pointer: coarse)').matches
+      && Math.min(screen.width, screen.height) <= 768);
+  if (requestedUi === 'mobile' || (requestedUi !== 'browser' && phoneLike)) {
     document.documentElement.dataset.ui = 'mobile';
     document.getElementById('app-manifest').href = 'manifest-mobile.json';
     const mobileStyles = document.createElement('link');

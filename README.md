@@ -4,13 +4,13 @@ An idle auto-battler for browsers and phones. The hero walks a straight line
 on its own, runs into monsters, kills them without input and clears stages.
 All you decide is where the gold goes.
 
-- **Play it in a browser**: <https://little-rpg.vercel.app>
-- **Open the portrait mobile UI**: <https://little-rpg.vercel.app/mobile.html>
+- **Play it in a browser or phone**: <https://little-rpg.vercel.app>
+- **Force the portrait mobile UI**: <https://little-rpg.vercel.app/mobile.html>
 
 The site is redeployed on every merge to `main`, so both links serve the
-latest build. Each entry is installable: the browser UI keeps its landscape
-layout, while the mobile entry uses a portrait-first HUD and bottom
-navigation. Both **play with no signal** (a service worker precaches all 289
+latest build. Phones automatically receive the portrait-first HUD and bottom
+navigation, while desktop browsers keep the wide layout. Both entries remain
+installable and **play with no signal** (a service worker precaches all 289
 files), share the same save and game simulation, and render the fight through
 the same canvas. `little-rpg.html` in the repo remains the browser game in one
 file, for playing straight off a download.
@@ -34,8 +34,8 @@ tabs behind thumb-sized bottom navigation.
 +---------------------------+----------------------+
 ```
 
-(The browser entry still asks an upright phone to turn. Use `mobile.html` for
-the dedicated portrait interface.)
+(The main URL detects phones automatically. `?ui=mobile` and `?ui=browser`
+remain available as explicit overrides.)
 
 ## Running it
 
@@ -1138,14 +1138,14 @@ meaning anything to them: the shop, forge, pets and feats go to two columns
 at 470px of panel and three at 820px. The webs do not switch at all: they
 are three lanes at every width, and only the cell size changes.
 
-**Portrait remains explicit.** The browser entry still uses the original
-stylesheet and shows a phone held upright a "turn your phone sideways"
-prompt; a narrow *desktop* window does not, because you cannot rotate a
-monitor — the test is `pointer: coarse`, not width. `mobile.html` instead
-selects `?ui=mobile`, loads `mobile.css` and adds the portrait HUD, grouped
-subnavigation and bottom navigation. It does not replace `#stage`, import game
-rules or instantiate another renderer: every action is forwarded to the
-existing UI around the same `GameState`, `Battle` and `Renderer`.
+**Portrait is automatic on phones.** The main entry selects the mobile shell
+for a mobile user agent or a coarse-pointer screen with a short side up to
+768px. A desktop keeps the wide browser UI, and `?ui=browser` can override an
+unusual touch device. `mobile.html` still selects `?ui=mobile`, loads
+`mobile.css` and adds the portrait HUD, grouped subnavigation and bottom
+navigation. It does not replace `#stage`, import game rules or instantiate
+another renderer: every action is forwarded to the existing UI around the
+same `GameState`, `Battle` and `Renderer`.
 
 
 ```
